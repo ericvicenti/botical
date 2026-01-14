@@ -220,7 +220,58 @@ This ensures future agents follow the same patterns. Examples of what to capture
 - Use descriptive variable names
 - Keep functions small and focused
 - Add JSDoc for public APIs
-- No `any` types (use `unknown` + validation)
+
+## Type Safety Requirements
+
+**CRITICAL: Aggressive type safety is required for building robust software.**
+
+### Rules
+1. **NEVER use `any`** - This is non-negotiable. Use `unknown` with proper validation instead.
+2. **NEVER use `@ts-ignore` or `@ts-expect-error`** - Fix the underlying type issue instead.
+3. **Use precise types** - Avoid loose types like `object` or `{}`. Be specific.
+4. **Use generics appropriately** - When code can work with multiple types, use generics.
+5. **Runtime validation** - Validate all external data (API inputs, database results) with Zod.
+6. **Type comments** - Add comments alongside complex type definitions explaining why.
+
+### Examples
+
+```typescript
+// BAD: Using any
+function process(data: any) { ... }
+
+// GOOD: Using unknown with validation
+function process(data: unknown) {
+  const validated = MySchema.parse(data);
+  // Now TypeScript knows the exact type
+}
+
+// BAD: Loose generic
+function getItem<T>(id: string): T { ... }
+
+// GOOD: Constrained generic with runtime check
+function getItem<T extends BaseEntity>(
+  id: string,
+  schema: z.ZodType<T>
+): T {
+  const data = db.get(id);
+  return schema.parse(data);
+}
+
+// BAD: Skipping type check
+// @ts-ignore - figure this out later
+const result = complexOperation();
+
+// GOOD: Fix the type issue properly
+const result: ExpectedType = complexOperation() as ExpectedType;
+// With comment explaining why the cast is safe
+```
+
+### Type comments
+```typescript
+// This generic ensures T extends SessionEvent, allowing us to
+// narrow the payload type based on the event type discriminator.
+type EventHandler<T extends SessionEvent> = (event: T) => void;
+```
 
 ## Reference Implementation
 
