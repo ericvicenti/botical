@@ -117,6 +117,30 @@ This ensures future agents follow the same patterns. Examples of what to capture
 
 **The user's instructions should ALWAYS be remembered by future agents.**
 
+## Human in the Loop
+
+**CRITICAL: After completing ANY task, output validation steps for the user.**
+
+The user must be able to verify your work. Always end your completion with:
+1. **What was done** - Brief summary of changes made
+2. **How to validate** - Specific commands or steps to verify the work
+3. **What to look for** - Expected output or behavior
+
+Example:
+```
+## What was done
+- Added user authentication middleware
+- Created login/logout endpoints
+
+## How to validate
+curl -X POST http://localhost:3000/auth/login -d '{"email":"test@example.com"}'
+bun test tests/unit/auth/
+
+## What to look for
+- Login should return a JWT token
+- All 15 auth tests should pass
+```
+
 ## Completion Workflow
 
 **After completing any implementation task, follow this workflow:**
