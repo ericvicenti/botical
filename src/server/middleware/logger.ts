@@ -1,3 +1,11 @@
+/**
+ * Logger Middleware
+ *
+ * Logs HTTP requests with timing information for observability.
+ * Log level is configurable via IRIS_LOG_LEVEL environment variable.
+ * See: docs/knowledge-base/01-architecture.md#rest-api
+ */
+
 import type { MiddlewareHandler } from "hono";
 import { Config } from "../../config/index.ts";
 

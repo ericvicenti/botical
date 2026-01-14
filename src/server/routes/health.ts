@@ -1,15 +1,19 @@
+/**
+ * Health Check Routes
+ *
+ * Provides standard Kubernetes-style health checks.
+ * See: docs/knowledge-base/01-architecture.md#rest-api
+ *
+ * Three endpoints for different purposes:
+ * - GET /health      - Basic health (always returns ok if server is running)
+ * - GET /health/ready - Readiness (checks database connectivity)
+ * - GET /health/live  - Liveness (checks process is alive)
+ */
+
 import { Hono } from "hono";
 import { DatabaseManager } from "../../database/index.ts";
 
 const health = new Hono();
-
-/**
- * Health Check Endpoint
- *
- * GET /health - Basic health check
- * GET /health/ready - Readiness check (includes database)
- * GET /health/live - Liveness check
- */
 
 // Basic health check
 health.get("/", (c) => {

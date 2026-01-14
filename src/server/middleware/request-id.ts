@@ -1,11 +1,17 @@
-import type { MiddlewareHandler } from "hono";
-import { generateId } from "../../utils/id.ts";
-
 /**
  * Request ID Middleware
  *
- * Adds a unique request ID to each request for tracing.
+ * Assigns unique IDs to requests for distributed tracing.
+ * Uses ID generation from: docs/knowledge-base/04-patterns.md#id-generation-patterns
+ *
+ * IDs are propagated via X-Request-Id header:
+ * - Accepts existing ID from incoming request
+ * - Generates new ID if none provided
+ * - Returns ID in response header for client correlation
  */
+
+import type { MiddlewareHandler } from "hono";
+import { generateId } from "../../utils/id.ts";
 export function requestId(): MiddlewareHandler {
   return async (c, next) => {
     // Check for existing request ID header

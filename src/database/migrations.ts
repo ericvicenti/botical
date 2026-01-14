@@ -1,7 +1,18 @@
+/**
+ * Database Migration System
+ *
+ * Provides schema versioning for SQLite databases.
+ * See: docs/knowledge-base/01-architecture.md#sqlite-choices
+ *
+ * Each migration is run in a transaction for atomicity.
+ * The migrations table tracks which migrations have been applied.
+ */
+
 import { Database } from "bun:sqlite";
 
 /**
- * Migration definition
+ * Migration definition.
+ * See: docs/knowledge-base/02-data-model.md for schema documentation.
  */
 export interface Migration {
   id: number;
@@ -11,10 +22,10 @@ export interface Migration {
 }
 
 /**
- * Run migrations on a database
+ * Run migrations on a database.
  *
- * Applies all migrations that haven't been applied yet.
- * Migrations are run in a transaction for atomicity.
+ * Applies all pending migrations in order.
+ * Each migration runs in a transaction - if it fails, it rolls back.
  */
 export function runMigrations(db: Database, migrations: Migration[]): void {
   // Ensure migrations table exists
