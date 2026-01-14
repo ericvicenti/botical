@@ -10,7 +10,7 @@ This file provides essential context for AI agents working on the Iris codebase.
 - Vercel AI SDK integration for LLM interactions
 - Multi-user collaboration support
 
-**Tech Stack:** Bun, TypeScript, Hono, SQLite, Vercel AI SDK, Zod, Vitest
+**Tech Stack:** Bun, TypeScript, Hono, SQLite (bun:sqlite), Vercel AI SDK, Zod
 
 ## Documentation Index
 
@@ -96,6 +96,27 @@ bun test:coverage     # With coverage report
 
 Coverage minimums: 85% overall, 90% for critical paths (auth, permissions, tools).
 
+## Commit Frequently
+
+**Commit early and often.** Don't wait until a large task is complete:
+- Commit after each logical change or milestone
+- Commit after adding comments or documentation updates
+- Commit before starting a risky refactor (so you can revert)
+- Small, focused commits are better than large omnibus commits
+
+## Update AGENTS.md with User Instructions
+
+**CRITICAL: When the user gives generic instructions or workflow guidance, ALWAYS update this file.**
+
+This ensures future agents follow the same patterns. Examples of what to capture:
+- Workflow preferences (commit frequency, validation steps)
+- Code style preferences
+- Documentation requirements
+- Testing requirements
+- Any "always do X" or "never do Y" instructions
+
+**The user's instructions should ALWAYS be remembered by future agents.**
+
 ## Completion Workflow
 
 **After completing any implementation task, follow this workflow:**
@@ -120,18 +141,57 @@ Coverage minimums: 85% overall, 90% for critical paths (auth, permissions, tools
    - Delete dead code paths
    - Be careful to avoid regressions when refactoring
 
-4. **Validate again** - After any cleanup:
+4. **Update documentation** - Keep docs in sync with code:
+   - Update relevant knowledge base files in `docs/knowledge-base/`
+   - Update AGENTS.md if new patterns or workflows were introduced
+   - Ensure code comments reference the knowledge base (see Code Comments below)
+
+5. **Validate again** - After any cleanup:
    ```bash
    bun run typecheck && bun run test
    ```
 
-5. **Commit changes** - Once all validations pass:
+6. **Commit changes** - Once all validations pass:
    ```bash
    git add -A
    git commit -m "descriptive message"
    ```
 
 **Important:** Always run validations after refactoring to catch regressions. Never commit code that fails typecheck or tests.
+
+## Code Comments
+
+**Comments should explain WHY, not WHAT.** The code shows what happens; comments explain the reasoning.
+
+### Comment Guidelines
+
+1. **Reference the knowledge base** - Link to relevant docs:
+   ```typescript
+   // Session IDs use descending order for newest-first queries.
+   // See: docs/knowledge-base/04-patterns.md#id-generation
+   const sessionId = generateId('sess', { descending: true });
+   ```
+
+2. **Explain non-obvious decisions**:
+   ```typescript
+   // WAL mode enables concurrent reads during writes, critical for
+   // real-time updates. See: docs/knowledge-base/01-architecture.md#database
+   db.exec("PRAGMA journal_mode = WAL");
+   ```
+
+3. **Document architectural boundaries**:
+   ```typescript
+   // Root DB stores global data; project DBs are isolated per-project.
+   // This separation enables project portability and parallel access.
+   // See: docs/knowledge-base/01-architecture.md#multi-database
+   ```
+
+4. **When reading code with KB references** - Always go read the referenced documentation to understand the full context before making changes.
+
+### What NOT to comment
+- Obvious code (`const count = items.length; // get length`)
+- Implementation details that are clear from types
+- Temporary notes (use TODO with issue links instead)
 
 ## Common Tasks
 

@@ -1,11 +1,18 @@
-import { z } from "zod";
-
 /**
  * Event Type Definitions
  *
- * All events have a type identifier and typed payload.
- * Events are used for internal communication and WebSocket broadcasting.
+ * Defines all events that flow through the event bus.
+ * See: docs/knowledge-base/04-patterns.md#event-bus-pattern
+ *
+ * Events use Zod for runtime validation ensuring type safety across
+ * the internal bus and WebSocket broadcasting.
+ * See: docs/knowledge-base/01-architecture.md#zod
+ *
+ * Event naming convention: "{entity}.{action}" or "{entity}.{sub}.{action}"
+ * Examples: "session.created", "message.text.delta", "file.updated"
  */
+
+import { z } from "zod";
 
 // Session Events
 export const SessionCreatedEvent = z.object({

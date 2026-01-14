@@ -1,7 +1,16 @@
 /**
  * Custom Error Types for Iris
  *
- * Typed errors enable consistent error handling and responses.
+ * Typed errors enable consistent error handling across the application.
+ * See: docs/knowledge-base/04-patterns.md#error-handling-pattern
+ *
+ * All errors extend IrisError with:
+ * - code: Machine-readable error identifier
+ * - statusCode: HTTP status for API responses
+ * - details: Optional structured data for debugging
+ *
+ * Error handler middleware converts these to consistent JSON responses.
+ * See: docs/knowledge-base/04-patterns.md#error-handler-middleware
  */
 
 /**

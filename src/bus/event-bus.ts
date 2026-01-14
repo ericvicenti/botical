@@ -1,3 +1,17 @@
+/**
+ * Event Bus Module
+ *
+ * Provides decoupled communication between components using pub/sub pattern.
+ * See: docs/knowledge-base/04-patterns.md#event-bus-pattern
+ *
+ * The event bus is central to Iris's event-driven architecture:
+ * - Services publish events when state changes
+ * - WebSocket bridge subscribes to broadcast to clients
+ * - Components can subscribe with pattern matching (e.g., "message.*")
+ *
+ * See: docs/knowledge-base/01-architecture.md#event-bus-layer
+ */
+
 import { generateId } from "../utils/id.ts";
 import type {
   IrisEvent,
@@ -28,13 +42,18 @@ interface StoredSubscription {
 }
 
 /**
- * Event Bus
+ * Event Bus Singleton
  *
- * Provides pub/sub functionality for internal events.
+ * Provides typed pub/sub for internal events with automatic WebSocket bridging.
+ * See: docs/knowledge-base/04-patterns.md#event-bus-pattern
+ *
  * Supports:
- * - Global events (cross-project)
- * - Project-scoped events
- * - Pattern matching with wildcards (e.g., "message.*")
+ * - Global events (cross-project): Use publishGlobal()
+ * - Project-scoped events: Use publish(projectId, event)
+ * - Pattern matching: "message.*" matches "message.created", "message.text.delta", etc.
+ *
+ * Event flow: Service → EventBus → WebSocket Bridge → Connected Clients
+ * See: docs/knowledge-base/01-architecture.md#event-driven-communication
  */
 class EventBusSingleton {
   private static instance: EventBusSingleton;

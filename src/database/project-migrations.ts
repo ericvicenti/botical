@@ -1,13 +1,26 @@
+/**
+ * Project Database Migrations
+ *
+ * Defines the schema for per-project databases. Each project gets its own
+ * isolated SQLite database, enabling complete data isolation.
+ * See: docs/knowledge-base/01-architecture.md#project-isolation
+ *
+ * Schema documented in: docs/knowledge-base/02-data-model.md
+ */
+
 import type { Migration } from "./migrations.ts";
 
 /**
- * Project database migrations
- *
- * Each project has its own database with:
- * - Sessions and messages
+ * Project database stores all project-scoped entities:
+ * - Sessions and messages (conversation history)
+ * - Message parts (text, tool calls, files)
  * - Custom agents and tools
- * - Files and versions
- * - Permissions
+ * - Files and versions (with diff-based history)
+ * - Snapshots (point-in-time project state)
+ * - Permissions (tool access rules)
+ * - Todos (task tracking)
+ *
+ * See: docs/knowledge-base/02-data-model.md#project-database-one-per-project
  */
 export const PROJECT_MIGRATIONS: Migration[] = [
   {

@@ -1,9 +1,24 @@
+/**
+ * Configuration Module
+ *
+ * Manages application configuration using a singleton pattern.
+ * See: docs/knowledge-base/01-architecture.md#technology-choices
+ *
+ * Configuration is loaded from environment variables with sensible defaults.
+ * The data directory structure supports the multi-database architecture:
+ * - Root DB at: {dataDir}/iris.db
+ * - Project DBs at: {dataDir}/projects/{projectId}/project.db
+ *
+ * See: docs/knowledge-base/01-architecture.md#database-architecture
+ */
+
 import path from "path";
 import os from "os";
 import { z } from "zod";
 
 /**
- * Configuration schema with defaults
+ * Configuration schema validated with Zod for type safety.
+ * See: docs/knowledge-base/01-architecture.md#zod
  */
 const ConfigSchema = z.object({
   dataDir: z.string(),
@@ -25,7 +40,9 @@ function getDefaultDataDir(): string {
 }
 
 /**
- * Configuration singleton
+ * Configuration singleton providing centralized configuration management.
+ * Uses singleton pattern to ensure consistent configuration across the application.
+ * See: docs/knowledge-base/04-patterns.md#singleton-pattern
  */
 class ConfigManager {
   private static instance: ConfigManager;

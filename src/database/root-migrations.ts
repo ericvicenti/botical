@@ -1,13 +1,24 @@
+/**
+ * Root Database Migrations
+ *
+ * Defines the schema for the root database which stores global data shared
+ * across all projects. This is one half of the multi-database architecture.
+ * See: docs/knowledge-base/01-architecture.md#root-db-responsibilities
+ *
+ * Schema documented in: docs/knowledge-base/02-data-model.md
+ */
+
 import type { Migration } from "./migrations.ts";
 
 /**
- * Root database migrations
- *
- * The root database stores global data:
- * - Users and authentication
- * - Project metadata and ownership
- * - API keys
+ * Root database stores:
+ * - Users and authentication credentials
+ * - Project registry and ownership (metadata only, not project data)
+ * - API keys for programmatic access
+ * - Provider credentials (encrypted LLM API keys)
  * - Global settings
+ *
+ * See: docs/knowledge-base/02-data-model.md#entity-relationship-diagram
  */
 export const ROOT_MIGRATIONS: Migration[] = [
   {

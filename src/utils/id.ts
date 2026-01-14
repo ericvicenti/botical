@@ -1,11 +1,16 @@
 /**
  * ID Generation Utilities
  *
- * IDs are generated with prefixes for type identification and timestamps
- * for natural ordering.
+ * Generates unique, sortable IDs with type prefixes.
+ * See: docs/knowledge-base/04-patterns.md#id-generation-patterns
+ * See: docs/knowledge-base/02-data-model.md#id-generation-strategies
  *
- * - Descending IDs: Newest first (sessions, projects)
- * - Ascending IDs: Chronological (messages, parts)
+ * Two ordering strategies for different use cases:
+ * - Descending: Newest first when sorted alphabetically (sessions, projects)
+ * - Ascending: Chronological order (messages, parts, file versions)
+ *
+ * Format: {prefix}_{timestamp_base36}-{random_8chars}
+ * Example: "sess_2r1hf9qj3-a1b2c3d4" (descending session ID)
  */
 
 interface GenerateIdOptions {

@@ -1,3 +1,22 @@
+/**
+ * Database Manager
+ *
+ * Manages SQLite database connections using a multi-database architecture.
+ * See: docs/knowledge-base/01-architecture.md#database-architecture
+ *
+ * This pattern provides complete project isolation:
+ * - Root DB: Users, projects, API keys, global settings (shared across all projects)
+ * - Project DBs: Sessions, messages, files, agents (one per project)
+ *
+ * Benefits of this architecture:
+ * - Independent backup/restore per project
+ * - No cross-project query accidents
+ * - Easy project deletion (delete DB file)
+ * - Projects can be moved between servers
+ *
+ * See: docs/knowledge-base/01-architecture.md#why-multiple-databases
+ */
+
 import { Database } from "bun:sqlite";
 import fs from "fs";
 import path from "path";
@@ -10,9 +29,9 @@ import { DatabaseError } from "../utils/errors.ts";
 /**
  * Database Manager Singleton
  *
- * Manages SQLite database connections for:
- * - Root database (users, projects, global settings)
- * - Project databases (one per project: sessions, messages, files)
+ * Provides lazy initialization for database connections.
+ * Connections are created on first access and cached for reuse.
+ * See: docs/knowledge-base/04-patterns.md#database-query-pattern
  */
 class DatabaseManagerSingleton {
   private static instance: DatabaseManagerSingleton;
@@ -168,20 +187,24 @@ class DatabaseManagerSingleton {
   }
 
   /**
-   * Configure a database with optimal settings
+   * Configure a database with optimal settings for concurrent access.
+   *
+   * WAL mode is critical for real-time updates - readers don't block writers.
+   * See: docs/knowledge-base/01-architecture.md#sqlite-choices
    */
   private configureDatabase(db: Database): void {
     try {
-      // Enable WAL mode for better concurrency
+      // WAL mode enables concurrent reads during writes, critical for real-time updates.
+      // See: docs/knowledge-base/01-architecture.md#wal-mode-write-ahead-logging
       db.exec("PRAGMA journal_mode = WAL");
-      // Enable foreign keys
+      // Enable foreign keys for referential integrity
       db.exec("PRAGMA foreign_keys = ON");
-      // Optimize synchronous for performance (still safe with WAL)
+      // NORMAL sync is safe with WAL and provides better performance
       db.exec("PRAGMA synchronous = NORMAL");
-      // Increase cache size for better performance
-      db.exec("PRAGMA cache_size = -64000"); // 64MB
-      // Enable memory-mapped I/O
-      db.exec("PRAGMA mmap_size = 268435456"); // 256MB
+      // 64MB cache for better query performance
+      db.exec("PRAGMA cache_size = -64000");
+      // 256MB memory-mapped I/O for faster file access
+      db.exec("PRAGMA mmap_size = 268435456");
     } catch (error) {
       throw new DatabaseError("Failed to configure database", error);
     }

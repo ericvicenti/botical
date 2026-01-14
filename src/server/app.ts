@@ -1,10 +1,31 @@
+/**
+ * Hono Application Setup
+ *
+ * Creates the HTTP server using Hono framework with middleware stack.
+ * See: docs/knowledge-base/01-architecture.md#hono
+ *
+ * The transport layer supports multiple protocols:
+ * - REST endpoints (auth, uploads, health)
+ * - WebSocket (primary, real-time)
+ * - SSE fallback (limited environments)
+ *
+ * See: docs/knowledge-base/01-architecture.md#transport-layer
+ */
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { health } from "./routes/index.ts";
 
 /**
- * Create the Hono application with all middleware and routes
+ * Create the Hono application with middleware and routes.
+ *
+ * Middleware order is important:
+ * 1. requestId - Assigns unique ID for request tracing
+ * 2. logger - Logs requests with timing
+ * 3. cors - Handles cross-origin requests
+ *
+ * See: docs/knowledge-base/01-architecture.md#rest-api
  */
 export function createApp() {
   const app = new Hono();
