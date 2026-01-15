@@ -80,7 +80,8 @@ export function decrypt(ciphertext: string): string {
 
   const [ivB64, authTagB64, encrypted] = parts;
 
-  if (!ivB64 || !authTagB64 || !encrypted) {
+  // Note: encrypted can be empty string for empty plaintext, so we check for undefined
+  if (ivB64 === undefined || authTagB64 === undefined || encrypted === undefined) {
     throw new Error("Invalid encrypted format: missing components");
   }
 
