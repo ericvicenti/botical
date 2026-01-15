@@ -311,13 +311,8 @@ export class SubAgentRunner {
         .map((p) => (p.content as { text: string }).text)
         .join("");
 
-      // Update session stats
-      SessionService.updateStats(db, childSessionId, {
-        messageCount: 1,
-        cost: this.calculateCost(providerId, modelId, result.usage),
-        tokensInput: result.usage.inputTokens,
-        tokensOutput: result.usage.outputTokens,
-      });
+      // Note: Session stats are updated by StreamProcessor on finish event
+      // so we don't need to call updateStats here
 
       return {
         sessionId: childSessionId,

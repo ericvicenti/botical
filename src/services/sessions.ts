@@ -239,7 +239,7 @@ export class SessionService {
       }
     }
 
-    // Order by ID descending (newest first due to descending ID generation)
+    // Order by ID ascending (newest first due to descending ID generation)
     query += " ORDER BY id ASC";
 
     if (options.limit) {

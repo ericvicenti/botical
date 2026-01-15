@@ -31,8 +31,9 @@ class ToolRegistryClass {
       requiresCodeExecution?: boolean;
     } = {}
   ): void {
+    // Skip if already registered (makes registration idempotent)
     if (this.tools.has(definition.name)) {
-      throw new Error(`Tool "${definition.name}" is already registered`);
+      return;
     }
 
     this.tools.set(definition.name, {

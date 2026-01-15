@@ -57,12 +57,13 @@ describe("Tool Registry", () => {
       expect(ToolRegistry.has("test_tool")).toBe(true);
     });
 
-    it("throws when registering duplicate tool", () => {
+    it("silently ignores duplicate registration (idempotent)", () => {
+      ToolRegistry.register(testTool, { category: "other" });
       ToolRegistry.register(testTool, { category: "other" });
 
-      expect(() => {
-        ToolRegistry.register(testTool, { category: "other" });
-      }).toThrow('Tool "test_tool" is already registered');
+      // Should still only have one tool registered
+      expect(ToolRegistry.getAll().length).toBe(1);
+      expect(ToolRegistry.has("test_tool")).toBe(true);
     });
 
     it("registers with default category", () => {

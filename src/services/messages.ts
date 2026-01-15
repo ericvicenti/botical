@@ -282,7 +282,7 @@ export class MessageService {
       params.push(options.role);
     }
 
-    // Order by ID ascending (chronological)
+    // Order by ID ascending (chronological for ascending ID generation)
     query += " ORDER BY id ASC";
 
     if (options.limit) {
