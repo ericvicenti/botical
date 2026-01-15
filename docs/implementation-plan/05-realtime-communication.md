@@ -212,22 +212,6 @@ export const FileEvents = {
   }),
 };
 
-// Presence events (for collaboration)
-export const PresenceEvents = {
-  'presence.joined': z.object({
-    userId: z.string(),
-    username: z.string(),
-    avatar: z.string().optional(),
-  }),
-  'presence.left': z.object({
-    userId: z.string(),
-  }),
-  'presence.cursor': z.object({
-    userId: z.string(),
-    sessionId: z.string(),
-    position: z.number().optional(),
-  }),
-};
 ```
 
 ## WebSocket Handler
@@ -288,16 +272,6 @@ export function createWebSocketHandler() {
         // Join project room
         RoomManager.join(`project:${projectId}`, connectionId);
 
-        // Notify others
-        RoomManager.broadcast(`project:${projectId}`, {
-          type: 'presence.joined',
-          payload: {
-            userId: auth.userId,
-            username: auth.username,
-            avatar: auth.avatar,
-          },
-        }, [connectionId]);
-
         // Send welcome message
         ws.send(JSON.stringify({
           type: 'connected',
@@ -336,19 +310,13 @@ export function createWebSocketHandler() {
       },
 
       onClose: async (event, ws) => {
-        const { userId, projectId, connectionId } = ws.data;
+        const { projectId, connectionId } = ws.data;
 
         // Leave rooms
         RoomManager.leave(`project:${projectId}`, connectionId);
 
         // Remove connection
         ConnectionManager.remove(connectionId);
-
-        // Notify others
-        RoomManager.broadcast(`project:${projectId}`, {
-          type: 'presence.left',
-          payload: { userId },
-        });
       },
 
       onError: async (event, ws) => {
@@ -639,9 +607,6 @@ export interface IrisClient {
 
   // Subscriptions
   subscribe(channel: string): () => void;
-
-  // Presence
-  onPresence(callback: (event: PresenceEvent) => void): () => void;
 }
 
 export type MessageStreamEvent =

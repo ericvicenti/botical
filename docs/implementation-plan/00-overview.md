@@ -37,7 +37,6 @@ Iris is a headless backend server that provides a full-featured AI agent workspa
 │  │                    API Layer (Hono)                         ││
 │  │  • WebSocket Handler (primary)                              ││
 │  │  • REST Endpoints (health, uploads, auth)                   ││
-│  │  • SSE Fallback (for environments without WebSocket)        ││
 │  └─────────────────────────────────────────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │                   Core Services                             ││
