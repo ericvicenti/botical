@@ -18,13 +18,13 @@ import type { SessionStatus } from "@/agents/types.ts";
  */
 export const SessionCreateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  agent: z.string().default("default"),
+  agent: z.string().optional().default("default"),
   parentId: z.string().nullable().optional(),
   providerId: z.string().nullable().optional(),
   modelId: z.string().nullable().optional(),
 });
 
-export type SessionCreateInput = z.infer<typeof SessionCreateSchema>;
+export type SessionCreateInput = z.input<typeof SessionCreateSchema>;
 
 /**
  * Session update input schema

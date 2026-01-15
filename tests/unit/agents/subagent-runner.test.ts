@@ -426,7 +426,7 @@ describe("SubAgent Runner", () => {
 
     it("can cancel background tasks", async () => {
       // Make LLM take longer
-      llmSpy.mockImplementation(async (options) => {
+      llmSpy.mockImplementation(async (_options: unknown) => {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         return {
           text: "Done",

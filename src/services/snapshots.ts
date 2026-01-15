@@ -245,8 +245,8 @@ export class SnapshotService {
       params.push(options.sessionId);
     }
 
-    // Order by ID ascending (newest first due to descending ID generation)
-    query += " ORDER BY id ASC";
+    // Order by created_at descending (newest first), with id as tiebreaker
+    query += " ORDER BY created_at DESC, id ASC";
 
     if (options.limit) {
       query += " LIMIT ?";
@@ -339,7 +339,7 @@ export class SnapshotService {
       params.push(sessionId);
     }
 
-    query += " ORDER BY id ASC LIMIT 1";
+    query += " ORDER BY created_at DESC, id ASC LIMIT 1";
 
     const row = db.prepare(query).get(...params) as SnapshotRow | undefined;
     if (!row) return null;

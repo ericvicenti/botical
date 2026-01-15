@@ -8,8 +8,25 @@ import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
+import type {
+  ListResponse,
+  ItemResponse,
+  ErrorResponse,
+} from "../../../utils/response-types.ts";
 import fs from "fs";
 import path from "path";
+
+interface MessageWithPartsResponse {
+  id: string;
+  role: string;
+  parts: Array<{ type: string; content: unknown }>;
+}
+
+interface MessagePartResponse {
+  id: string;
+  type: string;
+  content: unknown;
+}
 
 describe("Messages API Routes", () => {
   const testDataDir = path.join(
@@ -46,7 +63,6 @@ describe("Messages API Routes", () => {
     it("returns message with parts", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const session = SessionService.create(db, {
-        agent: "default",
         title: "Test Session",
       });
 
@@ -68,11 +84,11 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<MessageWithPartsResponse>;
       expect(body.data.id).toBe(message.id);
       expect(body.data.role).toBe("user");
       expect(body.data.parts).toHaveLength(1);
-      expect(body.data.parts[0].type).toBe("text");
+      expect(body.data.parts[0]!.type).toBe("text");
     });
 
     it("returns 404 for non-existent message", async () => {
@@ -82,7 +98,7 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(404);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("NOT_FOUND");
     });
 
@@ -91,7 +107,7 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
   });
@@ -100,7 +116,6 @@ describe("Messages API Routes", () => {
     it("returns message parts", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const session = SessionService.create(db, {
-        agent: "default",
         title: "Test Session",
       });
 
@@ -129,7 +144,7 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<MessagePartResponse>;
       expect(body.data).toHaveLength(2);
       expect(body.meta.total).toBe(2);
     });
@@ -156,7 +171,7 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
@@ -179,7 +194,6 @@ describe("Messages API Routes", () => {
     it("requires API key for provider", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const session = SessionService.create(db, {
-        agent: "default",
         title: "Test Session",
       });
 
@@ -197,7 +211,7 @@ describe("Messages API Routes", () => {
 
       expect(response.status).toBe(401);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("AUTHENTICATION_ERROR");
     });
   });

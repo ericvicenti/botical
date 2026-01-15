@@ -7,6 +7,13 @@ import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { SessionService } from "@/services/sessions.ts";
+import type {
+  ListResponse,
+  ItemResponse,
+  ErrorResponse,
+  SessionResponse,
+  MessageResponse,
+} from "../../../utils/response-types.ts";
 import fs from "fs";
 import path from "path";
 
@@ -50,7 +57,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<SessionResponse>;
       expect(body.data).toEqual([]);
       expect(body.meta.total).toBe(0);
     });
@@ -59,9 +66,9 @@ describe("Sessions API Routes", () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
 
       // Create test sessions
-      SessionService.create(db, { agent: "default", title: "Session 1" });
-      SessionService.create(db, { agent: "default", title: "Session 2" });
-      SessionService.create(db, { agent: "default", title: "Session 3" });
+      SessionService.create(db, { title: "Session 1" });
+      SessionService.create(db, { title: "Session 2" });
+      SessionService.create(db, { title: "Session 3" });
 
       const response = await app.request(
         `/api/sessions?projectId=${testProjectId}&limit=2`
@@ -69,7 +76,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<SessionResponse>;
       expect(body.data.length).toBe(2);
       expect(body.meta.total).toBe(3);
       expect(body.meta.hasMore).toBe(true);
@@ -78,12 +85,10 @@ describe("Sessions API Routes", () => {
     it("filters sessions by status", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
 
-      const session1 = SessionService.create(db, {
-        agent: "default",
+      SessionService.create(db, {
         title: "Active",
       });
       const session2 = SessionService.create(db, {
-        agent: "default",
         title: "Archived",
       });
       SessionService.archive(db, session2.id);
@@ -94,9 +99,9 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<SessionResponse>;
       expect(body.data.length).toBe(1);
-      expect(body.data[0].title).toBe("Active");
+      expect(body.data[0]!.title).toBe("Active");
     });
 
     it("requires projectId parameter", async () => {
@@ -104,7 +109,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
   });
@@ -116,14 +121,13 @@ describe("Sessions API Routes", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: testProjectId,
-          agent: "default",
           title: "New Session",
         }),
       });
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
       expect(body.data.id).toMatch(/^sess_/);
       expect(body.data.title).toBe("New Session");
       expect(body.data.agent).toBe("default");
@@ -136,13 +140,12 @@ describe("Sessions API Routes", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: testProjectId,
-          agent: "default",
         }),
       });
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
       expect(body.data.title).toBe("New Session");
     });
 
@@ -151,14 +154,13 @@ describe("Sessions API Routes", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agent: "default",
           title: "Test",
         }),
       });
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
   });
@@ -167,7 +169,6 @@ describe("Sessions API Routes", () => {
     it("returns session by ID", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const created = SessionService.create(db, {
-        agent: "default",
         title: "Test Session",
       });
 
@@ -177,7 +178,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
       expect(body.data.id).toBe(created.id);
       expect(body.data.title).toBe("Test Session");
     });
@@ -189,7 +190,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(404);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("NOT_FOUND");
     });
 
@@ -198,7 +199,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
   });
@@ -207,7 +208,6 @@ describe("Sessions API Routes", () => {
     it("updates session title", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const created = SessionService.create(db, {
-        agent: "default",
         title: "Original",
       });
 
@@ -222,14 +222,13 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
       expect(body.data.title).toBe("Updated Title");
     });
 
     it("updates session status", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const created = SessionService.create(db, {
-        agent: "default",
         title: "Test",
       });
 
@@ -244,7 +243,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<SessionResponse & { archivedAt?: number }>;
       expect(body.data.status).toBe("archived");
       expect(body.data.archivedAt).toBeDefined();
     });
@@ -254,7 +253,6 @@ describe("Sessions API Routes", () => {
     it("soft deletes a session", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const created = SessionService.create(db, {
-        agent: "default",
         title: "To Delete",
       });
 
@@ -267,7 +265,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<{ deleted: boolean }>;
       expect(body.data.deleted).toBe(true);
 
       // Verify session is soft deleted
@@ -291,7 +289,6 @@ describe("Sessions API Routes", () => {
     it("returns empty list for session with no messages", async () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
       const session = SessionService.create(db, {
-        agent: "default",
         title: "Empty Session",
       });
 
@@ -301,7 +298,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<MessageResponse>;
       expect(body.data).toEqual([]);
       expect(body.meta.total).toBe(0);
     });
@@ -313,7 +310,7 @@ describe("Sessions API Routes", () => {
 
       expect(response.status).toBe(404);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("NOT_FOUND");
     });
   });

@@ -7,6 +7,13 @@ import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { ProjectService } from "@/services/projects.ts";
+import type {
+  ListResponse,
+  ItemResponse,
+  ErrorResponse,
+  ProjectResponse,
+  MemberResponse,
+} from "../../../utils/response-types.ts";
 import fs from "fs";
 import path from "path";
 
@@ -70,7 +77,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<ProjectResponse>;
       expect(body.data).toEqual([]);
       expect(body.meta.total).toBe(0);
     });
@@ -86,7 +93,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<ProjectResponse>;
       expect(body.data.length).toBe(2);
       expect(body.meta.total).toBe(3);
       expect(body.meta.hasMore).toBe(true);
@@ -102,9 +109,9 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<ProjectResponse>;
       expect(body.data.length).toBe(1);
-      expect(body.data[0].name).toBe("User 1 Project");
+      expect(body.data[0]!.name).toBe("User 1 Project");
     });
 
     it("filters by memberId", async () => {
@@ -120,9 +127,9 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<ProjectResponse>;
       expect(body.data.length).toBe(1);
-      expect(body.data[0].name).toBe("Shared Project");
+      expect(body.data[0]!.name).toBe("Shared Project");
     });
   });
 
@@ -139,7 +146,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<ProjectResponse>;
       expect(body.data.id).toMatch(/^prj_/);
       expect(body.data.name).toBe("New Project");
       expect(body.data.ownerId).toBe(testUserId);
@@ -164,7 +171,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<ProjectResponse>;
       expect(body.data.description).toBe("A complete project");
       expect(body.data.type).toBe("remote");
       expect(body.data.color).toBe("#FF0000");
@@ -181,7 +188,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
@@ -196,7 +203,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
   });
@@ -213,7 +220,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<ProjectResponse>;
       expect(body.data.id).toBe(created.id);
       expect(body.data.name).toBe("Test Project");
     });
@@ -223,7 +230,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(404);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("NOT_FOUND");
     });
   });
@@ -246,7 +253,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<ProjectResponse>;
       expect(body.data.name).toBe("Updated Name");
     });
 
@@ -269,7 +276,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<ProjectResponse>;
       expect(body.data.name).toBe("New Name");
       expect(body.data.description).toBe("New description");
       expect(body.data.color).toBe("#00FF00");
@@ -302,7 +309,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<{ archived: boolean }>;
       expect(body.data.archived).toBe(true);
 
       // Verify project is archived
@@ -332,7 +339,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ListResponse<MemberResponse>;
       expect(body.data.length).toBe(2);
       expect(body.meta.total).toBe(2);
     });
@@ -363,7 +370,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<MemberResponse>;
       expect(body.data.userId).toBe(testUserId2);
       expect(body.data.role).toBe("member");
     });
@@ -387,7 +394,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(409);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("CONFLICT");
     });
   });
@@ -414,7 +421,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<MemberResponse>;
       expect(body.data.role).toBe("admin");
     });
 
@@ -458,7 +465,7 @@ describe("Projects API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<{ removed: boolean }>;
       expect(body.data.removed).toBe(true);
     });
 

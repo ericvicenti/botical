@@ -20,7 +20,7 @@ export const ProjectCreateSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   ownerId: z.string().min(1),
-  type: z.enum(["local", "remote"]).default("local"),
+  type: z.enum(["local", "remote"]).optional().default("local"),
   path: z.string().optional(),
   gitRemote: z.string().url().optional(),
   iconUrl: z.string().url().optional(),
@@ -28,7 +28,7 @@ export const ProjectCreateSchema = z.object({
   settings: z.record(z.unknown()).optional(),
 });
 
-export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>;
+export type ProjectCreateInput = z.input<typeof ProjectCreateSchema>;
 
 /**
  * Project update input schema

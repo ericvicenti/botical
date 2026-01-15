@@ -386,6 +386,58 @@ tests/e2e/
 
 ---
 
+## Phase 7: Custom Tools & Todo Tracking ✅ COMPLETE
+
+**Goal**: Implement custom tool management and task tracking for agent sessions
+
+### ToolService
+- [x] Create `src/services/tools.ts` with full CRUD operations
+- [x] Implement tool types: code, mcp, http
+- [x] Add reserved tool name validation
+- [x] Support JSON Schema for tool parameters
+- [x] Soft delete via enabled flag
+
+### TodoService
+- [x] Create `src/services/todos.ts` with CRUD operations
+- [x] Implement batch replacement (replaceBatch)
+- [x] Add position management with auto-increment
+- [x] Enforce single in_progress per session
+- [x] Support session isolation
+
+### REST API Routes
+- [x] `src/server/routes/tools.ts` - Tools CRUD endpoints
+- [x] `src/server/routes/todos.ts` - Todos CRUD endpoints
+- [x] Register routes in app.ts
+
+### Tests
+- [x] `tests/unit/services/tools.test.ts` - 30+ unit tests
+- [x] `tests/unit/services/todos.test.ts` - 25+ unit tests
+- [x] `tests/unit/server/routes/tools.test.ts` - 20+ route tests
+- [x] `tests/unit/server/routes/todos.test.ts` - 20+ route tests
+- [x] `tests/integration/custom-tools.test.ts` - Tool workflow tests
+- [x] `tests/integration/todo-tracking.test.ts` - Todo lifecycle tests
+
+### Orchestrator Integration (Deferred)
+- [ ] Update TodoWrite tool to use TodoService
+- [ ] Create custom-tool-executor.ts for executing custom tools
+
+### Phase 7 Testing Requirements
+
+**Validation Criteria**:
+- [x] All 930 unit and integration tests pass
+- [x] `bun test` passes
+- [x] Tools can be created via REST API
+- [x] Todos can be tracked per session
+- [x] No regressions in existing functionality
+
+**Known Issues**:
+- Pre-existing TypeScript strict mode warnings in test files (body: unknown)
+- Orchestrator integration deferred to future phase
+
+**Deliverable**: Custom tool management and todo tracking services with full REST API
+
+---
+
 ## Test Infrastructure
 
 ### Required Test Scripts

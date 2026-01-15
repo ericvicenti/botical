@@ -15,7 +15,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleError, logger, requestId } from "./middleware/index.ts";
-import { health, auth, credentials, sessions, messages, agents, projects } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -57,8 +57,11 @@ export function createApp() {
   // API routes
   app.route("/api/projects", projects);
   app.route("/api/sessions", sessions);
+  app.route("/api/sessions", sessionTodos); // Session-scoped todo routes
   app.route("/api/messages", messages);
   app.route("/api/agents", agents);
+  app.route("/api/tools", tools);
+  app.route("/api/todos", todos);
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

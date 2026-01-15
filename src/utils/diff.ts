@@ -58,8 +58,9 @@ export function applyPatch(content: string, patch: Patch): string {
       case "keep":
         // Advance through kept lines
         for (let i = 0; i < op.lines.length; i++) {
-          if (lineIndex < lines.length) {
-            result.push(lines[lineIndex]);
+          const line = lines[lineIndex];
+          if (lineIndex < lines.length && line !== undefined) {
+            result.push(line);
             lineIndex++;
           }
         }
@@ -192,9 +193,9 @@ function diffLines(oldLines: string[], newLines: string[]): DiffOp[] {
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       if (oldLines[i - 1] === newLines[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
+        dp[i]![j] = dp[i - 1]![j - 1]! + 1;
       } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
       }
     }
   }
@@ -209,14 +210,14 @@ function diffLines(oldLines: string[], newLines: string[]): DiffOp[] {
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      reverseOps.push({ op: "keep", lines: [oldLines[i - 1]] });
+      reverseOps.push({ op: "keep", lines: [oldLines[i - 1]!] });
       i--;
       j--;
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      reverseOps.push({ op: "insert", lines: [newLines[j - 1]] });
+    } else if (j > 0 && (i === 0 || dp[i]![j - 1]! >= dp[i - 1]![j]!)) {
+      reverseOps.push({ op: "insert", lines: [newLines[j - 1]!] });
       j--;
     } else {
-      reverseOps.push({ op: "delete", lines: [oldLines[i - 1]] });
+      reverseOps.push({ op: "delete", lines: [oldLines[i - 1]!] });
       i--;
     }
   }
@@ -241,7 +242,7 @@ function diffLinesGreedy(oldLines: string[], newLines: string[]): DiffOp[] {
       newIdx < newLines.length &&
       oldLines[oldIdx] === newLines[newIdx]
     ) {
-      keepLines.push(oldLines[oldIdx]);
+      keepLines.push(oldLines[oldIdx]!);
       oldIdx++;
       newIdx++;
     }
@@ -271,11 +272,11 @@ function diffLinesGreedy(oldLines: string[], newLines: string[]): DiffOp[] {
         if (oldLines[o] === newLines[newIdx + delta]) {
           // Delete lines from old up to o
           for (let i = oldIdx; i < o; i++) {
-            deleteLines.push(oldLines[i]);
+            deleteLines.push(oldLines[i]!);
           }
           // Insert lines from new up to newIdx + delta
           for (let i = newIdx; i < newIdx + delta; i++) {
-            insertLines.push(newLines[i]);
+            insertLines.push(newLines[i]!);
           }
           oldLookAhead = o;
           newLookAhead = newIdx + delta;
@@ -293,11 +294,11 @@ function diffLinesGreedy(oldLines: string[], newLines: string[]): DiffOp[] {
           if (newLines[n] === oldLines[oldIdx + delta]) {
             // Delete lines from old up to oldIdx + delta
             for (let i = oldIdx; i < oldIdx + delta; i++) {
-              deleteLines.push(oldLines[i]);
+              deleteLines.push(oldLines[i]!);
             }
             // Insert lines from new up to n
             for (let i = newIdx; i < n; i++) {
-              insertLines.push(newLines[i]);
+              insertLines.push(newLines[i]!);
             }
             oldLookAhead = oldIdx + delta;
             newLookAhead = n;
@@ -311,10 +312,10 @@ function diffLinesGreedy(oldLines: string[], newLines: string[]): DiffOp[] {
     if (!foundCommon) {
       // No common line found within look-ahead, treat rest as delete+insert
       while (oldIdx < oldLines.length) {
-        deleteLines.push(oldLines[oldIdx++]);
+        deleteLines.push(oldLines[oldIdx++]!);
       }
       while (newIdx < newLines.length) {
-        insertLines.push(newLines[newIdx++]);
+        insertLines.push(newLines[newIdx++]!);
       }
     } else {
       oldIdx = oldLookAhead;
@@ -338,11 +339,12 @@ function diffLinesGreedy(oldLines: string[], newLines: string[]): DiffOp[] {
 function mergeOps(ops: DiffOp[]): DiffOp[] {
   if (ops.length === 0) return [];
 
+  const firstOp = ops[0]!;
   const merged: DiffOp[] = [];
-  let current: DiffOp = { ...ops[0], lines: [...ops[0].lines] };
+  let current: DiffOp = { ...firstOp, lines: [...firstOp.lines] };
 
   for (let i = 1; i < ops.length; i++) {
-    const op = ops[i];
+    const op = ops[i]!;
     if (op.op === current.op) {
       current.lines.push(...op.lines);
     } else {

@@ -7,8 +7,22 @@ import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { AgentService } from "@/services/agents.ts";
+import type {
+  ItemResponse,
+  ErrorResponse,
+  AgentResponse,
+} from "../../../utils/response-types.ts";
 import fs from "fs";
 import path from "path";
+
+interface AgentListResponse {
+  data: Array<AgentResponse & { isBuiltin: boolean; mode: string }>;
+  meta: {
+    total: number;
+    builtinCount: number;
+    customCount: number;
+  };
+}
 
 describe("Agents API Routes", () => {
   const testDataDir = path.join(
@@ -47,16 +61,14 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as AgentListResponse;
       expect(body.data.length).toBeGreaterThan(0);
       expect(body.meta.builtinCount).toBeGreaterThan(0);
 
       // Check that default agent exists
-      const defaultAgent = body.data.find(
-        (a: { name: string }) => a.name === "default"
-      );
+      const defaultAgent = body.data.find((a) => a.name === "default");
       expect(defaultAgent).toBeDefined();
-      expect(defaultAgent.isBuiltin).toBe(true);
+      expect(defaultAgent!.isBuiltin).toBe(true);
     });
 
     it("returns both built-in and custom agents with projectId", async () => {
@@ -73,14 +85,12 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as AgentListResponse;
       expect(body.meta.customCount).toBe(1);
 
-      const customAgent = body.data.find(
-        (a: { name: string }) => a.name === "custom-agent"
-      );
+      const customAgent = body.data.find((a) => a.name === "custom-agent");
       expect(customAgent).toBeDefined();
-      expect(customAgent.isBuiltin).toBe(false);
+      expect(customAgent!.isBuiltin).toBe(false);
     });
 
     it("filters by mode", async () => {
@@ -88,7 +98,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as AgentListResponse;
       // All returned agents should be usable as primary
       for (const agent of body.data) {
         expect(agent.mode === "primary" || agent.mode === "all").toBe(true);
@@ -108,7 +118,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as AgentListResponse;
       expect(body.meta.customCount).toBe(0);
     });
 
@@ -125,7 +135,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as AgentListResponse;
       expect(body.meta.builtinCount).toBe(0);
       expect(body.meta.customCount).toBe(1);
     });
@@ -147,7 +157,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<AgentResponse & { isBuiltin: boolean }>;
       expect(body.data.name).toBe("my-custom-agent");
       expect(body.data.description).toBe("A custom agent for testing");
       expect(body.data.isBuiltin).toBe(false);
@@ -166,7 +176,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
       expect(body.error.message).toContain("reserved");
     });
@@ -184,7 +194,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
@@ -208,7 +218,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<AgentResponse & { isBuiltin: boolean }>;
       expect(body.data.name).toBe("default");
       expect(body.data.isBuiltin).toBe(true);
     });
@@ -226,7 +236,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<AgentResponse & { isBuiltin: boolean }>;
       expect(body.data.name).toBe("my-agent");
       expect(body.data.isBuiltin).toBe(false);
     });
@@ -236,7 +246,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.message).toContain("not found");
     });
   });
@@ -261,7 +271,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<AgentResponse>;
       expect(body.data.description).toBe("Updated description");
     });
 
@@ -277,7 +287,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(403);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("FORBIDDEN");
     });
 
@@ -299,7 +309,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(400);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.message).toContain("reserved");
     });
   });
@@ -321,7 +331,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as ItemResponse<{ deleted: boolean }>;
       expect(body.data.deleted).toBe(true);
 
       // Verify agent is deleted
@@ -339,7 +349,7 @@ describe("Agents API Routes", () => {
 
       expect(response.status).toBe(403);
 
-      const body = await response.json();
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error.code).toBe("FORBIDDEN");
     });
 

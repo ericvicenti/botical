@@ -652,6 +652,7 @@ export class FileService {
 
     // Find the first version (should have full content)
     const firstVersion = versions[0];
+    if (!firstVersion) return null;
 
     // Get full content from first version
     const contentRow = db
@@ -668,6 +669,7 @@ export class FileService {
     // Apply patches from version 2 onwards
     for (let i = 1; i < versions.length; i++) {
       const version = versions[i];
+      if (!version) continue;
       if (version.patch) {
         const patch = deserializePatch(version.patch);
         content = applyPatch(content, patch);
