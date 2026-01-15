@@ -15,7 +15,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleError, logger, requestId } from "./middleware/index.ts";
-import { health, auth, credentials, sessions, messages, agents } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -55,6 +55,7 @@ export function createApp() {
   app.route("/credentials", credentials);
 
   // API routes
+  app.route("/api/projects", projects);
   app.route("/api/sessions", sessions);
   app.route("/api/messages", messages);
   app.route("/api/agents", agents);

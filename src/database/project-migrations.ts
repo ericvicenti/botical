@@ -234,4 +234,38 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 2,
+    name: "add_file_content",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- FILE CONTENT
+        -- Stores full content for version 1 of files
+        -- ============================================
+
+        CREATE TABLE file_content (
+          id TEXT PRIMARY KEY,
+          version_id TEXT NOT NULL REFERENCES file_versions(id),
+          content TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_file_content_version ON file_content(version_id);
+
+        -- ============================================
+        -- SNAPSHOT FILES
+        -- Tracks which files/versions are in each snapshot
+        -- ============================================
+
+        CREATE TABLE snapshot_files (
+          snapshot_id TEXT NOT NULL REFERENCES snapshots(id),
+          file_id TEXT NOT NULL REFERENCES files(id),
+          version INTEGER NOT NULL,
+          PRIMARY KEY (snapshot_id, file_id)
+        );
+
+        CREATE INDEX idx_snapshot_files_snapshot ON snapshot_files(snapshot_id);
+      `);
+    },
+  },
 ];

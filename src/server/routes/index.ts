@@ -4,3 +4,4 @@ export { credentials } from "./credentials.ts";
 export { sessions } from "./sessions.ts";
 export { messages } from "./messages.ts";
 export { agents } from "./agents.ts";
+export { projects } from "./projects.ts";
