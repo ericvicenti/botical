@@ -141,4 +141,66 @@ export const ROOT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 2,
+    name: "auth_magic_link",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- USER TRUST LEVELS
+        -- ============================================
+        -- Add columns for admin status and code execution permission
+        -- First registered user becomes admin automatically
+
+        ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN can_execute_code INTEGER NOT NULL DEFAULT 0;
+
+        -- ============================================
+        -- EMAIL VERIFICATION TOKENS
+        -- ============================================
+        -- Used for magic link authentication
+        -- Tokens are hashed, expire after 15 minutes
+
+        CREATE TABLE email_verification_tokens (
+          id TEXT PRIMARY KEY,
+          email TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          token_type TEXT NOT NULL DEFAULT 'magic_link',
+          user_id TEXT REFERENCES users(id),
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          used_at INTEGER,
+          ip_address TEXT,
+          user_agent TEXT
+        );
+
+        CREATE INDEX idx_email_tokens_hash ON email_verification_tokens(token_hash);
+        CREATE INDEX idx_email_tokens_email ON email_verification_tokens(email);
+        CREATE INDEX idx_email_tokens_expires ON email_verification_tokens(expires_at);
+
+        -- ============================================
+        -- AUTH SESSIONS
+        -- ============================================
+        -- Database-backed sessions for immediate revocation capability
+        -- 7-day expiry, tokens hashed with SHA-256
+
+        CREATE TABLE auth_sessions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          token_hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          last_activity_at INTEGER NOT NULL,
+          ip_address TEXT,
+          user_agent TEXT,
+          revoked_at INTEGER,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_auth_sessions_token ON auth_sessions(token_hash);
+        CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
+        CREATE INDEX idx_auth_sessions_expires ON auth_sessions(expires_at);
+      `);
+    },
+  },
 ];

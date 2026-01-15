@@ -21,12 +21,22 @@ import { z } from "zod";
  * See: docs/knowledge-base/01-architecture.md#zod
  */
 const ConfigSchema = z.object({
+  // Server settings
   dataDir: z.string(),
   port: z.number().default(4096),
   host: z.string().default("localhost"),
-  logLevel: z
-    .enum(["debug", "info", "warn", "error"])
-    .default("info"),
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+
+  // Environment
+  nodeEnv: z.enum(["development", "production", "test"]).default("development"),
+
+  // Auth & Email settings
+  appUrl: z.string().url().default("http://localhost:4096"),
+  resendApiKey: z.string().optional(),
+  emailFrom: z.string().email().optional(),
+
+  // Security
+  encryptionKey: z.string().optional(),
 });
 
 export type ConfigOptions = z.infer<typeof ConfigSchema>;
@@ -62,12 +72,24 @@ class ConfigManager {
    */
   load(overrides: Partial<ConfigOptions> = {}): ConfigOptions {
     const envConfig = {
+      // Server settings
       dataDir: process.env.IRIS_DATA_DIR || getDefaultDataDir(),
       port: process.env.IRIS_PORT
         ? parseInt(process.env.IRIS_PORT, 10)
         : undefined,
       host: process.env.IRIS_HOST,
       logLevel: process.env.IRIS_LOG_LEVEL as ConfigOptions["logLevel"],
+
+      // Environment
+      nodeEnv: process.env.NODE_ENV as ConfigOptions["nodeEnv"],
+
+      // Auth & Email
+      appUrl: process.env.APP_URL,
+      resendApiKey: process.env.RESEND_API_KEY,
+      emailFrom: process.env.EMAIL_FROM,
+
+      // Security
+      encryptionKey: process.env.IRIS_ENCRYPTION_KEY,
     };
 
     // Remove undefined values

@@ -16,14 +16,16 @@ ROOT DATABASE
 │ id          │       │ project_id       │       │ id          │
 │ email       │       │ user_id          │       │ name        │
 │ username    │       │ role             │       │ owner_id ───┼───┐
-│ password_   │       │ permissions      │       │ type        │   │
-│   hash      │       │ joined_at        │       │ path        │   │
-│ preferences │       └──────────────────┘       │ settings    │   │
-└─────┬───────┘                                  └─────────────┘   │
+│ is_admin    │       │ permissions      │       │ type        │   │
+│ can_execute │       │ joined_at        │       │ path        │   │
+│   _code     │       └──────────────────┘       │ settings    │   │
+│ preferences │                                  └─────────────┘   │
+└─────┬───────┘                                                    │
       │                                                            │
       │ 1:N                                               owns 1:N │
-      │                                                            │
-      ▼                                                            │
+      ├────────────────────────────┐                               │
+      │                            │                               │
+      ▼                            ▼                               │
 ┌─────────────┐       ┌──────────────────┐                        │
 │  api_keys   │       │provider_creds    │<───────────────────────┘
 │             │       │                  │
@@ -33,6 +35,18 @@ ROOT DATABASE
 │ project_id? │       │ api_key_encrypted│
 │ permissions │       └──────────────────┘
 └─────────────┘
+
+┌──────────────────┐       ┌──────────────────┐
+│email_verification│       │  auth_sessions   │
+│     _tokens      │       │                  │
+│                  │       │ id               │
+│ id               │       │ user_id          │
+│ email            │       │ token_hash       │
+│ token_hash       │       │ expires_at       │
+│ user_id?         │       │ last_activity_at │
+│ expires_at       │       │ revoked_at       │
+│ used_at          │       └──────────────────┘
+└──────────────────┘
 
 
 PROJECT DATABASE (one per project)
@@ -107,13 +121,12 @@ Represents an authenticated user of the system.
 **Schema:**
 ```typescript
 const User = z.object({
-  id: z.string().uuid(),
-  email: z.string().email().nullable(),
+  id: z.string(),
+  email: z.string().email(),
   username: z.string().min(1).max(50),
-  passwordHash: z.string().nullable(),
   avatarUrl: z.string().url().nullable(),
-  oauthProvider: z.enum(['github', 'google']).nullable(),
-  oauthId: z.string().nullable(),
+  isAdmin: z.boolean().default(false),
+  canExecuteCode: z.boolean().default(false),
   preferences: z.record(z.unknown()).default({}),
   createdAt: z.number(),
   updatedAt: z.number(),
@@ -121,11 +134,75 @@ const User = z.object({
 });
 ```
 
+**Trust Levels:**
+| Level | isAdmin | canExecuteCode | Capabilities |
+|-------|---------|----------------|--------------|
+| Admin | true | true | Full access, code execution, manage users |
+| Trusted | false | true | Code execution, full project access |
+| Regular | false | false | Read/write projects, no code execution |
+
+The **first registered user** automatically becomes an admin.
+
 **Relationships:**
 - Owns many Projects (1:N)
 - Member of many Projects via ProjectMember (N:M)
 - Has many ApiKeys (1:N)
 - Has many ProviderCredentials (1:N)
+- Has many AuthSessions (1:N)
+- Has many EmailVerificationTokens (1:N)
+
+---
+
+### Email Verification Token
+
+Used for magic link authentication.
+
+**Schema:**
+```typescript
+const EmailVerificationToken = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  tokenHash: z.string(),
+  tokenType: z.enum(['magic_link', 'email_change']).default('magic_link'),
+  userId: z.string().nullable(),  // null for new user registration
+  createdAt: z.number(),
+  expiresAt: z.number(),
+  usedAt: z.number().nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+});
+```
+
+**Behavior:**
+- Tokens expire after 15 minutes
+- Token hash is SHA-256 of the raw token
+- Once used, `usedAt` is set to prevent reuse
+
+---
+
+### Auth Session
+
+Database-backed authentication session for immediate revocation.
+
+**Schema:**
+```typescript
+const AuthSession = z.object({
+  id: z.string(),
+  userId: z.string(),
+  tokenHash: z.string(),
+  createdAt: z.number(),
+  expiresAt: z.number(),
+  lastActivityAt: z.number(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  revokedAt: z.number().nullable(),
+});
+```
+
+**Behavior:**
+- Sessions expire after 7 days
+- `lastActivityAt` updated on each validated request
+- Can be immediately revoked by setting `revokedAt`
 
 ---
 

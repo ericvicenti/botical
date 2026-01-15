@@ -123,6 +123,10 @@ export const IdPrefixes = {
   snapshot: "snap",
   apiKey: "key",
   permission: "perm",
+  // Auth-related prefixes
+  emailToken: "emltkn",
+  authSession: "authsess",
+  providerCredential: "cred",
 } as const;
 
 export type IdPrefix = (typeof IdPrefixes)[keyof typeof IdPrefixes];

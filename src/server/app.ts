@@ -15,7 +15,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleError, logger, requestId } from "./middleware/index.ts";
-import { health } from "./routes/index.ts";
+import { health, auth, credentials } from "./routes/index.ts";
 
 /**
  * Create the Hono application with middleware and routes.
@@ -50,6 +50,8 @@ export function createApp() {
 
   // Mount routes
   app.route("/health", health);
+  app.route("/auth", auth);
+  app.route("/credentials", credentials);
 
   // API routes (placeholder for future)
   app.get("/api", (c) => {

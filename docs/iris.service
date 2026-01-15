@@ -1,0 +1,41 @@
+[Unit]
+Description=Iris AI Agent Server
+Documentation=https://github.com/your-org/iris
+After=network.target
+
+[Service]
+Type=simple
+User=iris
+Group=iris
+WorkingDirectory=/opt/iris
+EnvironmentFile=/etc/iris/.env
+ExecStart=/home/iris/.bun/bin/bun run src/index.ts
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/iris
+
+# Resource limits
+LimitNOFILE=65535
+MemoryMax=2G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iris
+
+[Install]
+WantedBy=multi-user.target

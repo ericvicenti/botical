@@ -397,16 +397,24 @@ tests/performance/
 
 **Goal**: Authentication and basic collaboration
 
-### Authentication
-- [ ] Implement user registration
-- [ ] Create login with email/password
-- [ ] Add JWT token generation/verification
-- [ ] Implement API key system
+### Magic Link Authentication
+- [ ] Implement email-based magic link flow
+- [ ] Create email service with Resend integration
+- [ ] Add dev mode console logging for magic links
+- [ ] Implement database-backed sessions (revocable)
+- [ ] Add first-user-becomes-admin logic
 
-### OAuth Integration
-- [ ] Add GitHub OAuth provider
-- [ ] Add Google OAuth provider
-- [ ] Implement account linking
+### User Trust Levels
+- [ ] Add is_admin and can_execute_code columns
+- [ ] Implement permission middleware (requireAuth, requireAdmin, requireCodeExecution)
+- [ ] First registered user automatically becomes admin
+- [ ] API key system for programmatic access
+
+### Per-User Provider Credentials
+- [ ] Implement encrypted storage for AI provider API keys
+- [ ] Support OpenAI, Anthropic, Google providers
+- [ ] Credential CRUD endpoints
+- [ ] AES-256-GCM encryption for stored keys
 
 ### Project Members
 - [ ] Implement member invitation system
@@ -426,13 +434,14 @@ tests/performance/
 ```
 tests/unit/
 ├── auth/
-│   ├── registration.test.ts     # User registration
-│   ├── login.test.ts            # Password login
-│   ├── jwt.test.ts              # Token handling
+│   ├── magic-link.test.ts       # Token generation, verification, expiry
+│   ├── session.test.ts          # Session CRUD, validation, revocation
+│   ├── middleware.test.ts       # Auth extraction, permission checks
 │   └── api-keys.test.ts         # API key management
-├── oauth/
-│   ├── github.test.ts           # GitHub OAuth
-│   └── google.test.ts           # Google OAuth
+├── services/
+│   ├── email.test.ts            # Dev mode logging, Resend mock
+│   ├── crypto.test.ts           # Encryption round-trip
+│   └── provider-credentials.test.ts # Credential CRUD
 ├── members/
 │   ├── invitation.test.ts       # Invite flow
 │   └── roles.test.ts            # Role permissions
@@ -443,8 +452,9 @@ tests/unit/
 **Integration Tests**:
 ```
 tests/integration/
-├── auth-flow.test.ts            # Full auth lifecycle
-├── oauth-flow.test.ts           # OAuth round-trip
+├── auth-flow.test.ts            # Full magic link -> session flow
+├── first-user-admin.test.ts     # First user becomes admin
+├── provider-credentials.test.ts # Credential storage/retrieval
 ├── member-access.test.ts        # Role-based access
 └── presence-broadcast.test.ts   # Presence events
 ```
@@ -452,20 +462,24 @@ tests/integration/
 **Security Tests**:
 ```
 tests/security/
-├── password-hashing.test.ts     # Passwords properly hashed
-├── token-validation.test.ts     # Invalid tokens rejected
+├── token-security.test.ts       # Tokens not guessable, properly hashed
+├── session-expiry.test.ts       # Sessions expire correctly
+├── encryption.test.ts           # Keys encrypted, not leaked
+├── permission-enforcement.test.ts # Code execution blocked for non-admins
 ├── role-enforcement.test.ts     # Roles actually enforced
 └── api-key-security.test.ts     # API keys secure
 ```
 
 **Validation Criteria**:
-- [ ] Registration/login works end-to-end
-- [ ] JWT tokens properly signed and validated
-- [ ] OAuth flow completes (manual test with real providers)
+- [ ] Magic link flow works end-to-end
+- [ ] Dev mode logs magic links to console
+- [ ] First user becomes admin automatically
+- [ ] Non-admin users blocked from code execution endpoints
+- [ ] Provider credentials encrypted at rest
 - [ ] Role permissions enforced correctly
 - [ ] Presence updates broadcast to all connected users
 
-**Deliverable**: Multi-user access with role-based permissions
+**Deliverable**: Multi-user access with role-based permissions and per-user AI provider keys
 
 ---
 

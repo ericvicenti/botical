@@ -143,6 +143,8 @@ bun test tests/unit/auth/
 
 ## Completion Workflow
 
+**CRITICAL: A task is NOT complete until changes are committed.**
+
 **After completing any implementation task, follow this workflow:**
 
 1. **Run all validations**
@@ -175,11 +177,12 @@ bun test tests/unit/auth/
    bun run typecheck && bun run test
    ```
 
-6. **Commit changes** - Once all validations pass:
+6. **ALWAYS Commit changes** - This step is MANDATORY:
    ```bash
    git add -A
    git commit -m "descriptive message"
    ```
+   **Never consider a task "done" without committing. Uncommitted work is lost work.**
 
 **Important:** Always run validations after refactoring to catch regressions. Never commit code that fails typecheck or tests.
 

@@ -3,6 +3,7 @@
 ## Overview
 
 Iris supports multiple users working on the same project with:
+- Email-based magic link authentication (passwordless)
 - Real-time presence awareness
 - Session sharing and collaborative viewing
 - Role-based access control
@@ -10,164 +11,206 @@ Iris supports multiple users working on the same project with:
 
 ## Authentication System
 
-### Auth Service
+### Magic Link Authentication
+
+Iris uses passwordless email-based authentication with magic links. This provides:
+- No passwords to remember or manage
+- Reduced attack surface (no password database)
+- Simple user experience
+- Dev mode console logging for local development
 
 ```typescript
-// src/auth/service.ts
-import { z } from 'zod';
-import { sign, verify } from './jwt';
-import { hash, compare } from 'bcrypt';
+// src/auth/magic-link.ts
 import { DatabaseManager } from '../database';
+import { hashSha256, generateSecureToken } from '../services/crypto';
+import { EmailService } from '../services/email';
 
-export const AuthCredentials = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
+const MAGIC_LINK_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 
-export const AuthToken = z.object({
-  sub: z.string(),          // User ID
-  email: z.string(),
-  username: z.string(),
-  iat: z.number(),
-  exp: z.number(),
-});
+export class MagicLinkService {
+  // Request a magic link for the given email
+  static async request(
+    email: string,
+    metadata?: { ipAddress?: string; userAgent?: string }
+  ): Promise<void> {
+    const db = DatabaseManager.getRootDb();
+    const normalizedEmail = email.toLowerCase().trim();
 
-export class AuthService {
-  // Register new user
-  static async register(input: {
-    email: string;
-    username: string;
-    password: string;
-  }): Promise<User> {
-    const rootDb = DatabaseManager.getRootDb();
+    // Generate secure random token
+    const token = generateSecureToken(32);
+    const tokenHash = hashSha256(token);
 
-    // Check for existing user
-    const existing = rootDb.prepare(
-      'SELECT id FROM users WHERE email = ? OR username = ?'
-    ).get(input.email, input.username);
+    // Check if user exists
+    const existingUser = db.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).get(normalizedEmail);
 
-    if (existing) {
-      throw new ConflictError('User already exists');
-    }
+    // Store token with expiry
+    db.prepare(`
+      INSERT INTO email_verification_tokens
+      (id, email, token_hash, token_type, user_id, created_at, expires_at, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      generateId('emltkn'),
+      normalizedEmail,
+      tokenHash,
+      'magic_link',
+      existingUser?.id ?? null,
+      Date.now(),
+      Date.now() + MAGIC_LINK_EXPIRY_MS,
+      metadata?.ipAddress ?? null,
+      metadata?.userAgent ?? null
+    );
 
-    const id = generateId('user');
-    const passwordHash = await hash(input.password, 12);
-
-    rootDb.prepare(`
-      INSERT INTO users (id, email, username, password_hash, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, input.email, input.username, passwordHash, Date.now(), Date.now());
-
-    return this.getUser(id)!;
+    // Send email (or log in dev mode)
+    await EmailService.sendMagicLink(normalizedEmail, token);
   }
 
-  // Login with email/password
-  static async login(input: z.infer<typeof AuthCredentials>): Promise<AuthResult> {
-    const rootDb = DatabaseManager.getRootDb();
+  // Verify a magic link token and return/create user
+  static verify(
+    token: string,
+    metadata?: { ipAddress?: string; userAgent?: string }
+  ): { userId: string; isNewUser: boolean; isAdmin: boolean } {
+    const db = DatabaseManager.getRootDb();
+    const tokenHash = hashSha256(token);
 
-    const user = rootDb.prepare(
-      'SELECT * FROM users WHERE email = ?'
-    ).get(input.email);
+    // Find valid token
+    const tokenRecord = db.prepare(`
+      SELECT * FROM email_verification_tokens
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+    `).get(tokenHash, Date.now());
 
-    if (!user || !user.password_hash) {
-      throw new AuthError('Invalid credentials');
+    if (!tokenRecord) {
+      throw new AuthenticationError('Invalid or expired magic link');
     }
 
-    const valid = await compare(input.password, user.password_hash);
-    if (!valid) {
-      throw new AuthError('Invalid credentials');
-    }
+    // Mark token as used
+    db.prepare('UPDATE email_verification_tokens SET used_at = ? WHERE id = ?')
+      .run(Date.now(), tokenRecord.id);
 
-    // Update last login
-    rootDb.prepare(
-      'UPDATE users SET last_login_at = ? WHERE id = ?'
-    ).run(Date.now(), user.id);
+    // Find or create user
+    let userId: string;
+    let isNewUser = false;
+    let isAdmin = false;
 
-    const token = await this.createToken(user);
+    if (tokenRecord.user_id) {
+      userId = tokenRecord.user_id;
+      const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(userId);
+      isAdmin = Boolean(user?.is_admin);
+    } else {
+      // Create new user - check if first user
+      isNewUser = true;
+      userId = generateId('usr');
 
-    return {
-      user: this.toUser(user),
-      token,
-    };
-  }
+      const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
+      const isFirstUser = userCount.count === 0;
+      isAdmin = isFirstUser;
 
-  // OAuth login/registration
-  static async oauthLogin(input: {
-    provider: 'github' | 'google';
-    providerId: string;
-    email: string;
-    username: string;
-    avatar?: string;
-  }): Promise<AuthResult> {
-    const rootDb = DatabaseManager.getRootDb();
+      // Generate username from email
+      const username = tokenRecord.email.split('@')[0] + '_' + randomHex(4);
 
-    // Find existing OAuth user
-    let user = rootDb.prepare(
-      'SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?'
-    ).get(input.provider, input.providerId);
-
-    if (!user) {
-      // Check if email already registered
-      user = rootDb.prepare(
-        'SELECT * FROM users WHERE email = ?'
-      ).get(input.email);
-
-      if (user) {
-        // Link OAuth to existing account
-        rootDb.prepare(`
-          UPDATE users SET oauth_provider = ?, oauth_id = ?, updated_at = ?
-          WHERE id = ?
-        `).run(input.provider, input.providerId, Date.now(), user.id);
-      } else {
-        // Create new user
-        const id = generateId('user');
-        rootDb.prepare(`
-          INSERT INTO users (id, email, username, oauth_provider, oauth_id, avatar_url, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, input.email, input.username, input.provider, input.providerId, input.avatar, Date.now(), Date.now());
-
-        user = rootDb.prepare('SELECT * FROM users WHERE id = ?').get(id);
-      }
+      db.prepare(`
+        INSERT INTO users (id, email, username, is_admin, can_execute_code, preferences, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        userId,
+        tokenRecord.email,
+        username,
+        isFirstUser ? 1 : 0,
+        isFirstUser ? 1 : 0, // First user can execute code
+        '{}',
+        Date.now(),
+        Date.now()
+      );
     }
 
     // Update last login
-    rootDb.prepare(
-      'UPDATE users SET last_login_at = ? WHERE id = ?'
-    ).run(Date.now(), user.id);
+    db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(Date.now(), userId);
 
-    const token = await this.createToken(user);
+    return { userId, isNewUser, isAdmin };
+  }
+}
+```
 
-    return {
-      user: this.toUser(user),
-      token,
+### User Trust Levels
+
+Users have different trust levels that control their capabilities:
+
+| Trust Level | is_admin | can_execute_code | Capabilities |
+|-------------|----------|------------------|--------------|
+| Admin | true | true | Full access, code execution, manage users |
+| Trusted | false | true | Code execution, full project access |
+| Regular | false | false | Read/write projects, no code execution |
+
+The **first registered user** automatically becomes an admin.
+
+### Session Management
+
+Sessions are database-backed for immediate revocation:
+
+```typescript
+// src/auth/session.ts
+export class SessionService {
+  // Create a new session for a user
+  static create(
+    userId: string,
+    metadata?: { ipAddress?: string; userAgent?: string }
+  ): { session: AuthSession; token: string } {
+    const db = DatabaseManager.getRootDb();
+
+    const token = generateSecureToken(32);
+    const tokenHash = hashSha256(token);
+
+    const session = {
+      id: generateId('authsess'),
+      userId,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      lastActivityAt: Date.now(),
     };
+
+    db.prepare(`
+      INSERT INTO auth_sessions
+      (id, user_id, token_hash, created_at, expires_at, last_activity_at, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      session.id,
+      userId,
+      tokenHash,
+      session.createdAt,
+      session.expiresAt,
+      session.lastActivityAt,
+      metadata?.ipAddress ?? null,
+      metadata?.userAgent ?? null
+    );
+
+    return { session, token };
   }
 
-  // Create JWT token
-  private static async createToken(user: any): Promise<string> {
-    return sign({
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-    }, {
-      expiresIn: '7d',
-    });
+  // Validate a session token
+  static validate(token: string): AuthSession | null {
+    const db = DatabaseManager.getRootDb();
+    const tokenHash = hashSha256(token);
+
+    const row = db.prepare(`
+      SELECT * FROM auth_sessions
+      WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > ?
+    `).get(tokenHash, Date.now());
+
+    if (!row) return null;
+
+    // Update last activity
+    db.prepare('UPDATE auth_sessions SET last_activity_at = ? WHERE id = ?')
+      .run(Date.now(), row.id);
+
+    return rowToAuthSession(row);
   }
 
-  // Verify token
-  static async verifyToken(token: string): Promise<AuthToken | null> {
-    try {
-      return await verify(token);
-    } catch {
-      return null;
-    }
-  }
-
-  // Get user by ID
-  static async getUser(id: string): Promise<User | null> {
-    const rootDb = DatabaseManager.getRootDb();
-    const user = rootDb.prepare('SELECT * FROM users WHERE id = ?').get(id);
-    return user ? this.toUser(user) : null;
+  // Revoke a session
+  static revoke(sessionId: string): void {
+    const db = DatabaseManager.getRootDb();
+    db.prepare('UPDATE auth_sessions SET revoked_at = ? WHERE id = ?')
+      .run(Date.now(), sessionId);
   }
 }
 ```
@@ -176,28 +219,18 @@ export class AuthService {
 
 ```typescript
 // src/auth/api-keys.ts
-import { z } from 'zod';
-import { randomBytes, createHash } from 'crypto';
-
-export const ApiKeyCreate = z.object({
-  name: z.string().min(1).max(100),
-  projectId: z.string().optional(),
-  permissions: z.array(z.string()).default([]),
-  expiresIn: z.number().optional(), // Days
-});
-
 export class ApiKeyService {
   // Generate new API key
-  static async create(
+  static create(
     userId: string,
-    input: z.infer<typeof ApiKeyCreate>
-  ): Promise<{ apiKey: string; record: ApiKeyRecord }> {
+    input: { name: string; projectId?: string; permissions?: string[]; expiresIn?: number }
+  ): { apiKey: string; record: ApiKeyRecord } {
     const rootDb = DatabaseManager.getRootDb();
 
-    // Generate random key
+    // Generate random key with prefix
     const keyBytes = randomBytes(32);
     const apiKey = `iris_${keyBytes.toString('base64url')}`;
-    const keyHash = createHash('sha256').update(apiKey).digest('hex');
+    const keyHash = hashSha256(apiKey);
     const keyPrefix = apiKey.slice(0, 12);
 
     const id = generateId('key');
@@ -214,25 +247,21 @@ export class ApiKeyService {
       input.name,
       keyHash,
       keyPrefix,
-      input.projectId,
-      JSON.stringify(input.permissions),
+      input.projectId ?? null,
+      JSON.stringify(input.permissions ?? []),
       Date.now(),
       expiresAt
     );
 
-    const record = await this.get(id);
-
-    // Only return full key once
+    const record = this.get(id);
     return { apiKey, record: record! };
   }
 
   // Validate API key
-  static async validate(apiKey: string): Promise<ApiKeyValidation | null> {
-    if (!apiKey.startsWith('iris_')) {
-      return null;
-    }
+  static validate(apiKey: string): ApiKeyValidation | null {
+    if (!apiKey.startsWith('iris_')) return null;
 
-    const keyHash = createHash('sha256').update(apiKey).digest('hex');
+    const keyHash = hashSha256(apiKey);
     const rootDb = DatabaseManager.getRootDb();
 
     const record = rootDb.prepare(`
@@ -240,11 +269,7 @@ export class ApiKeyService {
     `).get(keyHash);
 
     if (!record) return null;
-
-    // Check expiration
-    if (record.expires_at && record.expires_at < Date.now()) {
-      return null;
-    }
+    if (record.expires_at && record.expires_at < Date.now()) return null;
 
     // Update usage
     rootDb.prepare(`
@@ -258,38 +283,110 @@ export class ApiKeyService {
       permissions: JSON.parse(record.permissions),
     };
   }
+}
+```
 
-  // Revoke API key
-  static async revoke(userId: string, keyId: string): Promise<void> {
-    const rootDb = DatabaseManager.getRootDb();
+## Email Service
 
-    const result = rootDb.prepare(`
-      UPDATE api_keys SET revoked_at = ? WHERE id = ? AND user_id = ?
-    `).run(Date.now(), keyId, userId);
+### Resend Integration
 
-    if (result.changes === 0) {
-      throw new NotFoundError('API key not found');
+```typescript
+// src/services/email.ts
+export class EmailService {
+  // Send magic link email
+  async sendMagicLink(email: string, token: string): Promise<void> {
+    const config = this.getConfig();
+    const magicLink = `${config.appUrl}/auth/verify?token=${token}`;
+
+    if (!config.resendApiKey) {
+      // Dev mode: log to console
+      console.log('\n========================================');
+      console.log('MAGIC LINK (dev mode)');
+      console.log(`Email: ${email}`);
+      console.log(`Link: ${magicLink}`);
+      console.log('========================================\n');
+      return;
+    }
+
+    // Production: send via Resend
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: config.fromEmail,
+        to: email,
+        subject: 'Your Iris Login Link',
+        html: `
+          <h1>Login to Iris</h1>
+          <p>Click the link below to log in:</p>
+          <a href="${magicLink}">Log in to Iris</a>
+          <p>This link expires in 15 minutes.</p>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send email: ${response.statusText}`);
     }
   }
+}
+```
 
-  // List user's API keys
-  static async list(userId: string): Promise<ApiKeyRecord[]> {
-    const rootDb = DatabaseManager.getRootDb();
+## Per-User Provider Credentials
 
-    return rootDb.prepare(`
-      SELECT * FROM api_keys WHERE user_id = ? AND revoked_at IS NULL
-      ORDER BY created_at DESC
-    `).all(userId).map(row => ({
-      id: row.id,
-      name: row.name,
-      keyPrefix: row.key_prefix,
-      projectId: row.project_id,
-      permissions: JSON.parse(row.permissions),
-      lastUsedAt: row.last_used_at,
-      usageCount: row.usage_count,
-      createdAt: row.created_at,
-      expiresAt: row.expires_at,
-    }));
+Users configure their own AI provider API keys:
+
+```typescript
+// src/services/provider-credentials.ts
+export class ProviderCredentialsService {
+  // Store a new provider credential (encrypted)
+  static create(
+    userId: string,
+    input: { provider: 'openai' | 'anthropic' | 'google'; apiKey: string; name?: string; isDefault?: boolean }
+  ): ProviderCredential {
+    const db = DatabaseManager.getRootDb();
+
+    // If setting as default, unset other defaults for this provider
+    if (input.isDefault) {
+      db.prepare(`
+        UPDATE provider_credentials SET is_default = 0
+        WHERE user_id = ? AND provider = ?
+      `).run(userId, input.provider);
+    }
+
+    const id = generateId('cred');
+    db.prepare(`
+      INSERT INTO provider_credentials
+      (id, user_id, provider, api_key_encrypted, name, is_default, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      userId,
+      input.provider,
+      encrypt(input.apiKey), // AES-256-GCM encryption
+      input.name ?? null,
+      input.isDefault ? 1 : 0,
+      Date.now(),
+      Date.now()
+    );
+
+    return { id, provider: input.provider, name: input.name ?? null, isDefault: input.isDefault ?? true, createdAt: Date.now(), updatedAt: Date.now() };
+  }
+
+  // Get decrypted API key for a provider
+  static getApiKey(userId: string, provider: string): string | null {
+    const db = DatabaseManager.getRootDb();
+
+    const row = db.prepare(`
+      SELECT api_key_encrypted FROM provider_credentials
+      WHERE user_id = ? AND provider = ? AND is_default = 1
+    `).get(userId, provider);
+
+    if (!row) return null;
+    return decrypt(row.api_key_encrypted);
   }
 }
 ```
@@ -298,21 +395,13 @@ export class ApiKeyService {
 
 ```typescript
 // src/services/session-sharing.ts
-import { z } from 'zod';
-import { randomBytes } from 'crypto';
-
-export const ShareOptions = z.object({
-  allowAnonymous: z.boolean().default(false),
-  expiresIn: z.number().optional(), // Hours
-});
-
 export class SessionSharingService {
   // Create share link for session
   static async createShareLink(
     projectId: string,
     sessionId: string,
     userId: string,
-    options: z.infer<typeof ShareOptions>
+    options: { allowAnonymous?: boolean; expiresIn?: number }
   ): Promise<ShareLink> {
     const db = DatabaseManager.getProjectDb(projectId);
 
@@ -326,7 +415,7 @@ export class SessionSharingService {
       throw new ForbiddenError('Cannot share session');
     }
 
-    const secret = randomBytes(16).toString('base64url');
+    const secret = generateSecureToken(16);
     const expiresAt = options.expiresIn
       ? Date.now() + options.expiresIn * 60 * 60 * 1000
       : null;
