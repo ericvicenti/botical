@@ -377,33 +377,35 @@ Architecture supports eventual scaling:
 
 ### Completed Components
 
-**Phase 1: Foundation**
+**Phase 1: Foundation** ✅
 - Database schema with migrations (SQLite/Bun)
 - Multi-database architecture (root + project DBs)
 - ID generation with type prefixes
 - Error handling infrastructure
 
-**Phase 2: Agent Core**
+**Phase 2: Agent Core** ✅
 - AgentOrchestrator for LLM coordination
 - Tool Registry with built-in tools (read, write, edit, glob, grep, bash, task)
 - LLM wrapper with streaming support
 - Stream processor for real-time events
 - Provider registry (Anthropic, OpenAI, Google)
 
-**Phase 3: Real-time Communication**
-- WebSocket server with room management
+**Phase 3: Real-time Communication** ✅
+- WebSocket server with room management (`src/websocket/`)
 - Connection tracking and authentication
 - Event bus for internal pub/sub
 - Protocol for bidirectional messaging
+- Bus bridge for EventBus → WebSocket routing
+- State synchronization for reconnection
 
-**Phase 4: Agent System**
+**Phase 4: Agent System** ✅
 - Built-in agents (default, explore, plan)
 - Custom agent storage in project DBs
 - Sub-agent spawning via task tool
 - Permission system with rulesets
 - Approval workflow for sensitive operations
 
-**Phase 5: REST API**
+**Phase 5: REST API** ✅
 - Sessions API (`/api/sessions`)
 - Messages API (`/api/messages`)
 - Agents API (`/api/agents`)
@@ -411,13 +413,40 @@ Architecture supports eventual scaling:
 - Provider credentials routes (`/credentials`)
 - Health endpoints (`/health`)
 
+**Phase 6: Project Management** ✅
+- Projects API (`/api/projects`)
+- File versioning with snapshots
+- Files API (`/api/files`)
+- Snapshot rollback functionality
+
+**Phase 7: Custom Tools & Todos** ✅
+- Custom tool management (`/api/tools`)
+- Todo tracking per session (`/api/todos`)
+- Tool types: code, mcp, http
+
+**Phase 8: WebSocket Testing** ✅
+- Comprehensive unit tests (127 WebSocket tests)
+- Integration tests for streaming and multi-client
+- Total test count: 1011 tests passing
+
+### Test Coverage
+
+| Component | Tests |
+|-----------|-------|
+| WebSocket handlers | 28 |
+| Bus-bridge | 18 |
+| Sync/state | 13 |
+| Protocol/connections/rooms | 46 |
+| WebSocket integration | 22 |
+| **Total WebSocket** | **127** |
+| **Total Project** | **1011** |
+
 ### Pending Components
 
-- File versioning with diff-based history
-- Snapshot management for rollback
-- Project service for multi-project management
-- User management and OAuth
 - MCP (Model Context Protocol) tool integration
+- Orchestrator integration for custom tool execution
+- Performance/load testing
+- Production deployment hardening
 
 ---
 
