@@ -219,103 +219,280 @@ export const longTaskTool = defineTool('long_task', {
 
 ---
 
+## REST Route Pattern
+
+REST routes use Hono with Zod validation and consistent response formats.
+
+### Route Structure
+
+```typescript
+// src/server/routes/sessions.ts
+import { Hono } from "hono";
+import { z } from "zod";
+import { DatabaseManager } from "@/database/index.ts";
+import { SessionService, SessionCreateSchema } from "@/services/sessions.ts";
+import { ValidationError } from "@/utils/errors.ts";
+
+const sessions = new Hono();
+
+// Query validation schema
+const ListQuerySchema = z.object({
+  projectId: z.string().min(1),
+  status: z.enum(["active", "archived", "deleted"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+// List endpoint with pagination
+sessions.get("/", async (c) => {
+  const rawQuery = {
+    projectId: c.req.query("projectId"),
+    status: c.req.query("status"),
+    limit: c.req.query("limit"),
+    offset: c.req.query("offset"),
+  };
+
+  const result = ListQuerySchema.safeParse(rawQuery);
+  if (!result.success) {
+    throw new ValidationError(
+      result.error.errors[0]?.message || "Invalid query parameters",
+      result.error.errors
+    );
+  }
+
+  const { projectId, status, limit, offset } = result.data;
+  const db = DatabaseManager.getProjectDb(projectId);
+
+  const items = SessionService.list(db, { status, limit, offset });
+  const total = SessionService.count(db, status);
+
+  return c.json({
+    data: items,
+    meta: {
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    },
+  });
+});
+
+// Create endpoint
+sessions.post("/", async (c) => {
+  const body = await c.req.json();
+
+  const projectId = body.projectId;
+  if (!projectId) {
+    throw new ValidationError("projectId is required");
+  }
+
+  const db = DatabaseManager.getProjectDb(projectId);
+  const result = SessionCreateSchema.safeParse(body);
+  if (!result.success) {
+    throw new ValidationError(result.error.errors[0]?.message || "Invalid input");
+  }
+
+  const session = SessionService.create(db, result.data);
+  return c.json({ data: session }, 201);
+});
+
+// Get by ID endpoint
+sessions.get("/:id", async (c) => {
+  const sessionId = c.req.param("id");
+  const projectId = c.req.query("projectId");
+
+  if (!projectId) {
+    throw new ValidationError("projectId query parameter is required");
+  }
+
+  const db = DatabaseManager.getProjectDb(projectId);
+  const session = SessionService.getByIdOrThrow(db, sessionId);
+  return c.json({ data: session });
+});
+
+export { sessions };
+```
+
+### Route Registration
+
+```typescript
+// src/server/routes/index.ts
+export { sessions } from "./sessions.ts";
+export { messages } from "./messages.ts";
+export { agents } from "./agents.ts";
+
+// src/server/app.ts
+import { sessions, messages, agents } from "./routes/index.ts";
+
+app.route("/api/sessions", sessions);
+app.route("/api/messages", messages);
+app.route("/api/agents", agents);
+```
+
+---
+
 ## Service Pattern
 
 Services encapsulate business logic and database operations for a domain.
+Services are static classes that receive the database connection as a parameter.
 
 ### Service Structure
 
 ```typescript
 // src/services/sessions.ts
-import { z } from 'zod';
-import { ProjectInstance } from '../project/instance';
-import { EventBus } from '../bus';
+import { z } from "zod";
+import { generateId, IdPrefixes } from "@/utils/id.ts";
+import { NotFoundError } from "@/utils/errors.ts";
+import type { Database } from "bun:sqlite";
 
-// Input schemas
-const SessionCreate = z.object({
-  title: z.string().optional(),
-  agent: z.string().default('default'),
-  parentId: z.string().optional(),
+// Input validation schemas
+export const SessionCreateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  agent: z.string().default("default"),
+  parentId: z.string().nullable().optional(),
 });
 
-// Output schemas
-const SessionInfo = z.object({
-  id: z.string(),
-  title: z.string(),
-  agent: z.string(),
-  status: z.enum(['active', 'archived', 'deleted']),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-});
+export type SessionCreateInput = z.infer<typeof SessionCreateSchema>;
+
+// Entity interface (camelCase properties)
+export interface Session {
+  id: string;
+  slug: string;
+  parentId: string | null;
+  title: string;
+  status: SessionStatus;
+  agent: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Database row interface (snake_case columns)
+interface SessionRow {
+  id: string;
+  slug: string;
+  parent_id: string | null;
+  title: string;
+  status: string;
+  agent: string;
+  created_at: number;
+  updated_at: number;
+}
+
+// Row converter function
+function rowToSession(row: SessionRow): Session {
+  return {
+    id: row.id,
+    slug: row.slug,
+    parentId: row.parent_id,
+    title: row.title,
+    status: row.status as SessionStatus,
+    agent: row.agent,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export class SessionService {
-  // Create with validation and events
-  static async create(input: z.infer<typeof SessionCreate>): Promise<Session> {
-    const validated = SessionCreate.parse(input);
-    const db = ProjectInstance.db;
-
-    const session = {
-      id: generateSessionId(),
-      ...validated,
-      title: validated.title || await this.generateTitle(),
-      status: 'active',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  // Create with validation
+  static create(db: Database, input: SessionCreateInput): Session {
+    const validated = SessionCreateSchema.parse(input);
+    const now = Date.now();
+    const id = generateId(IdPrefixes.session, { descending: true });
+    const title = validated.title || "New Session";
 
     db.prepare(`
       INSERT INTO sessions (id, title, agent, parent_id, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      session.id,
-      session.title,
-      session.agent,
-      session.parentId,
-      session.status,
-      session.createdAt,
-      session.updatedAt
-    );
+    `).run(id, title, validated.agent, validated.parentId ?? null, "active", now, now);
 
-    // Emit event
-    EventBus.publish(ProjectInstance.projectId, {
-      type: 'session.created',
-      payload: { session },
-    });
+    return {
+      id,
+      slug: generateSlug(title),
+      parentId: validated.parentId ?? null,
+      title,
+      status: "active",
+      agent: validated.agent,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
 
+  // Get by ID (returns null if not found)
+  static getById(db: Database, sessionId: string): Session | null {
+    const row = db
+      .prepare("SELECT * FROM sessions WHERE id = ?")
+      .get(sessionId) as SessionRow | undefined;
+
+    if (!row) return null;
+    return rowToSession(row);
+  }
+
+  // Get by ID or throw NotFoundError
+  static getByIdOrThrow(db: Database, sessionId: string): Session {
+    const session = this.getById(db, sessionId);
+    if (!session) {
+      throw new NotFoundError("Session", sessionId);
+    }
     return session;
   }
 
-  // Read with validation
-  static async get(sessionId: string): Promise<Session | null> {
-    const db = ProjectInstance.db;
-    const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
-
-    if (!row) return null;
-    return SessionInfo.parse(this.rowToSession(row));
-  }
-
-  // List with filtering
-  static async list(options: { status?: string; limit?: number } = {}): Promise<Session[]> {
-    const db = ProjectInstance.db;
-    let query = 'SELECT * FROM sessions WHERE 1=1';
-    const params: any[] = [];
+  // List with dynamic filtering
+  static list(
+    db: Database,
+    options: {
+      status?: SessionStatus;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Session[] {
+    let query = "SELECT * FROM sessions WHERE 1=1";
+    const params: (string | number | null)[] = [];
 
     if (options.status) {
-      query += ' AND status = ?';
+      query += " AND status = ?";
       params.push(options.status);
     }
 
-    query += ' ORDER BY id DESC';
+    query += " ORDER BY id ASC";  // Descending IDs sort newest first
 
     if (options.limit) {
-      query += ' LIMIT ?';
+      query += " LIMIT ?";
       params.push(options.limit);
     }
 
-    return db.prepare(query).all(...params).map(this.rowToSession);
+    if (options.offset) {
+      query += " OFFSET ?";
+      params.push(options.offset);
+    }
+
+    const rows = db.prepare(query).all(...params) as SessionRow[];
+    return rows.map(rowToSession);
+  }
+
+  // Count for pagination
+  static count(db: Database, status?: SessionStatus): number {
+    let query = "SELECT COUNT(*) as count FROM sessions";
+    const params: string[] = [];
+
+    if (status) {
+      query += " WHERE status = ?";
+      params.push(status);
+    }
+
+    const result = db.prepare(query).get(...params) as { count: number };
+    return result.count;
   }
 }
 ```
+
+### Key Service Patterns
+
+1. **Static methods** - Services are namespaces, not instantiated
+2. **Database as parameter** - Enables per-project isolation
+3. **Zod validation** - Type-safe input validation
+4. **Row converters** - Map snake_case DB columns to camelCase entities
+5. **OrThrow variants** - Throw NotFoundError for missing resources
+6. **Dynamic query building** - Flexible filtering with prepared statements
 
 ---
 

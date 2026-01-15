@@ -564,15 +564,41 @@ const Todo = z.object({
 
 ## ID Generation Strategies
 
-### Descending IDs (Newest First)
-Used for entities commonly listed in reverse chronological order:
-- Sessions
+All IDs use a consistent format with type-safe prefixes:
 
 ```typescript
-function generateDescendingId(): string {
+// Format: {prefix}_{timestamp_base36}-{random_8chars}
+// Example: "sess_2r1hf9qj3-a1b2c3d4"
+
+const IdPrefixes = {
+  user: "usr",
+  project: "prj",
+  session: "sess",
+  message: "msg",
+  part: "part",
+  agent: "agt",
+  tool: "tool",
+  file: "file",
+  version: "ver",
+  snapshot: "snap",
+  apiKey: "key",
+  permission: "perm",
+  todo: "todo",
+  emailToken: "emltkn",
+  authSession: "authsess",
+  providerCredential: "cred",
+};
+```
+
+### Descending IDs (Newest First)
+Used for entities commonly listed in reverse chronological order:
+- Sessions (so newest appears first in list)
+
+```typescript
+function generateDescendingId(prefix: string): string {
   const timestamp = Number.MAX_SAFE_INTEGER - Date.now();
-  const random = crypto.randomUUID().slice(0, 8);
-  return `${timestamp.toString(36)}-${random}`;
+  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  return `${prefix}_${timestamp.toString(36)}-${random}`;
 }
 ```
 
@@ -583,12 +609,53 @@ Used for entities listed in creation order:
 - File Versions
 
 ```typescript
-function generateAscendingId(): string {
+function generateAscendingId(prefix: string): string {
   const timestamp = Date.now();
-  const random = crypto.randomUUID().slice(0, 8);
-  return `${timestamp.toString(36)}-${random}`;
+  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  return `${prefix}_${timestamp.toString(36)}-${random}`;
 }
 ```
+
+---
+
+## Implementation Status
+
+### Fully Implemented Entities
+
+| Entity | Service | Database | API |
+|--------|---------|----------|-----|
+| User | ✓ | ✓ | ✓ (auth routes) |
+| AuthSession | ✓ | ✓ | ✓ |
+| EmailVerificationToken | ✓ | ✓ | ✓ |
+| ProviderCredential | ✓ | ✓ | ✓ |
+| Session | ✓ | ✓ | ✓ |
+| Message | ✓ | ✓ | ✓ |
+| MessagePart | ✓ | ✓ | ✓ |
+| Agent (custom) | ✓ | ✓ | ✓ |
+| Permission | ✓ | ✓ | - |
+
+### Partially Implemented
+
+| Entity | Service | Database | API | Notes |
+|--------|---------|----------|-----|-------|
+| Project | - | ✓ | - | Schema only |
+| ProjectMember | - | ✓ | - | Schema only |
+| ApiKey | - | ✓ | - | Schema only |
+| File | - | ✓ | - | Schema only |
+| FileVersion | - | ✓ | - | Schema only |
+| Snapshot | - | ✓ | - | Schema only |
+| Todo | - | ✓ | - | Schema only |
+| Tool (custom) | - | ✓ | - | Schema only |
+
+### Built-in Agents
+
+Built-in agents are defined in code, not stored in database:
+
+| Name | Mode | Description |
+|------|------|-------------|
+| default | all | General-purpose assistant |
+| explore | subagent | Fast codebase exploration |
+| plan | subagent | Implementation planning |
 
 ---
 

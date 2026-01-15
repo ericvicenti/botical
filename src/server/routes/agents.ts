@@ -11,7 +11,15 @@
  * - PUT /api/agents/:name - Update custom agent
  * - DELETE /api/agents/:name - Delete custom agent
  *
+ * Built-in agents (default, explore, plan) cannot be modified or deleted.
+ * Custom agents are stored per-project in the project database.
+ *
+ * Response Format:
+ * All endpoints return { data, meta? } on success or { error } on failure.
+ *
  * See: docs/knowledge-base/02-data-model.md#agent
+ * See: docs/knowledge-base/03-api-reference.md#agents-api
+ * See: docs/knowledge-base/04-patterns.md#rest-route-pattern
  */
 
 import { Hono } from "hono";

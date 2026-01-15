@@ -12,7 +12,12 @@
  * - DELETE /api/sessions/:id - Delete session (soft delete)
  * - GET /api/sessions/:id/messages - List messages in session
  *
+ * Response Format:
+ * All endpoints return { data, meta? } on success or { error } on failure.
+ *
  * See: docs/knowledge-base/02-data-model.md#session
+ * See: docs/knowledge-base/03-api-reference.md#sessions-api
+ * See: docs/knowledge-base/04-patterns.md#rest-route-pattern
  */
 
 import { Hono } from "hono";

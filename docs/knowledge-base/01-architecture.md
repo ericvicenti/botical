@@ -101,10 +101,12 @@ Components communicate via typed events:
 - Binary support for file transfers
 
 **REST API**
-- Authentication endpoints (login, register, OAuth)
-- File uploads (multipart form data)
-- Health checks and metrics
-- API key management
+- Sessions API: CRUD operations for conversation sessions
+- Messages API: Send messages, trigger agent orchestration
+- Agents API: List/create/update/delete agent configurations
+- Authentication endpoints (magic link, sessions)
+- Provider credentials management (encrypted API keys)
+- Health checks and readiness probes
 
 **SSE Fallback**
 - For environments blocking WebSocket
@@ -368,6 +370,54 @@ Architecture supports eventual scaling:
 - File-based (easy deployment)
 - Full SQL support
 - Excellent performance for this scale
+
+---
+
+## Implementation Status
+
+### Completed Components
+
+**Phase 1: Foundation**
+- Database schema with migrations (SQLite/Bun)
+- Multi-database architecture (root + project DBs)
+- ID generation with type prefixes
+- Error handling infrastructure
+
+**Phase 2: Agent Core**
+- AgentOrchestrator for LLM coordination
+- Tool Registry with built-in tools (read, write, edit, glob, grep, bash, task)
+- LLM wrapper with streaming support
+- Stream processor for real-time events
+- Provider registry (Anthropic, OpenAI, Google)
+
+**Phase 3: Real-time Communication**
+- WebSocket server with room management
+- Connection tracking and authentication
+- Event bus for internal pub/sub
+- Protocol for bidirectional messaging
+
+**Phase 4: Agent System**
+- Built-in agents (default, explore, plan)
+- Custom agent storage in project DBs
+- Sub-agent spawning via task tool
+- Permission system with rulesets
+- Approval workflow for sensitive operations
+
+**Phase 5: REST API**
+- Sessions API (`/api/sessions`)
+- Messages API (`/api/messages`)
+- Agents API (`/api/agents`)
+- Authentication routes (`/auth`)
+- Provider credentials routes (`/credentials`)
+- Health endpoints (`/health`)
+
+### Pending Components
+
+- File versioning with diff-based history
+- Snapshot management for rollback
+- Project service for multi-project management
+- User management and OAuth
+- MCP (Model Context Protocol) tool integration
 
 ---
 

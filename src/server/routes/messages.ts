@@ -10,7 +10,17 @@
  * - GET /api/messages/:id - Get message with all parts
  * - GET /api/messages/:id/parts - List message parts
  *
+ * The POST endpoint is the primary way to interact with agents:
+ * 1. Creates a user message in the session
+ * 2. Runs the AgentOrchestrator to generate a response
+ * 3. Returns the assistant message with all parts
+ *
+ * Response Format:
+ * All endpoints return { data } on success or { error } on failure.
+ *
  * See: docs/knowledge-base/02-data-model.md#message
+ * See: docs/knowledge-base/03-api-reference.md#messages-api
+ * See: docs/knowledge-base/04-patterns.md#rest-route-pattern
  */
 
 import { Hono } from "hono";

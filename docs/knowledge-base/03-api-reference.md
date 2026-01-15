@@ -797,41 +797,548 @@ User cursor position (for collaborative features).
 
 ## REST Endpoints
 
-Some operations use REST instead of WebSocket:
+REST API provides CRUD operations for sessions, messages, and agents.
 
-### Authentication
+### Response Format
 
-#### `POST /auth/register`
-Create a new user account.
+All REST endpoints return consistent JSON responses:
 
-#### `POST /auth/login`
-Login with email/password.
+```typescript
+// Success response
+{
+  data: T;              // The requested resource(s)
+  meta?: {              // Pagination/metadata (for lists)
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+}
+
+// Error response
+{
+  error: {
+    code: string;       // Machine-readable error code
+    message: string;    // Human-readable message
+    details?: unknown;  // Additional context
+  }
+}
+```
+
+---
+
+### Sessions API
+
+Base path: `/api/sessions`
+
+#### `GET /api/sessions`
+
+List sessions with pagination and filters.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+- `status`: Filter by status (`active`, `archived`, `deleted`)
+- `agent`: Filter by agent name
+- `parentId`: Filter by parent session (for sub-agents)
+- `limit`: Max results (default: 50, max: 100)
+- `offset`: Skip results (default: 0)
+
+**Response:**
+```typescript
+{
+  data: Session[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+}
+```
+
+---
+
+#### `POST /api/sessions`
+
+Create a new session.
+
+**Request Body:**
+```typescript
+{
+  projectId: string;
+  title?: string;          // Auto-generated if omitted
+  agent?: string;          // Default: "default"
+  parentId?: string;       // For sub-agent sessions
+  providerId?: string;     // LLM provider
+  modelId?: string;        // Model ID
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  data: Session
+}
+```
+
+---
+
+#### `GET /api/sessions/:id`
+
+Get session by ID.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+
+**Response:**
+```typescript
+{
+  data: Session
+}
+```
+
+---
+
+#### `PUT /api/sessions/:id`
+
+Update session.
+
+**Request Body:**
+```typescript
+{
+  projectId: string;
+  title?: string;
+  status?: "active" | "archived" | "deleted";
+  agent?: string;
+  providerId?: string;
+  modelId?: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  data: Session
+}
+```
+
+---
+
+#### `DELETE /api/sessions/:id`
+
+Soft delete a session (sets status to "deleted").
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+
+**Response:**
+```typescript
+{
+  data: { deleted: true }
+}
+```
+
+---
+
+#### `GET /api/sessions/:id/messages`
+
+List messages in a session.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+- `role`: Filter by role (`user`, `assistant`, `system`)
+- `limit`: Max results (default: 50)
+- `offset`: Skip results (default: 0)
+
+**Response:**
+```typescript
+{
+  data: Message[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+}
+```
+
+---
+
+### Messages API
+
+Base path: `/api/messages`
+
+#### `POST /api/messages`
+
+Send a message and trigger agent orchestration.
+
+**Request Body:**
+```typescript
+{
+  projectId: string;
+  sessionId: string;
+  content: string;           // User message text
+  userId: string;            // User ID for permission context
+  providerId?: string;       // Default: "anthropic"
+  modelId?: string;          // Uses provider default
+  agentName?: string;        // Override session's agent
+  canExecuteCode?: boolean;  // Default: false
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  data: {
+    message: Message;          // Assistant message
+    parts: MessagePart[];      // All message parts
+    usage: {
+      inputTokens: number;
+      outputTokens: number;
+    };
+    cost: number;              // Estimated cost in USD
+    finishReason: "stop" | "tool-calls" | "length" | "error";
+  }
+}
+```
+
+---
+
+#### `GET /api/messages/:id`
+
+Get message with all parts.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+
+**Response:**
+```typescript
+{
+  data: Message & {
+    parts: MessagePart[];
+  }
+}
+```
+
+---
+
+#### `GET /api/messages/:id/parts`
+
+List message parts.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+
+**Response:**
+```typescript
+{
+  data: MessagePart[];
+  meta: {
+    total: number;
+  }
+}
+```
+
+---
+
+### Agents API
+
+Base path: `/api/agents`
+
+#### `GET /api/agents`
+
+List available agents (built-in + custom).
+
+**Query Parameters:**
+- `projectId`: Project ID (required for custom agents)
+- `mode`: Filter by mode (`primary`, `subagent`)
+- `includeHidden`: Include hidden agents (default: false)
+- `builtinOnly`: Only built-in agents (default: false)
+- `customOnly`: Only custom agents (default: false)
+
+**Response:**
+```typescript
+{
+  data: AgentConfig[];
+  meta: {
+    total: number;
+    builtinCount: number;
+    customCount: number;
+  }
+}
+```
+
+---
+
+#### `POST /api/agents`
+
+Create a custom agent.
+
+**Request Body:**
+```typescript
+{
+  projectId: string;
+  name: string;              // Lowercase, hyphens, starts with letter
+  description?: string;
+  mode?: "primary" | "subagent" | "all";  // Default: "subagent"
+  hidden?: boolean;          // Default: false
+  providerId?: string;
+  modelId?: string;
+  temperature?: number;      // 0-2
+  topP?: number;             // 0-1
+  maxSteps?: number;
+  prompt?: string;           // System prompt
+  tools?: string[];          // Tool names
+  color?: string;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  data: AgentConfig
+}
+```
+
+**Errors:**
+- `400`: Name is reserved or already exists
+- `400`: Invalid name format
+
+---
+
+#### `GET /api/agents/:name`
+
+Get agent config by name.
+
+**Query Parameters:**
+- `projectId`: Project ID (for custom agents)
+
+**Response:**
+```typescript
+{
+  data: AgentConfig
+}
+```
+
+---
+
+#### `PUT /api/agents/:name`
+
+Update custom agent.
+
+**Request Body:**
+```typescript
+{
+  projectId: string;
+  name?: string;             // Rename agent
+  description?: string;
+  mode?: "primary" | "subagent" | "all";
+  hidden?: boolean;
+  providerId?: string;
+  modelId?: string;
+  temperature?: number;
+  topP?: number;
+  maxSteps?: number;
+  prompt?: string;
+  tools?: string[];
+  color?: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  data: AgentConfig
+}
+```
+
+**Errors:**
+- `403`: Cannot update built-in agents
+- `400`: New name is reserved
+
+---
+
+#### `DELETE /api/agents/:name`
+
+Delete custom agent.
+
+**Query Parameters:**
+- `projectId` (required): Project ID
+
+**Response:**
+```typescript
+{
+  data: { deleted: true }
+}
+```
+
+**Errors:**
+- `403`: Cannot delete built-in agents
+
+---
+
+### Authentication API
+
+Base path: `/auth`
+
+#### `POST /auth/magic-link`
+
+Request a magic link for passwordless login.
+
+**Request Body:**
+```typescript
+{
+  email: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true;
+  message: string;
+}
+```
+
+---
+
+#### `GET /auth/verify`
+
+Verify magic link token and create session.
+
+**Query Parameters:**
+- `token`: Magic link token
+
+**Response:** Redirects or returns session.
+
+---
 
 #### `POST /auth/logout`
+
 Logout current session.
 
+**Response:**
+```typescript
+{
+  success: true
+}
+```
+
+---
+
 #### `GET /auth/me`
+
 Get current user info.
 
-#### `GET /auth/oauth/{provider}`
-Start OAuth flow.
-
-#### `GET /auth/oauth/{provider}/callback`
-OAuth callback handler.
-
----
-
-### File Uploads
-
-#### `POST /projects/{projectId}/files/upload`
-Upload file via multipart form.
+**Response:**
+```typescript
+{
+  user: User;
+  session: AuthSession;
+}
+```
 
 ---
 
-### Health
+### Provider Credentials API
+
+Base path: `/credentials`
+
+#### `GET /credentials`
+
+List user's provider credentials.
+
+**Response:**
+```typescript
+{
+  credentials: ProviderCredential[];
+}
+```
+
+---
+
+#### `POST /credentials`
+
+Store a new provider credential.
+
+**Request Body:**
+```typescript
+{
+  provider: "anthropic" | "openai" | "google";
+  apiKey: string;
+  name?: string;
+  isDefault?: boolean;
+}
+```
+
+**Response:**
+```typescript
+{
+  credential: ProviderCredential;
+}
+```
+
+---
+
+#### `DELETE /credentials/:id`
+
+Delete a provider credential.
+
+**Response:**
+```typescript
+{
+  deleted: true
+}
+```
+
+---
+
+### Health API
+
+Base path: `/health`
 
 #### `GET /health`
-Server health check.
+
+Basic health check.
+
+**Response:**
+```typescript
+{
+  status: "ok";
+  timestamp: number;
+}
+```
+
+---
+
+#### `GET /health/ready`
+
+Readiness check (includes database).
+
+**Response:**
+```typescript
+{
+  status: "ok" | "error";
+  timestamp: number;
+  checks: {
+    database: "ok" | "error";
+  }
+}
+```
+
+---
+
+#### `GET /health/live`
+
+Liveness check with uptime.
+
+**Response:**
+```typescript
+{
+  status: "ok";
+  uptime: number;
+}
 
 ---
 
