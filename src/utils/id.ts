@@ -123,6 +123,7 @@ export const IdPrefixes = {
   snapshot: "snap",
   apiKey: "key",
   permission: "perm",
+  todo: "todo",
   // Auth-related prefixes
   emailToken: "emltkn",
   authSession: "authsess",
