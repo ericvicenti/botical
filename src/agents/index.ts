@@ -11,3 +11,6 @@ export * from "./providers.ts";
 export * from "./llm.ts";
 export * from "./stream-processor.ts";
 export * from "./orchestrator.ts";
+export * from "./registry.ts";
+export * from "./subagent-runner.ts";
+export * from "./builtin/index.ts";

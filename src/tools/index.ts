@@ -16,6 +16,7 @@ import { editTool } from "./edit.ts";
 import { bashTool } from "./bash.ts";
 import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
+import { taskTool } from "./task.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -54,6 +55,12 @@ export function registerCoreTools(): void {
     category: "execution",
     requiresCodeExecution: true,
   });
+
+  // Agent tools (spawning sub-agents)
+  ToolRegistry.register(taskTool, {
+    category: "agent",
+    requiresCodeExecution: false, // Task tool itself doesn't execute code
+  });
 }
 
 // Export individual tools for direct use
@@ -63,3 +70,4 @@ export { editTool } from "./edit.ts";
 export { bashTool } from "./bash.ts";
 export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
+export { taskTool } from "./task.ts";

@@ -6,6 +6,7 @@
  * - Tool execution context setup
  * - LLM streaming and response processing
  * - Session and message statistics tracking
+ * - Sub-agent spawning via the task tool
  *
  * See: docs/knowledge-base/04-patterns.md
  */
@@ -18,7 +19,10 @@ import { ToolRegistry } from "@/tools/registry.ts";
 import type { ToolExecutionContext, ToolMetadataUpdate } from "@/tools/types.ts";
 import { LLM } from "./llm.ts";
 import { StreamProcessor, type ProcessedEvent } from "./stream-processor.ts";
-import type { ProviderId, AgentRunResult } from "./types.ts";
+import type { ProviderId, AgentRunResult, AgentConfig } from "./types.ts";
+import { AgentRegistry } from "./registry.ts";
+import { SubAgentRunner } from "./subagent-runner.ts";
+import type { TaskParams } from "@/tools/task.ts";
 
 /**
  * Options for running an agent
@@ -44,11 +48,13 @@ export interface OrchestratorRunOptions {
   providerId: ProviderId;
   /** Model ID (uses provider default if not specified) */
   modelId?: string | null;
-  /** Agent-specific system prompt */
+  /** Agent name to use (uses session's agent or 'default' if not specified) */
+  agentName?: string;
+  /** Agent-specific system prompt (overrides agent config) */
   agentPrompt?: string;
-  /** Maximum tool execution steps */
+  /** Maximum tool execution steps (overrides agent config) */
   maxSteps?: number;
-  /** Temperature for the model */
+  /** Temperature for the model (overrides agent config) */
   temperature?: number;
   /** Abort signal for cancellation */
   abortSignal?: AbortSignal;
@@ -75,8 +81,9 @@ export class AgentOrchestrator {
       apiKey,
       providerId,
       modelId,
+      agentName,
       agentPrompt,
-      maxSteps = 10,
+      maxSteps,
       temperature,
       abortSignal,
       onEvent,
@@ -85,8 +92,19 @@ export class AgentOrchestrator {
     // Verify session exists
     const session = SessionService.getByIdOrThrow(db, sessionId);
 
-    // Use model from options, session, or provider default
-    const effectiveModelId = modelId ?? session.modelId ?? null;
+    // Resolve agent configuration
+    const effectiveAgentName = agentName ?? session.agent ?? "default";
+    const agentConfig = AgentRegistry.get(db, effectiveAgentName);
+    if (!agentConfig) {
+      throw new Error(`Agent "${effectiveAgentName}" not found`);
+    }
+
+    // Resolve effective settings (options > agent config > session > defaults)
+    const effectiveModelId =
+      modelId ?? agentConfig.modelId ?? session.modelId ?? null;
+    const effectiveMaxSteps = maxSteps ?? agentConfig.maxSteps ?? 10;
+    const effectiveTemperature = temperature ?? agentConfig.temperature ?? undefined;
+    const effectivePrompt = agentPrompt ?? agentConfig.prompt ?? undefined;
 
     // Create user message
     const userMessage = MessageService.create(db, {
@@ -112,12 +130,19 @@ export class AgentOrchestrator {
       parentId: userMessage.id,
       providerId,
       modelId: effectiveModelId,
+      agent: effectiveAgentName,
     });
 
     // Build conversation history
     const messages = this.buildMessages(db, sessionId, content);
 
-    // Create tool execution context
+    // Resolve tools for this agent
+    const availableToolNames = AgentRegistry.resolveTools(
+      agentConfig,
+      ToolRegistry.getNames()
+    );
+
+    // Create tool execution context with task handler
     const toolContext = this.createToolContext({
       projectId,
       projectPath,
@@ -127,14 +152,44 @@ export class AgentOrchestrator {
       abortSignal,
     });
 
-    // Get tools
-    const tools = ToolRegistry.toAITools(toolContext, {
+    // Create a custom tool handler that intercepts task tool calls
+    const taskToolHandler = this.createTaskToolHandler({
+      db,
+      projectId,
+      projectPath,
+      parentSessionId: sessionId,
+      userId,
       canExecuteCode,
+      apiKey,
+      providerId,
+      modelId: effectiveModelId,
+      abortSignal,
+      onEvent,
     });
+
+    // Get tools with task tool interception
+    const tools = ToolRegistry.toAITools(toolContext, {
+      toolNames: availableToolNames,
+      canExecuteCode:
+        canExecuteCode &&
+        agentConfig.tools.some((t) => ["bash"].includes(t)),
+    });
+
+    // Override task tool execute if it exists
+    if (tools.task) {
+      const originalTaskTool = tools.task;
+      tools.task = {
+        ...originalTaskTool,
+        execute: async (args: unknown) => {
+          const result = await taskToolHandler(args as TaskParams);
+          return JSON.stringify(result);
+        },
+      };
+    }
 
     // Build system prompt
     const systemPrompt = LLM.buildSystemPrompt({
-      agentPrompt,
+      agentPrompt: effectivePrompt,
     });
 
     // Create stream processor
@@ -156,7 +211,7 @@ export class AgentOrchestrator {
         system: systemPrompt,
         messages,
         tools,
-        temperature,
+        temperature: effectiveTemperature,
         abortSignal,
         onStreamEvent: async (event) => {
           await processor.process(event);
@@ -178,6 +233,42 @@ export class AgentOrchestrator {
 
       throw error;
     }
+  }
+
+  /**
+   * Create a task tool handler for spawning sub-agents
+   */
+  private static createTaskToolHandler(context: {
+    db: Database;
+    projectId: string;
+    projectPath: string;
+    parentSessionId: string;
+    userId: string;
+    canExecuteCode: boolean;
+    apiKey: string;
+    providerId: ProviderId;
+    modelId: string | null;
+    abortSignal?: AbortSignal;
+    onEvent?: (event: ProcessedEvent) => void | Promise<void>;
+  }) {
+    return async (taskParams: TaskParams) => {
+      const result = await SubAgentRunner.run({
+        db: context.db,
+        projectId: context.projectId,
+        projectPath: context.projectPath,
+        parentSessionId: context.parentSessionId,
+        userId: context.userId,
+        canExecuteCode: context.canExecuteCode,
+        taskParams,
+        apiKey: context.apiKey,
+        parentProviderId: context.providerId,
+        parentModelId: context.modelId,
+        abortSignal: context.abortSignal,
+        onEvent: context.onEvent,
+      });
+
+      return result;
+    };
   }
 
   /**
