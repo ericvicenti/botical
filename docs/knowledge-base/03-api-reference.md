@@ -1178,6 +1178,201 @@ Delete custom agent.
 
 ---
 
+### Projects API
+
+Base path: `/api/projects`
+
+#### `GET /api/projects`
+
+List projects with pagination and filters.
+
+**Query Parameters:**
+- `ownerId`: Filter by owner user ID
+- `memberId`: Filter by member user ID (includes projects where user is owner or member)
+- `type`: Filter by type (`local`, `remote`)
+- `includeArchived`: Include archived projects (default: false)
+- `limit`: Max results (default: 50, max: 100)
+- `offset`: Skip results (default: 0)
+
+**Response:**
+```typescript
+{
+  data: Project[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+}
+```
+
+---
+
+#### `POST /api/projects`
+
+Create a new project.
+
+**Request Body:**
+```typescript
+{
+  name: string;              // Required, 1-200 chars
+  ownerId: string;           // Required, user ID
+  description?: string;      // Max 2000 chars
+  type?: "local" | "remote"; // Default: "local"
+  path?: string;             // Local filesystem path
+  gitRemote?: string;        // Git repository URL
+  iconUrl?: string;          // Project icon URL
+  color?: string;            // Hex color (#RRGGBB)
+  settings?: Record<string, unknown>;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  data: Project
+}
+```
+
+---
+
+#### `GET /api/projects/:id`
+
+Get project by ID.
+
+**Response:**
+```typescript
+{
+  data: Project
+}
+```
+
+---
+
+#### `PUT /api/projects/:id`
+
+Update project.
+
+**Request Body:**
+```typescript
+{
+  name?: string;
+  description?: string | null;
+  path?: string | null;
+  gitRemote?: string | null;
+  iconUrl?: string | null;
+  color?: string | null;
+  settings?: Record<string, unknown>;
+}
+```
+
+**Response:**
+```typescript
+{
+  data: Project
+}
+```
+
+---
+
+#### `DELETE /api/projects/:id`
+
+Archive a project (soft delete).
+
+**Response:**
+```typescript
+{
+  data: { archived: true }
+}
+```
+
+---
+
+### Project Members API
+
+Base path: `/api/projects/:id/members`
+
+#### `GET /api/projects/:id/members`
+
+List project members.
+
+**Response:**
+```typescript
+{
+  data: ProjectMember[];
+  meta: {
+    total: number;
+  }
+}
+```
+
+---
+
+#### `POST /api/projects/:id/members`
+
+Add a member to the project.
+
+**Request Body:**
+```typescript
+{
+  userId: string;
+  role: "admin" | "member" | "viewer";
+  invitedBy?: string;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  data: ProjectMember
+}
+```
+
+**Errors:**
+- `409 CONFLICT`: User is already a member
+
+---
+
+#### `PUT /api/projects/:id/members/:userId`
+
+Update member role.
+
+**Request Body:**
+```typescript
+{
+  role: "admin" | "member" | "viewer";
+}
+```
+
+**Response:**
+```typescript
+{
+  data: ProjectMember
+}
+```
+
+**Errors:**
+- `403 FORBIDDEN`: Cannot change owner's role
+
+---
+
+#### `DELETE /api/projects/:id/members/:userId`
+
+Remove a member from the project.
+
+**Response:**
+```typescript
+{
+  data: { removed: true }
+}
+```
+
+**Errors:**
+- `403 FORBIDDEN`: Cannot remove project owner
+
+---
+
 ### Authentication API
 
 Base path: `/auth`

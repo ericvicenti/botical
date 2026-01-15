@@ -633,17 +633,17 @@ function generateAscendingId(prefix: string): string {
 | MessagePart | ✓ | ✓ | ✓ |
 | Agent (custom) | ✓ | ✓ | ✓ |
 | Permission | ✓ | ✓ | - |
+| Project | ✓ | ✓ | ✓ |
+| ProjectMember | ✓ | ✓ | ✓ |
+| File | ✓ | ✓ | - |
+| FileVersion | ✓ | ✓ | - |
+| Snapshot | ✓ | ✓ | - |
 
 ### Partially Implemented
 
 | Entity | Service | Database | API | Notes |
 |--------|---------|----------|-----|-------|
-| Project | - | ✓ | - | Schema only |
-| ProjectMember | - | ✓ | - | Schema only |
 | ApiKey | - | ✓ | - | Schema only |
-| File | - | ✓ | - | Schema only |
-| FileVersion | - | ✓ | - | Schema only |
-| Snapshot | - | ✓ | - | Schema only |
 | Todo | - | ✓ | - | Schema only |
 | Tool (custom) | - | ✓ | - | Schema only |
 

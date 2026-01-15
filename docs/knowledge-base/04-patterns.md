@@ -785,6 +785,156 @@ export function errorHandler(): MiddlewareHandler {
 
 ---
 
+## File Versioning Pattern
+
+Files are versioned using a patch-based approach that stores diffs rather than full copies, optimizing storage while maintaining complete history.
+
+### Storage Strategy
+
+```typescript
+// Version 1: Store full content
+if (version === 1) {
+  db.prepare(`
+    INSERT INTO file_content (id, version_id, content)
+    VALUES (?, ?, ?)
+  `).run(contentId, versionId, fullContent);
+}
+
+// Subsequent versions: Store forward patch from previous version
+else {
+  const previousContent = getVersionContent(db, fileId, version - 1);
+  const patch = createPatch(previousContent, newContent);
+
+  db.prepare(`
+    UPDATE file_versions SET patch = ? WHERE id = ?
+  `).run(serializePatch(patch), versionId);
+}
+```
+
+### Content Reconstruction
+
+```typescript
+function getVersionContent(db: Database, fileId: string, targetVersion: number): string {
+  // Get all versions up to target
+  const versions = db.prepare(`
+    SELECT v.version, v.patch, c.content
+    FROM file_versions v
+    LEFT JOIN file_content c ON c.version_id = v.id
+    WHERE v.file_id = ? AND v.version <= ?
+    ORDER BY v.version ASC
+  `).all(fileId, targetVersion);
+
+  // Start with version 1's full content
+  let content = versions[0].content;
+
+  // Apply patches to reach target version
+  for (let i = 1; i < versions.length; i++) {
+    if (versions[i].patch) {
+      const patch = deserializePatch(versions[i].patch);
+      content = applyPatch(content, patch);
+    }
+  }
+
+  return content;
+}
+```
+
+### Diff Algorithm
+
+Uses Longest Common Subsequence (LCS) for accurate line-based diffs:
+
+```typescript
+interface PatchOperation {
+  type: "keep" | "delete" | "insert";
+  lines: string[];
+  position?: number;
+}
+
+function createPatch(oldContent: string, newContent: string): PatchOperation[] {
+  const oldLines = oldContent.split("\n");
+  const newLines = newContent.split("\n");
+  const lcs = computeLCS(oldLines, newLines);
+
+  // Generate operations from LCS
+  return generateOperations(oldLines, newLines, lcs);
+}
+```
+
+### Benefits
+
+- **Storage efficiency**: Only first version stores full content
+- **Complete history**: Any version can be reconstructed
+- **Accurate diffs**: LCS algorithm handles complex changes
+- **Skip unchanged**: Identical writes don't create new versions
+
+---
+
+## Snapshot Pattern
+
+Snapshots capture point-in-time project state for rollback capabilities.
+
+### Creating Snapshots
+
+```typescript
+function createSnapshot(db: Database): Snapshot {
+  const files = db.prepare(`
+    SELECT id, path, hash FROM files WHERE deleted_at IS NULL
+  `).all();
+
+  // Generate Merkle-style hash for integrity
+  const hashes = files.map(f => `${f.path}:${f.hash}`).sort();
+  const combinedHash = createHash("sha256")
+    .update(hashes.join("\n"))
+    .digest("hex");
+
+  const snapshotId = generateId(IdPrefixes.snapshot);
+
+  // Store snapshot metadata
+  db.prepare(`
+    INSERT INTO snapshots (id, hash, file_count, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(snapshotId, combinedHash, files.length, Date.now());
+
+  // Store file references with their current versions
+  for (const file of files) {
+    const latestVersion = getLatestVersion(db, file.id);
+    db.prepare(`
+      INSERT INTO snapshot_files (snapshot_id, file_id, version)
+      VALUES (?, ?, ?)
+    `).run(snapshotId, file.id, latestVersion);
+  }
+
+  return { id: snapshotId, hash: combinedHash, fileCount: files.length };
+}
+```
+
+### Restoring Snapshots
+
+```typescript
+function restoreSnapshot(db: Database, snapshotId: string): RestoreResult {
+  const snapshotFiles = getSnapshotFiles(db, snapshotId);
+  const currentFiles = getCurrentFiles(db);
+
+  // Restore modified files to snapshot version
+  for (const sf of snapshotFiles) {
+    const content = getVersionContent(db, sf.fileId, sf.version);
+    FileService.write(db, sf.path, content);
+  }
+
+  // Delete files that didn't exist in snapshot
+  const snapshotPaths = new Set(snapshotFiles.map(f => f.path));
+  for (const current of currentFiles) {
+    if (!snapshotPaths.has(current.path)) {
+      FileService.delete(db, current.path);
+    }
+  }
+
+  return { restoredCount, deletedCount };
+}
+```
+
+---
+
 ## Related Documents
 
 - [Architecture](./01-architecture.md) - System design
