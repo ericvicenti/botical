@@ -11,6 +11,7 @@ import { SessionHandlers } from "./sessions.ts";
 import { MessageHandlers } from "./messages.ts";
 import { ToolHandlers } from "./tools.ts";
 import { SubscriptionHandlers } from "./subscriptions.ts";
+import { ProcessHandlers } from "./processes.ts";
 
 /**
  * Handler function type
@@ -40,6 +41,11 @@ const handlers: Record<RequestType, Handler> = {
   subscribe: SubscriptionHandlers.subscribe,
   unsubscribe: SubscriptionHandlers.unsubscribe,
 
+  // Process handlers
+  "process.write": ProcessHandlers.write,
+  "process.resize": ProcessHandlers.resize,
+  "process.kill": ProcessHandlers.kill,
+
   // Ping handler
   ping: async () => ({ pong: Date.now() }),
 };
@@ -65,3 +71,4 @@ export { SessionHandlers } from "./sessions.ts";
 export { MessageHandlers } from "./messages.ts";
 export { ToolHandlers, registerPendingApproval, removePendingApproval } from "./tools.ts";
 export { SubscriptionHandlers } from "./subscriptions.ts";
+export { ProcessHandlers } from "./processes.ts";

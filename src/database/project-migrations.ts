@@ -341,4 +341,55 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 4,
+    name: "processes",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- PROCESSES
+        -- Shell commands and services with PTY support
+        -- ============================================
+
+        CREATE TABLE processes (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          type TEXT NOT NULL,
+          command TEXT NOT NULL,
+          cwd TEXT NOT NULL,
+          env TEXT,
+          cols INTEGER NOT NULL DEFAULT 80,
+          rows INTEGER NOT NULL DEFAULT 24,
+          scope TEXT NOT NULL,
+          scope_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'starting',
+          exit_code INTEGER,
+          label TEXT,
+          created_by TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          started_at INTEGER NOT NULL,
+          ended_at INTEGER
+        );
+
+        CREATE INDEX idx_processes_project ON processes(project_id);
+        CREATE INDEX idx_processes_scope ON processes(scope, scope_id);
+        CREATE INDEX idx_processes_status ON processes(status);
+
+        -- ============================================
+        -- PROCESS OUTPUT
+        -- Stores output chunks for history/replay
+        -- ============================================
+
+        CREATE TABLE process_output (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          process_id TEXT NOT NULL REFERENCES processes(id),
+          timestamp INTEGER NOT NULL,
+          data TEXT NOT NULL,
+          stream TEXT NOT NULL DEFAULT 'stdout'
+        );
+
+        CREATE INDEX idx_process_output_process ON process_output(process_id);
+      `);
+    },
+  },
 ];

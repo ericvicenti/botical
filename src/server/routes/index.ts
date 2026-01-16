@@ -8,3 +8,4 @@ export { projects } from "./projects.ts";
 export { tools } from "./tools.ts";
 export { projectMissions, missions } from "./missions.ts";
 export { sessionTasks as sessionTodos, tasks as todos, projectTasks, tasks } from "./tasks.ts";
+export { projectProcesses, processes } from "./processes.ts";

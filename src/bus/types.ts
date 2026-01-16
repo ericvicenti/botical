@@ -146,6 +146,44 @@ export const ProjectDeletedEvent = z.object({
   }),
 });
 
+// Process Events
+export const ProcessSpawnedEvent = z.object({
+  type: z.literal("process.spawned"),
+  payload: z.object({
+    id: z.string(),
+    projectId: z.string(),
+    type: z.enum(["command", "service"]),
+    command: z.string(),
+    cwd: z.string(),
+    status: z.string(),
+  }),
+});
+
+export const ProcessOutputEvent = z.object({
+  type: z.literal("process.output"),
+  payload: z.object({
+    id: z.string(),
+    data: z.string(),
+    stream: z.enum(["stdout", "stderr"]),
+  }),
+});
+
+export const ProcessExitedEvent = z.object({
+  type: z.literal("process.exited"),
+  payload: z.object({
+    id: z.string(),
+    exitCode: z.number(),
+    status: z.string(),
+  }),
+});
+
+export const ProcessKilledEvent = z.object({
+  type: z.literal("process.killed"),
+  payload: z.object({
+    id: z.string(),
+  }),
+});
+
 // Union of all event types
 export const IrisEvent = z.discriminatedUnion("type", [
   SessionCreatedEvent,
@@ -162,6 +200,10 @@ export const IrisEvent = z.discriminatedUnion("type", [
   ProjectCreatedEvent,
   ProjectUpdatedEvent,
   ProjectDeletedEvent,
+  ProcessSpawnedEvent,
+  ProcessOutputEvent,
+  ProcessExitedEvent,
+  ProcessKilledEvent,
 ]);
 
 export type IrisEvent = z.infer<typeof IrisEvent>;

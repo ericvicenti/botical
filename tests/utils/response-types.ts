@@ -173,3 +173,31 @@ export interface TaskResponse {
   startedAt: number | null;
   completedAt: number | null;
 }
+
+export interface ProcessResponse {
+  id: string;
+  projectId: string;
+  type: "command" | "service";
+  command: string;
+  cwd: string;
+  env: Record<string, string> | null;
+  cols: number;
+  rows: number;
+  scope: "task" | "mission" | "project";
+  scopeId: string;
+  status: "starting" | "running" | "completed" | "failed" | "killed";
+  exitCode: number | null;
+  label: string | null;
+  createdBy: string;
+  createdAt: number;
+  startedAt: number;
+  endedAt: number | null;
+}
+
+export interface ProcessOutputResponse {
+  id: number;
+  processId: string;
+  timestamp: number;
+  data: string;
+  stream: "stdout" | "stderr";
+}

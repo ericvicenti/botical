@@ -39,6 +39,11 @@ export const RequestType = z.enum([
   "subscribe",
   "unsubscribe",
 
+  // Process operations
+  "process.write",
+  "process.resize",
+  "process.kill",
+
   // Ping/pong
   "ping",
 ]);
@@ -106,6 +111,21 @@ export const UnsubscribePayload = z.object({
 });
 
 export const PingPayload = z.object({}).optional();
+
+export const ProcessWritePayload = z.object({
+  id: z.string(),
+  data: z.string(),
+});
+
+export const ProcessResizePayload = z.object({
+  id: z.string(),
+  cols: z.number().int().min(1).max(1000),
+  rows: z.number().int().min(1).max(1000),
+});
+
+export const ProcessKillPayload = z.object({
+  id: z.string(),
+});
 
 // ============================================================================
 // Request Message
@@ -203,6 +223,12 @@ export const EventType = z.enum([
   "task.updated",
   "task.started",
   "task.completed",
+
+  // Process events
+  "process.spawned",
+  "process.output",
+  "process.exited",
+  "process.killed",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

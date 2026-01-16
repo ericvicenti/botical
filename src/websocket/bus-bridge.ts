@@ -36,6 +36,10 @@ function mapEventType(internalType: string): EventType | null {
     "message.error": "message.error",
     "file.updated": "file.updated",
     "file.deleted": "file.deleted",
+    "process.spawned": "process.spawned",
+    "process.output": "process.output",
+    "process.exited": "process.exited",
+    "process.killed": "process.killed",
   };
 
   return mappings[internalType] ?? null;
@@ -108,6 +112,19 @@ export function setupBusBridge(): void {
     // They could be added to the protocol if needed
   });
   subscriptions.push(projectSub);
+
+  // Subscribe to process events → broadcast to project room
+  const processSub = EventBus.subscribe("process.*", (envelope) => {
+    const { projectId, event } = envelope;
+    if (!projectId) return;
+
+    const wsEventType = mapEventType(event.type);
+    if (!wsEventType) return;
+
+    const wsEvent = createEvent(wsEventType, event.payload);
+    RoomManager.broadcast(getProjectRoom(projectId), wsEvent);
+  });
+  subscriptions.push(processSub);
 
   console.log("[WebSocket] Event bus bridge initialized");
 }

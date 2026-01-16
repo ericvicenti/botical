@@ -32,8 +32,8 @@ describe("Bus Bridge", () => {
     it("subscribes to session events", () => {
       setupBusBridge();
 
-      // Should have subscriptions for session.*, message.*, file.*, project.*
-      expect(getBridgeSubscriptionCount()).toBe(4);
+      // Should have subscriptions for session.*, message.*, file.*, project.*, process.*
+      expect(getBridgeSubscriptionCount()).toBe(5);
     });
   });
 

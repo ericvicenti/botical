@@ -218,6 +218,13 @@ class DatabaseManagerSingleton {
   }
 
   /**
+   * Get IDs of all open project databases
+   */
+  getOpenProjectIds(): string[] {
+    return Array.from(this.projectDbs.keys());
+  }
+
+  /**
    * Check if the manager is initialized
    */
   isInitialized(): boolean {
