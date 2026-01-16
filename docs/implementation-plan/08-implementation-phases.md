@@ -460,7 +460,7 @@ tests/e2e/
 - [x] Full handler request lifecycle (sessions, subscriptions)
 - [x] Event streaming (text deltas, tool calls, errors)
 - [x] Multi-client scenarios (project isolation, multi-session)
-- [x] All 1011 tests pass (127 WebSocket-specific)
+- [x] All 1175 tests pass (127 WebSocket-specific)
 
 **Deliverable**: Complete WebSocket test coverage validating Phase 3 implementation
 
@@ -599,3 +599,223 @@ iris/
 - **Risk**: Upstream provider failures
 - **Mitigation**: Multiple provider support, retry logic, graceful degradation
 - **Test**: `tests/agents/error-handling.test.ts`
+
+---
+
+## Phase 10: Missions & Tasks ✅ COMPLETE
+
+**Goal**: Implement mission system with planning documents and evolve todos into tasks
+
+### MissionService
+- [x] Create `src/services/missions.ts` with full lifecycle management
+- [x] Implement status transitions: planning → pending → running → paused → completed/cancelled
+- [x] Add plan document storage with markdown files
+- [x] Support plan approval workflow
+- [x] Track completion criteria and summaries
+
+### TaskService
+- [x] Rename TodoService to TaskService in `src/services/tasks.ts`
+- [x] Add mission association (optional missionId)
+- [x] Extend status: pending, in_progress, completed, blocked, cancelled
+- [x] Add createdBy/assignedTo fields (agent vs user)
+- [x] Support parent-child task relationships
+- [x] Maintain backwards compatibility with todo API
+
+### REST API
+- [x] `src/server/routes/missions.ts` - Mission CRUD and lifecycle
+- [x] `src/server/routes/tasks.ts` - Task CRUD (renamed from todos)
+- [x] Register routes in app.ts
+
+### Database Migration
+- [x] Migration 3: Add missions table, rename todos to tasks, add new columns
+
+### Tests
+- [x] Unit tests for MissionService and TaskService
+- [x] Route tests for missions and tasks APIs
+- [x] Integration tests for mission lifecycle
+
+**Deliverable**: Full mission system with task tracking and plan management
+
+---
+
+## Phase 11: Process Management ✅ COMPLETE
+
+**Goal**: PTY-based process execution for commands and services
+
+### PTY Manager
+- [x] Create `src/services/pty-manager.ts` with node-pty integration
+- [x] Implement process spawning with terminal emulation
+- [x] Handle stdin/stdout/stderr streaming
+- [x] Support resize operations
+- [x] Graceful process termination
+
+### ProcessService
+- [x] Create `src/services/processes.ts` with full CRUD
+- [x] Implement spawn, kill, write, resize operations
+- [x] Store process output chunks in database
+- [x] Support scope-based cleanup (task, mission, project)
+- [x] Emit events for WebSocket broadcasting
+
+### REST API
+- [x] `src/server/routes/processes.ts` - Process management endpoints
+- [x] Spawn, list, output, write, resize, kill operations
+- [x] Register routes in app.ts
+
+### WebSocket Handlers
+- [x] `src/websocket/handlers/processes.ts` - Real-time process I/O
+- [x] Handle process.write, process.resize, process.kill
+
+### Event Bus Integration
+- [x] Add process events: spawned, output, exited, killed
+- [x] Update bus-bridge for process event routing
+
+### Database Migration
+- [x] Migration 4: Add processes and process_output tables
+
+### Tests
+- [x] Unit tests for ProcessService
+- [x] Schema validation tests
+- [x] Bus-bridge tests updated for process events
+
+**Deliverable**: Full PTY-based process management with real-time streaming
+
+---
+
+## Phase 12: Git Integration
+
+**Goal**: Git operations via API with Iris SSH identity
+
+See [Git Integration](./12-git-integration.md) for detailed specification.
+
+- [ ] Git status, diff, log operations
+- [ ] Staging and commit functionality
+- [ ] Branch management
+- [ ] Remote operations with SSH identity
+- [ ] File-level diff viewing
+
+---
+
+## Phase 13: WebUI Foundation ✅ COMPLETE
+
+**Goal**: React application with routing, state management, and real-time updates
+
+### Build Setup
+- [x] Vite configuration with React plugin
+- [x] TanStack Router Vite plugin for file-based routing
+- [x] TypeScript configuration with path aliases
+- [x] Tailwind CSS with custom dark theme
+
+### Core Infrastructure
+- [x] React 19 with strict mode
+- [x] TanStack Query for server state
+- [x] TanStack Router for navigation
+- [x] WebSocket context with auto-reconnect
+- [x] UI context for client state
+
+### API Integration
+- [x] API client with error handling
+- [x] Query hooks for projects, sessions, missions, processes
+- [x] Mutation hooks with cache invalidation
+- [x] WebSocket event handlers for cache updates
+
+### Routes
+- [x] Root layout with header and navigation
+- [x] Home page with projects list
+- [x] Project detail page with sessions, missions, processes
+- [x] Connection status indicator
+
+### Styling
+- [x] Tailwind CSS configuration
+- [x] Dark theme (Catppuccin Mocha inspired)
+- [x] Custom scrollbar styles
+- [x] Loading and error states
+
+**Deliverable**: Working React app foundation connected to backend
+
+---
+
+## Phase 14: WebUI Shell
+
+**Goal**: Application shell with tabs, sidebar, and resizable panels
+
+See [WebUI Shell](./14-webui-shell.md) for detailed specification.
+
+- [ ] Tab system for multiple views
+- [ ] Collapsible sidebar with panel switching
+- [ ] Resizable split panels
+- [ ] Bottom panel with tabs
+- [ ] Keyboard shortcuts
+
+---
+
+## Phase 15: Editor & Files
+
+**Goal**: Code editor with file tree navigation
+
+See [Editor & Files](./15-editor-files.md) for detailed specification.
+
+- [ ] CodeMirror 6 integration
+- [ ] File tree component
+- [ ] Multi-file tabs
+- [ ] Syntax highlighting
+- [ ] File operations (create, rename, delete)
+
+---
+
+## Phase 16: Missions UI
+
+**Goal**: Mission planning and execution interface
+
+See [Missions UI](./16-missions-ui.md) for detailed specification.
+
+- [ ] Mission list and creation
+- [ ] Plan editor with markdown preview
+- [ ] Approval workflow UI
+- [ ] Task list with status updates
+- [ ] Mission timeline view
+
+---
+
+## Phase 17: Processes UI
+
+**Goal**: Terminal emulation with xterm.js
+
+See [Processes UI](./17-processes-ui.md) for detailed specification.
+
+- [ ] xterm.js terminal component
+- [ ] Multiple terminal tabs
+- [ ] Process spawn interface
+- [ ] Service management panel
+- [ ] Output search and filtering
+
+---
+
+## Phase 18: Git UI
+
+**Goal**: Git panel with staging, commits, and diffs
+
+See [Git UI](./18-git-ui.md) for detailed specification.
+
+- [ ] Git status panel
+- [ ] Staging interface
+- [ ] Commit dialog
+- [ ] Branch switcher
+- [ ] Diff viewer
+
+---
+
+## Phase 19: Polish & Production
+
+**Goal**: UX polish, performance optimization, and E2E tests
+
+See [Polish & Production](./19-polish-production.md) for detailed specification.
+
+- [ ] Performance optimization
+- [ ] Accessibility improvements
+- [ ] Error boundaries
+- [ ] E2E test suite
+- [ ] Production build configuration
+
+---
+
+Each phase document contains detailed specifications for both backend and frontend work, including pseudocode, API designs, component structures, and comprehensive test requirements

@@ -142,6 +142,47 @@ export function createWebSocketHandler() {
       onOpen(event, ws) {
         const rawWs = ws as unknown as WebSocketConnection;
 
+        // Generate connection ID
+        const connectionId = generateId("conn");
+
+        // Development mode: allow anonymous connections
+        const isDev = process.env.NODE_ENV !== "production";
+
+        if (!token && !projectId && isDev) {
+          // Anonymous dev connection - limited functionality
+          userData = {
+            userId: "anonymous",
+            projectId: "global",
+            connectionId,
+          };
+
+          // Register connection
+          ConnectionManager.add(connectionId, {
+            ws: rawWs,
+            userId: "anonymous",
+            projectId: "global",
+            connectedAt: Date.now(),
+            lastActivity: Date.now(),
+          });
+
+          // Send welcome message
+          rawWs.send(
+            JSON.stringify(
+              createEvent("connected", {
+                connectionId,
+                projectId: "global",
+                userId: "anonymous",
+                anonymous: true,
+              })
+            )
+          );
+
+          console.log(
+            `[WebSocket] Anonymous dev connection ${connectionId} opened`
+          );
+          return;
+        }
+
         // Validate token
         if (!token || !projectId) {
           rawWs.close(4001, "Missing token or projectId");
@@ -159,9 +200,6 @@ export function createWebSocketHandler() {
           rawWs.close(4003, "Access denied to project");
           return;
         }
-
-        // Generate connection ID
-        const connectionId = generateId("conn");
 
         // Store connection data
         userData = {

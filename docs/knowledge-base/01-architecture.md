@@ -365,6 +365,13 @@ Architecture supports eventual scaling:
 - Schema sharing (client/server)
 - Error messages for debugging
 
+### WebUI Stack
+- **Vite** - Build tool with HMR and API proxy
+- **React 19** - UI framework
+- **TanStack Router** - File-based type-safe routing
+- **TanStack Query** - Server state with caching
+- **Tailwind CSS** - Utility-first styling
+
 ### SQLite
 - Zero configuration
 - File-based (easy deployment)
@@ -427,19 +434,36 @@ Architecture supports eventual scaling:
 **Phase 8: WebSocket Testing** ✅
 - Comprehensive unit tests (127 WebSocket tests)
 - Integration tests for streaming and multi-client
-- Total test count: 1011 tests passing
+
+**Phase 10: Missions & Tasks** ✅
+- MissionService with lifecycle management (planning → pending → running → paused → completed)
+- TaskService evolved from TodoService with backwards compatibility
+- REST APIs for missions and tasks
+- Plan document management
+
+**Phase 11: Process Management** ✅
+- ProcessService with PTY support via node-pty
+- Full terminal emulation for commands and services
+- Process output storage and streaming
+- Scope-based lifecycle (task, mission, project)
+
+**Phase 13: WebUI Foundation** ✅
+- React 19 with Vite build tool
+- TanStack Router for file-based routing
+- TanStack Query for server state management
+- WebSocket integration with auto-reconnect
+- Tailwind CSS dark theme (Catppuccin Mocha)
+- Total test count: 1175 tests passing
 
 ### Test Coverage
 
 | Component | Tests |
 |-----------|-------|
-| WebSocket handlers | 28 |
-| Bus-bridge | 18 |
-| Sync/state | 13 |
-| Protocol/connections/rooms | 46 |
-| WebSocket integration | 22 |
-| **Total WebSocket** | **127** |
-| **Total Project** | **1011** |
+| WebSocket tests | 127 |
+| Service tests | 200+ |
+| Route tests | 300+ |
+| Integration tests | 100+ |
+| **Total Project** | **1175** |
 
 ### Pending Components
 
@@ -455,4 +479,6 @@ Architecture supports eventual scaling:
 - [Data Model](./02-data-model.md) - Entity relationships and schemas
 - [API Reference](./03-api-reference.md) - WebSocket and REST endpoints
 - [Patterns](./04-patterns.md) - Common code patterns
+- [Conventions](./05-conventions.md) - Coding standards
+- [WebUI Architecture](./06-webui-architecture.md) - Frontend architecture
 - [Implementation Overview](../implementation-plan/00-overview.md) - Detailed specs
