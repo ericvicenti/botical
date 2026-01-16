@@ -2,7 +2,8 @@ import { useUI } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
 import { FolderTree, Files, GitBranch, Play } from "lucide-react";
 import { useProjects, useMissions } from "@/lib/api/queries";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { useTabs } from "@/contexts/tabs";
 
 const PANELS = [
   { id: "nav", icon: FolderTree, label: "Navigator" },
@@ -113,17 +114,27 @@ function ProjectItem({
   project: { id: string; name: string; path?: string | null };
 }) {
   const { data: missions } = useMissions(project.id);
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    openTab({
+      type: "project",
+      projectId: project.id,
+      projectName: project.name,
+    });
+    navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
+  };
 
   return (
     <div>
-      <Link
-        to="/projects/$projectId"
-        params={{ projectId: project.id }}
-        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-elevated text-sm text-text-primary"
+      <button
+        onClick={handleClick}
+        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-elevated text-sm text-text-primary w-full text-left"
       >
-        <FolderTree className="w-4 h-4 text-accent-primary" />
+        <FolderTree className="w-4 h-4 text-accent-primary shrink-0" />
         <span className="truncate">{project.name}</span>
-      </Link>
+      </button>
       {missions && missions.length > 0 && (
         <div className="ml-4 mt-1 space-y-0.5">
           {missions.slice(0, 5).map((mission) => (
