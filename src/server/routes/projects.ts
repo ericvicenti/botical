@@ -101,13 +101,31 @@ projects.get("/", async (c) => {
 });
 
 /**
+ * Schema for project creation from API (ownerId optional for dev mode)
+ */
+const ApiProjectCreateSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  ownerId: z.string().min(1).optional(),
+  type: z.enum(["local", "remote"]).optional().default("local"),
+  path: z.string().optional(),
+  gitRemote: z.string().url().optional(),
+  iconUrl: z.string().url().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+  settings: z.record(z.unknown()).optional(),
+});
+
+/**
  * POST /api/projects
  * Create a new project
  */
 projects.post("/", async (c) => {
   const body = await c.req.json();
 
-  const result = ProjectCreateSchema.safeParse(body);
+  const result = ApiProjectCreateSchema.safeParse(body);
   if (!result.success) {
     throw new ValidationError(
       result.error.errors[0]?.message || "Invalid input",
@@ -115,8 +133,29 @@ projects.post("/", async (c) => {
     );
   }
 
+  // Auto-generate ownerId for dev mode if not provided
+  const ownerId = result.data.ownerId || `usr_dev_${Date.now().toString(36)}`;
+
   const rootDb = DatabaseManager.getRootDb();
-  const project = ProjectService.create(rootDb, result.data);
+
+  // Ensure user exists (create if needed for dev mode)
+  if (!result.data.ownerId) {
+    const existingUser = rootDb
+      .prepare("SELECT id FROM users WHERE id = ?")
+      .get(ownerId);
+    if (!existingUser) {
+      rootDb
+        .prepare(
+          "INSERT INTO users (id, username, email, is_admin, can_execute_code, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
+        .run(ownerId, "dev_user", `dev@iris.local`, 1, 1, Date.now(), Date.now());
+    }
+  }
+
+  const project = ProjectService.create(rootDb, {
+    ...result.data,
+    ownerId,
+  });
 
   return c.json(
     {

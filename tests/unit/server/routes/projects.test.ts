@@ -192,19 +192,20 @@ describe("Projects API Routes", () => {
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
-    it("requires ownerId", async () => {
+    it("auto-generates ownerId in dev mode when not provided", async () => {
       const response = await app.request("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Test Project",
+          name: "Auto Owner Project",
         }),
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(201);
 
-      const body = (await response.json()) as ErrorResponse;
-      expect(body.error.code).toBe("VALIDATION_ERROR");
+      const body = (await response.json()) as { data: Project };
+      expect(body.data.name).toBe("Auto Owner Project");
+      expect(body.data.ownerId).toMatch(/^usr_dev_/);
     });
   });
 

@@ -12,7 +12,6 @@ function HomePage() {
   const createProject = useCreateProject();
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectPath, setNewProjectPath] = useState("");
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +20,8 @@ function HomePage() {
     try {
       await createProject.mutateAsync({
         name: newProjectName.trim(),
-        path: newProjectPath.trim() || undefined,
       });
       setNewProjectName("");
-      setNewProjectPath("");
       setShowNewProject(false);
     } catch (err) {
       console.error("Failed to create project:", err);
@@ -76,22 +73,6 @@ function HomePage() {
                 placeholder="My Project"
                 className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
                 autoFocus
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="path"
-                className="block text-sm font-medium text-text-primary mb-1"
-              >
-                Path (optional)
-              </label>
-              <input
-                id="path"
-                type="text"
-                value={newProjectPath}
-                onChange={(e) => setNewProjectPath(e.target.value)}
-                placeholder="/path/to/project"
-                className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
               />
             </div>
             <div className="flex gap-2">
