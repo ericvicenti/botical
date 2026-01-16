@@ -187,6 +187,22 @@ export const EventType = z.enum([
   "file.created",
   "file.updated",
   "file.deleted",
+
+  // Mission events
+  "mission.created",
+  "mission.updated",
+  "mission.plan.updated",
+  "mission.started",
+  "mission.paused",
+  "mission.resumed",
+  "mission.completed",
+  "mission.failed",
+
+  // Task events
+  "task.created",
+  "task.updated",
+  "task.started",
+  "task.completed",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

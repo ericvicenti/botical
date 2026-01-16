@@ -124,6 +124,8 @@ export const IdPrefixes = {
   apiKey: "key",
   permission: "perm",
   todo: "todo",
+  mission: "msn",
+  task: "task",
   // Auth-related prefixes
   emailToken: "emltkn",
   authSession: "authsess",

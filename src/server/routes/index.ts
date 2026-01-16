@@ -6,4 +6,5 @@ export { messages } from "./messages.ts";
 export { agents } from "./agents.ts";
 export { projects } from "./projects.ts";
 export { tools } from "./tools.ts";
-export { sessionTodos, todos } from "./todos.ts";
+export { projectMissions, missions } from "./missions.ts";
+export { sessionTasks as sessionTodos, tasks as todos, projectTasks, tasks } from "./tasks.ts";

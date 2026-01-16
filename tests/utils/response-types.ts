@@ -137,3 +137,39 @@ export interface MemberResponse {
   joinedAt: number;
   invitedBy: string | null;
 }
+
+export interface MissionResponse {
+  id: string;
+  projectId: string;
+  sessionId: string | null;
+  title: string;
+  status: "planning" | "pending" | "running" | "paused" | "completed" | "cancelled";
+  planPath: string;
+  planApprovedAt: number | null;
+  planApprovedBy: string | null;
+  createdAt: number;
+  startedAt: number | null;
+  pausedAt: number | null;
+  completedAt: number | null;
+  summary: string | null;
+  completionCriteriaMet: boolean;
+}
+
+export interface TaskResponse {
+  id: string;
+  sessionId: string;
+  missionId: string | null;
+  title: string;
+  activeForm: string;
+  status: "pending" | "in_progress" | "completed" | "blocked" | "cancelled";
+  position: number;
+  createdBy: "agent" | "user";
+  assignedTo: "agent" | "user";
+  parentTaskId: string | null;
+  description: string | null;
+  result: string | null;
+  createdAt: number;
+  updatedAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+}

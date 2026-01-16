@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { DatabaseManager } from "@/database/manager.ts";
 import { Config } from "@/config/index.ts";
-import { TodoService } from "@/services/todos.ts";
+import { TodoService } from "@/services/tasks.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 import fs from "fs";
@@ -46,7 +46,7 @@ describe("Todo Tracking Integration", () => {
 
       // Create pending todo
       const todo = TodoService.create(db, session.id, {
-        content: "Implement feature X",
+        title: "Implement feature X",
         activeForm: "Implementing feature X",
         status: "pending",
       });
@@ -69,14 +69,14 @@ describe("Todo Tracking Integration", () => {
 
       // Create first in_progress todo
       const todo1 = TodoService.create(db, session.id, {
-        content: "Task 1",
+        title: "Task 1",
         activeForm: "Task 1",
         status: "in_progress",
       });
 
       // Create second in_progress todo (should demote first)
       const todo2 = TodoService.create(db, session.id, {
-        content: "Task 2",
+        title: "Task 2",
         activeForm: "Task 2",
         status: "in_progress",
       });
@@ -96,15 +96,15 @@ describe("Todo Tracking Integration", () => {
       const session = SessionService.create(db, { title: "Test Session" });
 
       const todo1 = TodoService.create(db, session.id, {
-        content: "First",
+        title: "First",
         activeForm: "First",
       });
       const todo2 = TodoService.create(db, session.id, {
-        content: "Second",
+        title: "Second",
         activeForm: "Second",
       });
       const todo3 = TodoService.create(db, session.id, {
-        content: "Third",
+        title: "Third",
         activeForm: "Third",
       });
 
@@ -114,9 +114,9 @@ describe("Todo Tracking Integration", () => {
 
       // Todos should be listed in position order
       const todos = TodoService.listBySession(db, session.id);
-      expect(todos[0]!.content).toBe("First");
-      expect(todos[1]!.content).toBe("Second");
-      expect(todos[2]!.content).toBe("Third");
+      expect(todos[0]!.title).toBe("First");
+      expect(todos[1]!.title).toBe("Second");
+      expect(todos[2]!.title).toBe("Third");
     });
   });
 
@@ -126,16 +126,16 @@ describe("Todo Tracking Integration", () => {
       const session = SessionService.create(db, { title: "Test Session" });
 
       // Create initial todos
-      TodoService.create(db, session.id, { content: "Old 1", activeForm: "Old 1" });
-      TodoService.create(db, session.id, { content: "Old 2", activeForm: "Old 2" });
-      TodoService.create(db, session.id, { content: "Old 3", activeForm: "Old 3" });
+      TodoService.create(db, session.id, { title: "Old 1", activeForm: "Old 1" });
+      TodoService.create(db, session.id, { title: "Old 2", activeForm: "Old 2" });
+      TodoService.create(db, session.id, { title: "Old 3", activeForm: "Old 3" });
 
       // Replace with new list
       const newTodos = TodoService.replaceBatch(db, session.id, [
-        { content: "New Task A", activeForm: "Working on A", status: "completed" },
-        { content: "New Task B", activeForm: "Working on B", status: "in_progress" },
-        { content: "New Task C", activeForm: "Working on C", status: "pending" },
-        { content: "New Task D", activeForm: "Working on D", status: "pending" },
+        { title: "New Task A", activeForm: "Working on A", status: "completed" },
+        { title: "New Task B", activeForm: "Working on B", status: "in_progress" },
+        { title: "New Task C", activeForm: "Working on C", status: "pending" },
+        { title: "New Task D", activeForm: "Working on D", status: "pending" },
       ]);
 
       expect(newTodos.length).toBe(4);
@@ -143,7 +143,7 @@ describe("Todo Tracking Integration", () => {
       // Verify all old todos are gone
       const allTodos = TodoService.listBySession(db, session.id);
       expect(allTodos.length).toBe(4);
-      expect(allTodos.every((t) => t.content.startsWith("New Task"))).toBe(true);
+      expect(allTodos.every((t) => t.title.startsWith("New Task"))).toBe(true);
 
       // Verify positions
       expect(allTodos[0]!.position).toBe(0);
@@ -158,8 +158,8 @@ describe("Todo Tracking Integration", () => {
 
       expect(() => {
         TodoService.replaceBatch(db, session.id, [
-          { content: "Task 1", activeForm: "Task 1", status: "in_progress" },
-          { content: "Task 2", activeForm: "Task 2", status: "in_progress" },
+          { title: "Task 1", activeForm: "Task 1", status: "in_progress" },
+          { title: "Task 2", activeForm: "Task 2", status: "in_progress" },
         ]);
       }).toThrow(ValidationError);
     });
@@ -170,23 +170,23 @@ describe("Todo Tracking Integration", () => {
 
       // Create mixed status todos
       TodoService.create(db, session.id, {
-        content: "Pending",
+        title: "Pending",
         activeForm: "Pending",
         status: "pending",
       });
       const inProgress = TodoService.create(db, session.id, {
-        content: "In Progress",
+        title: "In Progress",
         activeForm: "In Progress",
         status: "in_progress",
       });
       const completed1 = TodoService.create(db, session.id, {
-        content: "Done 1",
+        title: "Done 1",
         activeForm: "Done 1",
         status: "pending",
       });
       TodoService.update(db, completed1.id, { status: "completed" });
       const completed2 = TodoService.create(db, session.id, {
-        content: "Done 2",
+        title: "Done 2",
         activeForm: "Done 2",
         status: "pending",
       });
@@ -212,15 +212,15 @@ describe("Todo Tracking Integration", () => {
 
       // Create todos in each session
       TodoService.create(db, session1.id, {
-        content: "Session 1 Task",
+        title: "Session 1 Task",
         activeForm: "Session 1 Task",
       });
       TodoService.create(db, session2.id, {
-        content: "Session 2 Task",
+        title: "Session 2 Task",
         activeForm: "Session 2 Task",
       });
       TodoService.create(db, session2.id, {
-        content: "Session 2 Task 2",
+        title: "Session 2 Task 2",
         activeForm: "Session 2 Task 2",
       });
 
@@ -243,13 +243,13 @@ describe("Todo Tracking Integration", () => {
 
       // Each session can have its own in_progress
       const todo1 = TodoService.create(db, session1.id, {
-        content: "Active in S1",
+        title: "Active in S1",
         activeForm: "Active in S1",
         status: "in_progress",
       });
 
       const todo2 = TodoService.create(db, session2.id, {
-        content: "Active in S2",
+        title: "Active in S2",
         activeForm: "Active in S2",
         status: "in_progress",
       });
@@ -269,22 +269,22 @@ describe("Todo Tracking Integration", () => {
       const session = SessionService.create(db, { title: "Test Session" });
 
       TodoService.create(db, session.id, {
-        content: "Pending 1",
+        title: "Pending 1",
         activeForm: "Pending 1",
         status: "pending",
       });
       TodoService.create(db, session.id, {
-        content: "Pending 2",
+        title: "Pending 2",
         activeForm: "Pending 2",
         status: "pending",
       });
       TodoService.create(db, session.id, {
-        content: "In Progress",
+        title: "In Progress",
         activeForm: "In Progress",
         status: "in_progress",
       });
       const completed = TodoService.create(db, session.id, {
-        content: "Completed",
+        title: "Completed",
         activeForm: "Completed",
         status: "pending",
       });
@@ -306,22 +306,22 @@ describe("Todo Tracking Integration", () => {
 
       for (let i = 0; i < 10; i++) {
         TodoService.create(db, session.id, {
-          content: `Task ${i + 1}`,
+          title: `Task ${i + 1}`,
           activeForm: `Task ${i + 1}`,
         });
       }
 
       const page1 = TodoService.listBySession(db, session.id, { limit: 3 });
       expect(page1.length).toBe(3);
-      expect(page1[0]!.content).toBe("Task 1");
+      expect(page1[0]!.title).toBe("Task 1");
 
       const page2 = TodoService.listBySession(db, session.id, { limit: 3, offset: 3 });
       expect(page2.length).toBe(3);
-      expect(page2[0]!.content).toBe("Task 4");
+      expect(page2[0]!.title).toBe("Task 4");
 
       const page4 = TodoService.listBySession(db, session.id, { limit: 3, offset: 9 });
       expect(page4.length).toBe(1);
-      expect(page4[0]!.content).toBe("Task 10");
+      expect(page4[0]!.title).toBe("Task 10");
     });
   });
 
@@ -331,13 +331,13 @@ describe("Todo Tracking Integration", () => {
       const session = SessionService.create(db, { title: "Test Session" });
 
       const todo1 = TodoService.create(db, session.id, {
-        content: "First",
+        title: "First",
         activeForm: "First",
         status: "in_progress",
       });
 
       const todo2 = TodoService.create(db, session.id, {
-        content: "Second",
+        title: "Second",
         activeForm: "Second",
         status: "pending",
       });
@@ -354,7 +354,7 @@ describe("Todo Tracking Integration", () => {
       const session = SessionService.create(db, { title: "Test Session" });
 
       const todo = TodoService.create(db, session.id, {
-        content: "Task",
+        title: "Task",
         activeForm: "Task",
         status: "in_progress",
       });
@@ -369,15 +369,15 @@ describe("Todo Tracking Integration", () => {
       const db = DatabaseManager.getProjectDb(testProjectId);
 
       expect(() => {
-        TodoService.getByIdOrThrow(db, "todo_nonexistent");
+        TodoService.getByIdOrThrow(db, "task_nonexistent");
       }).toThrow(NotFoundError);
 
       expect(() => {
-        TodoService.update(db, "todo_nonexistent", { content: "Updated" });
+        TodoService.update(db, "task_nonexistent", { title: "Updated" });
       }).toThrow(NotFoundError);
 
       expect(() => {
-        TodoService.delete(db, "todo_nonexistent");
+        TodoService.delete(db, "task_nonexistent");
       }).toThrow(NotFoundError);
     });
   });
@@ -390,18 +390,18 @@ describe("Todo Tracking Integration", () => {
       // Agent receives task and creates todo list
       TodoService.replaceBatch(db, session.id, [
         {
-          content: "Analyze requirements",
+          title: "Analyze requirements",
           activeForm: "Analyzing requirements",
           status: "in_progress",
         },
         {
-          content: "Write implementation",
+          title: "Write implementation",
           activeForm: "Writing implementation",
           status: "pending",
         },
-        { content: "Add tests", activeForm: "Adding tests", status: "pending" },
+        { title: "Add tests", activeForm: "Adding tests", status: "pending" },
         {
-          content: "Update documentation",
+          title: "Update documentation",
           activeForm: "Updating documentation",
           status: "pending",
         },
@@ -409,15 +409,15 @@ describe("Todo Tracking Integration", () => {
 
       let todos = TodoService.listBySession(db, session.id);
       expect(todos.length).toBe(4);
-      expect(TodoService.getInProgress(db, session.id)?.content).toBe(
+      expect(TodoService.getInProgress(db, session.id)?.title).toBe(
         "Analyze requirements"
       );
 
       // Complete first task, start second
-      const firstTodo = todos.find((t) => t.content === "Analyze requirements")!;
+      const firstTodo = todos.find((t) => t.title === "Analyze requirements")!;
       TodoService.markCompleted(db, firstTodo.id);
 
-      const secondTodo = todos.find((t) => t.content === "Write implementation")!;
+      const secondTodo = todos.find((t) => t.title === "Write implementation")!;
       TodoService.setInProgress(db, secondTodo.id);
 
       // Check progress
@@ -427,10 +427,10 @@ describe("Todo Tracking Integration", () => {
 
       // Complete remaining tasks
       TodoService.markCompleted(db, secondTodo.id);
-      const thirdTodo = todos.find((t) => t.content === "Add tests")!;
+      const thirdTodo = todos.find((t) => t.title === "Add tests")!;
       TodoService.setInProgress(db, thirdTodo.id);
       TodoService.markCompleted(db, thirdTodo.id);
-      const fourthTodo = todos.find((t) => t.content === "Update documentation")!;
+      const fourthTodo = todos.find((t) => t.title === "Update documentation")!;
       TodoService.setInProgress(db, fourthTodo.id);
       TodoService.markCompleted(db, fourthTodo.id);
 

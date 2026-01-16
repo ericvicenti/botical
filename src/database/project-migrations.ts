@@ -268,4 +268,77 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 3,
+    name: "missions_and_tasks",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- MISSIONS
+        -- Core unit of autonomous work with planning phase
+        -- ============================================
+
+        CREATE TABLE missions (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          session_id TEXT REFERENCES sessions(id),
+          title TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'planning',
+          plan_path TEXT NOT NULL,
+          plan_approved_at INTEGER,
+          plan_approved_by TEXT,
+          created_at INTEGER NOT NULL,
+          started_at INTEGER,
+          paused_at INTEGER,
+          completed_at INTEGER,
+          summary TEXT,
+          completion_criteria_met INTEGER DEFAULT 0
+        );
+
+        CREATE INDEX idx_missions_project ON missions(project_id);
+        CREATE INDEX idx_missions_status ON missions(status);
+
+        -- ============================================
+        -- TASKS (evolved from todos)
+        -- Granular work units that can belong to missions or sessions
+        -- ============================================
+
+        -- Create new tasks table with all columns
+        CREATE TABLE tasks (
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL REFERENCES sessions(id),
+          mission_id TEXT REFERENCES missions(id),
+          title TEXT NOT NULL,
+          active_form TEXT NOT NULL,
+          status TEXT NOT NULL,
+          position INTEGER NOT NULL,
+          created_by TEXT DEFAULT 'agent',
+          assigned_to TEXT DEFAULT 'agent',
+          parent_task_id TEXT REFERENCES tasks(id),
+          description TEXT,
+          result TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          started_at INTEGER,
+          completed_at INTEGER
+        );
+
+        CREATE INDEX idx_tasks_session ON tasks(session_id, position);
+        CREATE INDEX idx_tasks_mission ON tasks(mission_id);
+
+        -- Copy data from todos to tasks (renaming content to title)
+        INSERT INTO tasks (
+          id, session_id, title, active_form, status, position,
+          created_at, updated_at
+        )
+        SELECT
+          id, session_id, content, active_form, status, position,
+          created_at, updated_at
+        FROM todos;
+
+        -- Drop old todos table
+        DROP TABLE todos;
+      `);
+    },
+  },
 ];
