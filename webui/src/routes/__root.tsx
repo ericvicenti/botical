@@ -1,5 +1,9 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { useWebSocket } from "@/lib/websocket/context";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { TabBar } from "@/components/layout/TabBar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { BottomPanel } from "@/components/layout/BottomPanel";
 import { cn } from "@/lib/utils/cn";
 
 export const Route = createRootRoute({
@@ -8,24 +12,16 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const { status } = useWebSocket();
+  useKeyboardShortcuts();
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
       {/* Header */}
-      <header className="h-12 flex items-center justify-between px-4 bg-bg-secondary border-b border-border">
+      <header className="h-10 flex items-center justify-between px-4 bg-bg-secondary border-b border-border shrink-0">
         <div className="flex items-center gap-4">
           <Link to="/" className="text-lg font-semibold text-text-primary">
             Iris
           </Link>
-          <nav className="flex items-center gap-2">
-            <Link
-              to="/"
-              className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-elevated rounded transition-colors"
-              activeProps={{ className: "text-text-primary bg-bg-elevated" }}
-            >
-              Projects
-            </Link>
-          </nav>
         </div>
         <div className="flex items-center gap-3">
           <div
@@ -53,10 +49,20 @@ function RootLayout() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto scrollbar-thin">
-        <Outlet />
-      </main>
+      {/* Tab Bar */}
+      <TabBar />
+
+      {/* Main area with sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+
+        <main className="flex-1 overflow-auto scrollbar-thin">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Bottom Panel */}
+      <BottomPanel />
     </div>
   );
 }

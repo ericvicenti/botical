@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { WebSocketProvider } from "./lib/websocket/context";
 import { UIProvider } from "./contexts/ui";
+import { TabsProvider } from "./contexts/tabs";
 import { routeTree } from "./routeTree.gen";
 
 const queryClient = new QueryClient({
@@ -31,7 +32,9 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <WebSocketProvider>
         <UIProvider>
-          <RouterProvider router={router} />
+          <TabsProvider>
+            <RouterProvider router={router} />
+          </TabsProvider>
         </UIProvider>
       </WebSocketProvider>
     </QueryClientProvider>
