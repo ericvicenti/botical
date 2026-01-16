@@ -43,9 +43,9 @@ function generateTabId(data: TabData): string {
 function generateTabLabel(data: TabData): string {
   switch (data.type) {
     case "project":
-      return "Project";
+      return data.projectName;
     case "mission":
-      return "Mission";
+      return data.missionTitle;
     case "file":
       return data.path.split("/").pop() || "File";
     case "process":

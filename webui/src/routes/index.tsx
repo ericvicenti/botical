@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useProjects, useCreateProject } from "@/lib/api/queries";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useTabs } from "@/contexts/tabs";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -12,6 +13,17 @@ function HomePage() {
   const createProject = useCreateProject();
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleProjectClick = (project: { id: string; name: string }) => {
+    openTab({
+      type: "project",
+      projectId: project.id,
+      projectName: project.name,
+    });
+    navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,12 +126,11 @@ function HomePage() {
       ) : (
         <div className="space-y-3">
           {projects?.map((project) => (
-            <Link
+            <button
               key={project.id}
-              to="/projects/$projectId"
-              params={{ projectId: project.id }}
+              onClick={() => handleProjectClick(project)}
               className={cn(
-                "block p-4 bg-bg-elevated rounded-lg border border-border",
+                "block w-full text-left p-4 bg-bg-elevated rounded-lg border border-border",
                 "hover:border-accent-primary/50 hover:bg-bg-elevated/80 transition-colors"
               )}
             >
@@ -143,7 +154,7 @@ function HomePage() {
                   {new Date(project.createdAt).toLocaleDateString()}
                 </span>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       )}

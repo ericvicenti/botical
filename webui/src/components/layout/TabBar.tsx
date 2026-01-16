@@ -1,4 +1,5 @@
 import { useTabs } from "@/contexts/tabs";
+import { useNavigate } from "@tanstack/react-router";
 import {
   X,
   Circle,
@@ -10,6 +11,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import type { Tab } from "@/types/tabs";
 
 const TAB_ICONS = {
   project: Folder,
@@ -20,8 +22,28 @@ const TAB_ICONS = {
   settings: Settings,
 } as const;
 
+function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } {
+  switch (tab.data.type) {
+    case "project":
+      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "mission":
+      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "settings":
+      return { to: "/settings" };
+    default:
+      return { to: "/" };
+  }
+}
+
 export function TabBar() {
   const { tabs, activeTabId, setActiveTab, closeTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleTabClick = (tab: Tab) => {
+    setActiveTab(tab.id);
+    const route = getTabRoute(tab);
+    navigate({ to: route.to, params: route.params });
+  };
 
   if (tabs.length === 0) {
     return (
@@ -38,7 +60,7 @@ export function TabBar() {
         return (
           <div
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabClick(tab)}
             className={cn(
               "group h-full px-3 flex items-center gap-2 border-r border-border cursor-pointer",
               "hover:bg-bg-elevated transition-colors min-w-0 max-w-48",

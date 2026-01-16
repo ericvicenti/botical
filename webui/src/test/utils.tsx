@@ -1,10 +1,9 @@
 import { ReactNode } from "react";
-import { render, RenderOptions } from "@testing-library/react";
+import { render as rtlRender, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
-  createRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -29,58 +28,6 @@ function createTestQueryClient() {
 // Mock WebSocket context that doesn't actually connect
 function MockWebSocketProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;
-}
-
-interface TestProvidersProps {
-  children: ReactNode;
-  queryClient?: QueryClient;
-  initialRoute?: string;
-}
-
-// Create a minimal router for testing
-function createTestRouter(initialRoute: string = "/") {
-  const rootRoute = createRootRoute({
-    component: () => null,
-  });
-
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/",
-    component: () => null,
-  });
-
-  const projectRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/projects/$projectId",
-    component: () => null,
-  });
-
-  const routeTree = rootRoute.addChildren([indexRoute, projectRoute]);
-
-  return createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [initialRoute] }),
-  });
-}
-
-export function TestProviders({
-  children,
-  queryClient = createTestQueryClient(),
-  initialRoute = "/",
-}: TestProvidersProps) {
-  const router = createTestRouter(initialRoute);
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <MockWebSocketProvider>
-        <UIProvider>
-          <TabsProvider>
-            <RouterProvider router={router}>{children}</RouterProvider>
-          </TabsProvider>
-        </UIProvider>
-      </MockWebSocketProvider>
-    </QueryClientProvider>
-  );
 }
 
 // Wrapper for testing without router (for isolated component tests)
@@ -111,20 +58,42 @@ function customRender(
     withRouter?: boolean;
   }
 ) {
-  const { queryClient, initialRoute, withRouter = true, ...renderOptions } = options || {};
+  const { queryClient = createTestQueryClient(), initialRoute = "/", withRouter = true, ...renderOptions } = options || {};
 
-  const Wrapper = ({ children }: { children: ReactNode }) =>
-    withRouter ? (
-      <TestProviders queryClient={queryClient} initialRoute={initialRoute}>
-        {children}
-      </TestProviders>
-    ) : (
+  if (!withRouter) {
+    // Simple case - no router needed
+    const Wrapper = ({ children }: { children: ReactNode }) => (
       <TestProvidersNoRouter queryClient={queryClient}>
         {children}
       </TestProvidersNoRouter>
     );
+    return rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
+  }
 
-  return render(ui, { wrapper: Wrapper, ...renderOptions });
+  // With router - create a router that renders the UI as its root component
+  const rootRoute = createRootRoute({
+    component: () => <>{ui}</>,
+  });
+
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: [initialRoute] }),
+  });
+
+  // Render the full app with router
+  const FullApp = (
+    <QueryClientProvider client={queryClient}>
+      <MockWebSocketProvider>
+        <UIProvider>
+          <TabsProvider>
+            <RouterProvider router={router} />
+          </TabsProvider>
+        </UIProvider>
+      </MockWebSocketProvider>
+    </QueryClientProvider>
+  );
+
+  return rtlRender(FullApp, renderOptions);
 }
 
 export * from "@testing-library/react";
