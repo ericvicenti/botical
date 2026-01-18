@@ -47,6 +47,8 @@ const SendMessageSchema = z.object({
   modelId: z.string().nullable().optional(),
   agentName: z.string().optional(),
   canExecuteCode: z.boolean().default(false),
+  // Allow API key to be passed directly (for frontend localStorage storage)
+  apiKey: z.string().optional(),
 });
 
 /**
@@ -73,6 +75,7 @@ messages.post("/", async (c) => {
     modelId,
     agentName,
     canExecuteCode,
+    apiKey: requestApiKey,
   } = result.data;
 
   // Get the project database
@@ -81,11 +84,11 @@ messages.post("/", async (c) => {
   // Verify session exists
   const session = SessionService.getByIdOrThrow(db, sessionId);
 
-  // Get API key for the provider
-  const apiKey = ProviderCredentialsService.getApiKey(userId, providerId);
+  // Get API key - prefer request body, fallback to stored credentials
+  const apiKey = requestApiKey || ProviderCredentialsService.getApiKey(userId, providerId);
   if (!apiKey) {
     throw new AuthenticationError(
-      `No API key found for provider "${providerId}". Please add credentials first.`
+      `No API key found for provider "${providerId}". Please add credentials first or provide an API key.`
     );
   }
 

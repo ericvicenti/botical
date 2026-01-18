@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientRaw } from "./client";
-import type { Project, Session, Mission, Task, Process, MessageWithParts } from "./types";
+import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart } from "./types";
 
 // Projects
 export function useProjects() {
@@ -42,7 +42,7 @@ export function useSessions(projectId: string) {
     queryKey: ["projects", projectId, "sessions"],
     queryFn: async () => {
       const response = await apiClientRaw<Session[]>(
-        `/api/projects/${projectId}/sessions`
+        `/api/sessions?projectId=${encodeURIComponent(projectId)}`
       );
       return response.data;
     },
@@ -50,11 +50,11 @@ export function useSessions(projectId: string) {
   });
 }
 
-export function useSession(sessionId: string) {
+export function useSession(sessionId: string, projectId: string) {
   return useQuery({
     queryKey: ["sessions", sessionId],
-    queryFn: () => apiClient<Session>(`/api/sessions/${sessionId}`),
-    enabled: !!sessionId,
+    queryFn: () => apiClient<Session>(`/api/sessions/${sessionId}?projectId=${encodeURIComponent(projectId)}`),
+    enabled: !!sessionId && !!projectId,
   });
 }
 
@@ -63,9 +63,13 @@ export function useCreateSession() {
 
   return useMutation({
     mutationFn: (data: { projectId: string; title: string; agent?: string }) =>
-      apiClient<Session>(`/api/projects/${data.projectId}/sessions`, {
+      apiClient<Session>(`/api/sessions`, {
         method: "POST",
-        body: JSON.stringify({ title: data.title, agent: data.agent }),
+        body: JSON.stringify({
+          projectId: data.projectId,
+          title: data.title,
+          agent: data.agent || "default",
+        }),
       }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["projects", projectId, "sessions"] });
@@ -77,8 +81,8 @@ export function useArchiveSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (sessionId: string) =>
-      apiClient(`/api/sessions/${sessionId}`, { method: "DELETE" }),
+    mutationFn: ({ sessionId, projectId }: { sessionId: string; projectId: string }) =>
+      apiClient(`/api/sessions/${sessionId}?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -87,16 +91,16 @@ export function useArchiveSession() {
 }
 
 // Messages
-export function useMessages(sessionId: string) {
+export function useMessages(sessionId: string, projectId: string) {
   return useQuery({
     queryKey: ["sessions", sessionId, "messages"],
     queryFn: async () => {
       const response = await apiClientRaw<MessageWithParts[]>(
-        `/api/sessions/${sessionId}/messages`
+        `/api/sessions/${sessionId}/messages?projectId=${encodeURIComponent(projectId)}`
       );
       return response.data;
     },
-    enabled: !!sessionId,
+    enabled: !!sessionId && !!projectId,
   });
 }
 
@@ -104,17 +108,83 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { sessionId: string; content: string }) =>
-      apiClient<MessageWithParts>("/api/messages", {
+    mutationFn: (data: {
+      projectId: string;
+      sessionId: string;
+      content: string;
+      userId: string;
+      providerId?: string;
+      apiKey?: string;
+      modelId?: string;
+    }) =>
+      apiClient<{ message: MessageWithParts; parts: MessagePart[] }>("/api/messages", {
         method: "POST",
         body: JSON.stringify({
+          projectId: data.projectId,
           sessionId: data.sessionId,
           content: data.content,
+          userId: data.userId,
+          providerId: data.providerId || "anthropic",
+          apiKey: data.apiKey,
+          modelId: data.modelId,
         }),
       }),
     onSuccess: (_, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: ["sessions", sessionId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["sessions", sessionId] });
+    },
+  });
+}
+
+// Settings - stored in localStorage for now
+const SETTINGS_KEY = "iris:settings";
+
+export interface AppSettings {
+  anthropicApiKey?: string;
+  openaiApiKey?: string;
+  googleApiKey?: string;
+  defaultProvider: "anthropic" | "openai" | "google";
+  userId: string;
+}
+
+export function getSettings(): AppSettings {
+  try {
+    const stored = localStorage.getItem(SETTINGS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn("Failed to load settings:", e);
+  }
+  // Default settings with a generated userId
+  return {
+    defaultProvider: "anthropic",
+    userId: `user-${Date.now()}`,
+  };
+}
+
+export function saveSettings(settings: AppSettings): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export function useSettings() {
+  return useQuery({
+    queryKey: ["settings"],
+    queryFn: () => getSettings(),
+    staleTime: Infinity,
+  });
+}
+
+export function useSaveSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (settings: AppSettings) => {
+      saveSettings(settings);
+      return Promise.resolve(settings);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
     },
   });
 }
