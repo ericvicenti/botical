@@ -23,28 +23,20 @@ Open http://localhost:5173 in your browser.
 1. Open http://localhost:5173
 2. **Verify:**
    - "Projects" heading displays
-   - "New Project" button appears in top right
    - Project list shows existing projects OR "No projects yet" message
+   - Sidebar shows project dropdown at top
 
 ### 1.2 Create a Project
-1. Click "New Project" button
-2. A form appears with a "Project Name" input
-3. Type a name (e.g., "My Test Project")
-4. Click "Create" button
-5. **Verify:**
-   - Form closes
-   - New project appears in the list immediately
-   - Project shows name and creation date
-
-### 1.3 Create Project - Validation
-1. Click "New Project" button
-2. Leave the name field empty
-3. **Verify:** "Create" button is disabled
-
-### 1.4 Cancel Project Creation
-1. Click "New Project" button
-2. Click "Cancel"
-3. **Verify:** Form closes, no project created
+1. Click the project dropdown in the sidebar
+2. Click "Create New Project"
+3. A new tab opens with a "Create New Project" form
+4. Type a name (e.g., "My Test Project")
+5. Optionally enter a project path
+6. Click "Create Project" button
+7. **Verify:**
+   - New project tab opens
+   - Project appears in the sidebar dropdown
+   - Page navigates to project detail
 
 ---
 
@@ -71,18 +63,43 @@ Open http://localhost:5173 in your browser.
 
 ## 3. Sidebar
 
-### 3.1 Panel Switching
+### 3.1 Project Selector
+1. Look at the top of the sidebar
+2. **Verify:**
+   - A dropdown showing "Select a project" appears at the top
+   - Dropdown has a folder icon and chevron
+3. Click the dropdown
+4. **Verify:**
+   - Dropdown expands to show all available projects
+   - Projects show folder icons next to names
+5. Click a project in the dropdown
+6. **Verify:**
+   - Dropdown closes
+   - Dropdown label updates to show selected project name
+   - A tab opens for the project
+   - Page navigates to project detail
+
+### 3.2 Panel Switching
 1. Click each icon in the sidebar (top to bottom):
-   - **Files icon** → Shows "Navigator" panel
-   - **Folder icon** → Shows "Files" panel
-   - **Git branch icon** → Shows "Git" panel
-   - **Play icon** → Shows "Run" panel
+   - **Files icon** → Shows "Files" panel
+   - **Git branch icon** → Shows "Git" panel (Source Control)
+   - **Play icon** → Shows "Run" panel (Commands & Services)
 2. **Verify:**
    - Panel title changes to match selection
    - Active icon is visually highlighted
    - Panel content area updates
 
-### 3.2 Toggle Sidebar
+### 3.3 Project-Scoped Panels
+1. Without a project selected:
+   - Files panel shows "Select a project to browse files"
+   - Git panel shows "Select a project to view git status"
+   - Run panel shows "Select a project to manage processes"
+2. After selecting a project:
+   - Files panel shows "File browser coming soon"
+   - Git panel shows "Git integration coming soon"
+   - Run panel shows "No running processes"
+
+### 3.4 Toggle Sidebar
 1. Press `Cmd+B` (Mac) or `Ctrl+B` (Windows)
 2. **Verify:** Sidebar collapses/hides
 3. Press shortcut again
@@ -121,7 +138,9 @@ Open http://localhost:5173 in your browser.
 
 ### 5.1 Initial State
 1. Open http://localhost:5173
-2. **Verify:** Tab bar shows "No open tabs"
+2. **Verify:**
+   - Tab bar is above the main content (to the right of sidebar)
+   - Tab bar shows "No open tabs"
 
 ### 5.2 Opening a Project Tab
 1. Click on a project in the project list
@@ -158,6 +177,15 @@ Open http://localhost:5173 in your browser.
 3. Click the same project again
 4. **Verify:** Only one tab exists for that project (not duplicated)
 
+### 5.7 Create Project Tab
+1. Click the project dropdown in sidebar
+2. Click "Create New Project"
+3. **Verify:**
+   - A "New Project" tab opens with a + icon
+   - Tab shows form with project name and path fields
+4. Click the X on the tab to close it
+5. **Verify:** Tab closes, returns to previous view
+
 ---
 
 ## 6. Error States
@@ -177,14 +205,14 @@ Open http://localhost:5173 in your browser.
 
 The following are **placeholder UI only** - not functional:
 
-- **Sidebar panels**: Navigator, Files, Git, Run panels show titles only - no actual content
+- **Sidebar panels**: Files, Git, Run panels show project-scoped placeholders - no actual content
 - **Bottom panel**: Output, Problems, Services show placeholder text - no real data
 - **Terminal**: No ability to type/run commands from GUI
 - **Sessions**: Display only - cannot create from UI
 - **Missions**: Display only - cannot create from UI
 - **Processes**: Display only - cannot start from UI
-- **File browser**: Not implemented
-- **Git operations**: Not implemented
+- **File browser**: Not implemented (placeholder shows "File browser coming soon")
+- **Git operations**: Not implemented (placeholder shows "Git integration coming soon")
 
 ---
 
