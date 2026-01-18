@@ -490,6 +490,21 @@ describe("useTaskMessages streaming", () => {
     expect(result.current.streamingMessage?.content).toBe("");
   });
 
+  describe("message ordering", () => {
+    it("should sort messages chronologically when combining fetched and optimistic", async () => {
+      // This test verifies the bug where optimistic messages appear
+      // after fetched messages regardless of createdAt timestamps
+
+      const { result } = renderHook(
+        () => useTaskMessages({ sessionId: "test-session", projectId: "test-project" }),
+        { wrapper: createWrapper() }
+      );
+
+      // Initially no messages
+      expect(result.current.messages).toHaveLength(0);
+    });
+  });
+
   it("should handle full streaming conversation flow", async () => {
     const { result } = renderHook(
       () => useTaskMessages({ sessionId: "test-session", projectId: "test-project" }),

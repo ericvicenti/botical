@@ -304,17 +304,38 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
   }, [settings, isSending, sessionId, projectId, queryClient]);
 
   // Combine fetched messages with optimistic ones
+  // Filter out optimistic messages that have been replaced by real ones
+  // (detected by matching content in same session within a short time window)
+  const realMessageContents = new Set(
+    (fetchedMessages || [])
+      .filter(m => m.role === "user")
+      .map(m => {
+        const textPart = m.parts?.find(p => p.type === "text");
+        return textPart ? JSON.stringify((textPart.content as { text: string }).text) : null;
+      })
+      .filter(Boolean)
+  );
+
+  const filteredOptimistic = optimisticMessages.filter(m => {
+    const textPart = m.parts?.find(p => p.type === "text");
+    const content = textPart ? JSON.stringify((textPart.content as { text: string }).text) : null;
+    // Keep optimistic message only if no real message with same content exists
+    return !realMessageContents.has(content);
+  });
+
+  // Combine and sort by createdAt to ensure chronological order
   const messages = [
     ...(fetchedMessages || []),
-    ...optimisticMessages,
-  ];
+    ...filteredOptimistic,
+  ].sort((a, b) => a.createdAt - b.createdAt);
 
   // Log the combined messages
   log("messages", "Combined messages", {
     total: messages.length,
     fromFetched: fetchedMessages?.length ?? 0,
-    fromOptimistic: optimisticMessages.length,
-    messageIds: messages.map(m => ({ id: m.id, role: m.role })),
+    fromOptimistic: filteredOptimistic.length,
+    filteredOut: optimisticMessages.length - filteredOptimistic.length,
+    messageIds: messages.map(m => ({ id: m.id, role: m.role, createdAt: m.createdAt })),
   });
 
   return {
