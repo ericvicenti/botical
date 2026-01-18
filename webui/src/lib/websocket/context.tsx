@@ -12,6 +12,12 @@ import { handleWebSocketEvent } from "./events";
 
 type WSStatus = "connecting" | "connected" | "disconnected";
 
+// Generate unique request IDs
+let requestIdCounter = 0;
+function generateRequestId(): string {
+  return `req_${Date.now()}_${++requestIdCounter}`;
+}
+
 interface WebSocketContextValue {
   status: WSStatus;
   send: (message: object) => void;
@@ -69,9 +75,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log(`[WebSocket] Received message:`, data.type, data);
         handleWebSocketEvent(data, queryClient);
-      } catch {
-        console.error("Failed to parse WebSocket message");
+      } catch (err) {
+        console.error("[WebSocket] Failed to parse message:", err, event.data);
       }
     };
 
@@ -98,15 +105,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const subscribe = useCallback(
-    (room: string) => {
-      send({ type: "subscribe", room });
+    (channel: string) => {
+      // Send in the format expected by the server's WSRequest schema
+      send({
+        id: generateRequestId(),
+        type: "subscribe",
+        payload: { channel },
+      });
+      console.log(`[WebSocket] Subscribing to channel: ${channel}`);
     },
     [send]
   );
 
   const unsubscribe = useCallback(
-    (room: string) => {
-      send({ type: "unsubscribe", room });
+    (channel: string) => {
+      // Send in the format expected by the server's WSRequest schema
+      send({
+        id: generateRequestId(),
+        type: "unsubscribe",
+        payload: { channel },
+      });
+      console.log(`[WebSocket] Unsubscribing from channel: ${channel}`);
     },
     [send]
   );
