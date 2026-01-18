@@ -4,13 +4,19 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { TabBar } from "@/components/layout/TabBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomPanel } from "@/components/layout/BottomPanel";
+import { CommandProvider } from "@/commands/context";
+import { CommandPalette } from "@/components/command-palette/CommandPalette";
+import { registerAllCommands } from "@/commands/definitions";
 import { cn } from "@/lib/utils/cn";
+
+// Register commands on app load
+registerAllCommands();
 
 export const Route = createRootRoute({
   component: RootLayout,
 });
 
-function RootLayout() {
+function RootLayoutInner() {
   const { status } = useWebSocket();
   useKeyboardShortcuts();
 
@@ -49,20 +55,32 @@ function RootLayout() {
         </div>
       </header>
 
-      {/* Tab Bar */}
-      <TabBar />
-
       {/* Main area with sidebar */}
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
 
-        <main className="flex-1 overflow-auto scrollbar-thin">
-          <Outlet />
-        </main>
+        {/* Content area with tabs on top */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TabBar />
+          <main className="flex-1 overflow-auto scrollbar-thin">
+            <Outlet />
+          </main>
+        </div>
       </div>
 
       {/* Bottom Panel */}
       <BottomPanel />
+
+      {/* Command Palette */}
+      <CommandPalette />
     </div>
+  );
+}
+
+function RootLayout() {
+  return (
+    <CommandProvider>
+      <RootLayoutInner />
+    </CommandProvider>
   );
 }
