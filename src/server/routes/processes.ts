@@ -33,6 +33,7 @@ import {
   type ProcessType,
   type ProcessStatus,
 } from "@/services/processes.ts";
+import { ProjectService } from "@/services/projects.ts";
 import { ValidationError } from "@/utils/errors.ts";
 
 // ============================================
@@ -76,8 +77,14 @@ projectProcesses.post("/:projectId/processes", async (c) => {
     );
   }
 
+  // Get the project to find the actual workspace path
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  // Use the project's workspace path if available, otherwise fall back to internal data dir
+  const projectPath = project.path || Config.getProjectDir(projectId);
+
   const db = DatabaseManager.getProjectDb(projectId);
-  const projectPath = Config.getProjectDir(projectId);
   const process = ProcessService.spawn(db, result.data, projectPath);
 
   return c.json({ data: process }, 201);

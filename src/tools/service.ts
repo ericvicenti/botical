@@ -12,6 +12,7 @@ import { defineTool } from "./types.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { ProcessService } from "@/services/processes.ts";
+import { ProjectService } from "@/services/projects.ts";
 
 export const serviceTool = defineTool("service", {
   description: `Start a long-running service process (non-blocking).
@@ -54,7 +55,11 @@ Examples:
     });
 
     const db = DatabaseManager.getProjectDb(context.projectId);
-    const projectPath = Config.getProjectDir(context.projectId);
+
+    // Get the project to find the actual workspace path
+    const rootDb = DatabaseManager.getRootDb();
+    const project = ProjectService.getByIdOrThrow(rootDb, context.projectId);
+    const projectPath = project.path || Config.getProjectDir(context.projectId);
 
     // Spawn the process
     const process = ProcessService.spawn(db, {
