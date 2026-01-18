@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderPlus, FolderTree, MessageSquare } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderPlus, FolderTree, MessageSquare, Settings } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -61,6 +61,10 @@ export function Sidebar() {
             <FolderTree className="w-5 h-5" />
           </button>
         )}
+
+        {/* Spacer and Settings at bottom */}
+        <div className="flex-1" />
+        <SettingsButton />
       </div>
     );
   }
@@ -76,6 +80,9 @@ export function Sidebar() {
         </div>
         <div className="flex-1 overflow-auto">
           <ProjectList />
+        </div>
+        <div className="border-t border-border">
+          <SettingsButton />
         </div>
       </div>
     );
@@ -102,6 +109,12 @@ export function Sidebar() {
               <panel.icon className="w-5 h-5" />
             </button>
           ))}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Settings button at bottom */}
+          <SettingsButton />
         </div>
 
         <div className="flex-1 overflow-hidden">
@@ -316,5 +329,30 @@ function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
         <div className="text-sm text-text-muted">Select a project to manage processes</div>
       )}
     </div>
+  );
+}
+
+function SettingsButton() {
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    openTab({ type: "settings" });
+    navigate({ to: "/settings" });
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        "w-12 h-12 flex items-center justify-center",
+        "hover:bg-bg-elevated transition-colors",
+        "text-text-secondary hover:text-text-primary"
+      )}
+      title="Settings"
+      data-testid="settings-button"
+    >
+      <Settings className="w-5 h-5" />
+    </button>
   );
 }

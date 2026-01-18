@@ -3,18 +3,66 @@ import { render, screen, fireEvent, waitFor } from "@/test/utils";
 import { server } from "@/test/setup";
 import { http, HttpResponse } from "msw";
 import { useUI } from "@/contexts/ui";
-import { useProjects, useMissions } from "@/lib/api/queries";
+import { useProjects } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
-import { FolderTree, Files, GitBranch, Play } from "lucide-react";
+import { Files, GitBranch, Play, ChevronDown, FolderTree } from "lucide-react";
 
 const PANELS = [
-  { id: "nav", icon: FolderTree, label: "Navigator" },
   { id: "files", icon: Files, label: "Files" },
   { id: "git", icon: GitBranch, label: "Git" },
   { id: "run", icon: Play, label: "Run" },
 ] as const;
 
-// Simplified Sidebar without Link component for testing
+// Simplified ProjectSelector without navigation for testing
+function TestProjectSelector() {
+  const { data: projects, isLoading } = useProjects();
+  const { selectedProjectId, setSelectedProject } = useUI();
+
+  const selectedProject = projects?.find((p) => p.id === selectedProjectId);
+
+  const handleSelectProject = (project: { id: string; name: string }) => {
+    setSelectedProject(project.id);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        data-testid="project-selector-trigger"
+        className={cn(
+          "w-full flex items-center justify-between gap-2 px-3 py-2",
+          "bg-bg-elevated hover:bg-bg-elevated/80 transition-colors",
+          "text-sm text-text-primary border-b border-border"
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderTree className="w-4 h-4 text-accent-primary shrink-0" />
+          <span className="truncate" data-testid="project-selector-label">
+            {isLoading
+              ? "Loading..."
+              : selectedProject?.name ?? "Select a project"}
+          </span>
+        </div>
+        <ChevronDown className="w-4 h-4 text-text-secondary shrink-0" />
+      </button>
+
+      <div data-testid="project-dropdown" className="py-1">
+        {projects?.map((project) => (
+          <button
+            key={project.id}
+            onClick={() => handleSelectProject(project)}
+            data-testid={`project-option-${project.id}`}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm"
+          >
+            <FolderTree className="w-4 h-4 shrink-0" />
+            <span className="truncate">{project.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Simplified Sidebar for testing
 function TestSidebar() {
   const { sidebarCollapsed, sidebarPanel, setSidebarPanel, toggleSidebar } =
     useUI();
@@ -46,141 +94,94 @@ function TestSidebar() {
   }
 
   return (
-    <div className="w-60 bg-bg-secondary border-r border-border flex">
-      <div className="w-12 border-r border-border flex flex-col shrink-0">
-        {PANELS.map((panel) => (
-          <button
-            key={panel.id}
-            onClick={() => setSidebarPanel(panel.id)}
-            className={cn(
-              "w-12 h-12 flex items-center justify-center",
-              "hover:bg-bg-elevated transition-colors",
-              sidebarPanel === panel.id
-                ? "text-accent-primary border-l-2 border-accent-primary"
-                : "text-text-secondary"
-            )}
-            title={panel.label}
-          >
-            <panel.icon className="w-5 h-5" />
-          </button>
-        ))}
-      </div>
+    <div className="w-60 bg-bg-secondary border-r border-border flex flex-col">
+      <TestProjectSelector />
+      <div className="flex flex-1 min-h-0">
+        <div className="w-12 border-r border-border flex flex-col shrink-0">
+          {PANELS.map((panel) => (
+            <button
+              key={panel.id}
+              onClick={() => setSidebarPanel(panel.id)}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center",
+                "hover:bg-bg-elevated transition-colors",
+                sidebarPanel === panel.id
+                  ? "text-accent-primary border-l-2 border-accent-primary"
+                  : "text-text-secondary"
+              )}
+              title={panel.label}
+            >
+              <panel.icon className="w-5 h-5" />
+            </button>
+          ))}
+        </div>
 
-      <div className="flex-1 overflow-hidden">
-        <SidebarPanel panel={sidebarPanel} />
+        <div className="flex-1 overflow-hidden">
+          <SidebarPanel panel={sidebarPanel} />
+        </div>
       </div>
     </div>
   );
 }
 
 function SidebarPanel({ panel }: { panel: string }) {
+  const { selectedProjectId } = useUI();
+
   switch (panel) {
-    case "nav":
-      return <NavigatorPanel />;
     case "files":
-      return <FilesPanel />;
+      return <FilesPanel selectedProjectId={selectedProjectId} />;
     case "git":
-      return <GitPanel />;
+      return <GitPanel selectedProjectId={selectedProjectId} />;
     case "run":
-      return <RunPanel />;
+      return <RunPanel selectedProjectId={selectedProjectId} />;
     default:
       return null;
   }
 }
 
-function NavigatorPanel() {
-  const { data: projects, isLoading } = useProjects();
-
-  return (
-    <div className="p-2 overflow-auto h-full">
-      <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
-        Projects
-      </div>
-      {isLoading ? (
-        <div className="text-sm text-text-muted">Loading...</div>
-      ) : !projects?.length ? (
-        <div className="text-sm text-text-muted">No projects</div>
-      ) : (
-        <div className="space-y-1">
-          {projects.map((project) => (
-            <ProjectItem key={project.id} project={project} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProjectItem({
-  project,
-}: {
-  project: { id: string; name: string; path?: string | null };
-}) {
-  const { data: missions } = useMissions(project.id);
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-elevated text-sm text-text-primary cursor-pointer">
-        <FolderTree className="w-4 h-4 text-accent-primary" />
-        <span className="truncate">{project.name}</span>
-      </div>
-      {missions && missions.length > 0 && (
-        <div className="ml-4 mt-1 space-y-0.5">
-          {missions.slice(0, 5).map((mission) => (
-            <div
-              key={mission.id}
-              className="flex items-center gap-2 px-2 py-0.5 rounded hover:bg-bg-elevated text-xs text-text-secondary"
-            >
-              <span
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  mission.status === "running"
-                    ? "bg-accent-success"
-                    : mission.status === "planning"
-                      ? "bg-accent-warning"
-                      : "bg-text-muted"
-                )}
-              />
-              <span className="truncate">{mission.title}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FilesPanel() {
+function FilesPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
   return (
     <div className="p-2">
       <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
         Files
       </div>
-      <div className="text-sm text-text-muted">
-        Select a project to browse files
-      </div>
+      {selectedProjectId ? (
+        <div className="text-sm text-text-muted">File browser coming soon</div>
+      ) : (
+        <div className="text-sm text-text-muted">
+          Select a project to browse files
+        </div>
+      )}
     </div>
   );
 }
 
-function GitPanel() {
+function GitPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
   return (
     <div className="p-2">
       <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
         Source Control
       </div>
-      <div className="text-sm text-text-muted">Git integration coming soon</div>
+      {selectedProjectId ? (
+        <div className="text-sm text-text-muted">Git integration coming soon</div>
+      ) : (
+        <div className="text-sm text-text-muted">Select a project to view git status</div>
+      )}
     </div>
   );
 }
 
-function RunPanel() {
+function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
   return (
     <div className="p-2">
       <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
         Commands & Services
       </div>
-      <div className="text-sm text-text-muted">No running processes</div>
+      {selectedProjectId ? (
+        <div className="text-sm text-text-muted">No running processes</div>
+      ) : (
+        <div className="text-sm text-text-muted">Select a project to manage processes</div>
+      )}
     </div>
   );
 }
@@ -189,24 +190,20 @@ describe("Sidebar", () => {
   it("renders all panel buttons", () => {
     render(<TestSidebar />, { withRouter: false });
 
-    expect(screen.getByTitle("Navigator")).toBeInTheDocument();
     expect(screen.getByTitle("Files")).toBeInTheDocument();
     expect(screen.getByTitle("Git")).toBeInTheDocument();
     expect(screen.getByTitle("Run")).toBeInTheDocument();
   });
 
-  it("shows Navigator panel by default", () => {
+  it("shows Files panel by default", () => {
     render(<TestSidebar />, { withRouter: false });
 
-    expect(screen.getByText("Projects")).toBeInTheDocument();
+    expect(screen.getByText("Files")).toBeInTheDocument();
+    expect(screen.getByText("Select a project to browse files")).toBeInTheDocument();
   });
 
   it("switches panels when buttons are clicked", async () => {
     render(<TestSidebar />, { withRouter: false });
-
-    // Click Files panel
-    fireEvent.click(screen.getByTitle("Files"));
-    expect(screen.getByText("Files")).toBeInTheDocument();
 
     // Click Git panel
     fireEvent.click(screen.getByTitle("Git"));
@@ -216,17 +213,54 @@ describe("Sidebar", () => {
     fireEvent.click(screen.getByTitle("Run"));
     expect(screen.getByText("Commands & Services")).toBeInTheDocument();
 
-    // Back to Navigator
-    fireEvent.click(screen.getByTitle("Navigator"));
-    expect(screen.getByText("Projects")).toBeInTheDocument();
+    // Back to Files
+    fireEvent.click(screen.getByTitle("Files"));
+    expect(screen.getByText("Files")).toBeInTheDocument();
   });
 
-  it("displays projects in Navigator panel", async () => {
+  it("shows project selector with projects", async () => {
     render(<TestSidebar />, { withRouter: false });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("project-selector-label")).toHaveTextContent("Select a project");
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Test Project 1")).toBeInTheDocument();
       expect(screen.getByText("Test Project 2")).toBeInTheDocument();
+    });
+  });
+
+  it("selects a project when clicked", async () => {
+    render(<TestSidebar />, { withRouter: false });
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Project 1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Test Project 1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("project-selector-label")).toHaveTextContent("Test Project 1");
+    });
+  });
+
+  it("shows project-specific content when project is selected", async () => {
+    render(<TestSidebar />, { withRouter: false });
+
+    // Initially shows "Select a project" message
+    expect(screen.getByText("Select a project to browse files")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Project 1")).toBeInTheDocument();
+    });
+
+    // Select a project
+    fireEvent.click(screen.getByText("Test Project 1"));
+
+    // Now shows project-specific content
+    await waitFor(() => {
+      expect(screen.getByText("File browser coming soon")).toBeInTheDocument();
     });
   });
 
@@ -242,40 +276,23 @@ describe("Sidebar", () => {
     );
 
     render(<TestSidebar />, { withRouter: false });
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByTestId("project-selector-label")).toHaveTextContent("Loading...");
 
     await waitFor(() => {
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-    });
-  });
-
-  it("shows empty state when no projects", async () => {
-    server.use(
-      http.get("/api/projects", () => {
-        return HttpResponse.json({
-          data: [],
-          meta: { total: 0, limit: 50, offset: 0, hasMore: false },
-        });
-      })
-    );
-
-    render(<TestSidebar />, { withRouter: false });
-
-    await waitFor(() => {
-      expect(screen.getByText("No projects")).toBeInTheDocument();
+      expect(screen.getByTestId("project-selector-label")).toHaveTextContent("Select a project");
     });
   });
 
   it("highlights active panel button", () => {
     render(<TestSidebar />, { withRouter: false });
 
-    const navigatorButton = screen.getByTitle("Navigator");
-    expect(navigatorButton).toHaveClass("text-accent-primary");
-
-    fireEvent.click(screen.getByTitle("Files"));
-
     const filesButton = screen.getByTitle("Files");
     expect(filesButton).toHaveClass("text-accent-primary");
-    expect(navigatorButton).not.toHaveClass("text-accent-primary");
+
+    fireEvent.click(screen.getByTitle("Git"));
+
+    const gitButton = screen.getByTitle("Git");
+    expect(gitButton).toHaveClass("text-accent-primary");
+    expect(filesButton).not.toHaveClass("text-accent-primary");
   });
 });
