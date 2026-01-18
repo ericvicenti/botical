@@ -28,6 +28,21 @@ function emitStreamingEvent(event: WSEvent) {
   }
 }
 
+// Custom event emitter for process events
+type ProcessEventHandler = (event: WSEvent) => void;
+const processHandlers = new Set<ProcessEventHandler>();
+
+export function subscribeToProcessEvents(handler: ProcessEventHandler): () => void {
+  processHandlers.add(handler);
+  return () => processHandlers.delete(handler);
+}
+
+function emitProcessEvent(event: WSEvent) {
+  for (const handler of processHandlers) {
+    handler(event);
+  }
+}
+
 export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
   log(`Received event: ${event.type}`, event.payload);
 
@@ -85,9 +100,10 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
 
     // Process events
     case "process.spawned":
-    case "process.output":
     case "process.exited":
     case "process.killed":
+      log(`Process event: ${event.type}`, event.payload);
+      emitProcessEvent(event);
       if (event.payload.projectId) {
         queryClient.invalidateQueries({
           queryKey: ["projects", event.payload.projectId, "processes"],
@@ -98,6 +114,11 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
           queryKey: ["processes", event.payload.id],
         });
       }
+      break;
+
+    case "process.output":
+      // Stream output to handlers without invalidating queries (too frequent)
+      emitProcessEvent(event);
       break;
 
     // Message streaming events - forward to streaming handlers

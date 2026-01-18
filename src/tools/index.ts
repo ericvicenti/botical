@@ -14,6 +14,7 @@ import { readTool } from "./read.ts";
 import { writeTool } from "./write.ts";
 import { editTool } from "./edit.ts";
 import { bashTool } from "./bash.ts";
+import { serviceTool } from "./service.ts";
 import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
@@ -56,6 +57,11 @@ export function registerCoreTools(): void {
     requiresCodeExecution: true,
   });
 
+  ToolRegistry.register(serviceTool, {
+    category: "execution",
+    requiresCodeExecution: true,
+  });
+
   // Agent tools (spawning sub-agents)
   ToolRegistry.register(taskTool, {
     category: "agent",
@@ -68,6 +74,7 @@ export { readTool } from "./read.ts";
 export { writeTool } from "./write.ts";
 export { editTool } from "./edit.ts";
 export { bashTool } from "./bash.ts";
+export { serviceTool } from "./service.ts";
 export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";

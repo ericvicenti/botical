@@ -6,6 +6,7 @@ import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, More
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
+import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
 import { useProjects } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -324,18 +325,18 @@ function GitPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
 }
 
 function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
-  return (
-    <div className="p-2">
-      <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
-        Commands & Services
-      </div>
-      {selectedProjectId ? (
-        <div className="text-sm text-text-muted">No running processes</div>
-      ) : (
+  if (!selectedProjectId) {
+    return (
+      <div className="p-2">
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
+          Commands & Services
+        </div>
         <div className="text-sm text-text-muted">Select a project to manage processes</div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return <ProcessesPanel projectId={selectedProjectId} />;
 }
 
 function SettingsButton() {

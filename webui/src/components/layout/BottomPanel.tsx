@@ -1,8 +1,11 @@
 import { useUI } from "@/contexts/ui";
 import { useWebSocket } from "@/lib/websocket/context";
 import { cn } from "@/lib/utils/cn";
-import { Terminal, AlertCircle, Radio, ChevronDown, ChevronUp } from "lucide-react";
+import { Terminal, AlertCircle, Radio, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useState, useCallback } from "react";
+import { ProcessTerminal } from "@/components/processes/ProcessTerminal";
+import { ProcessList } from "@/components/processes/ProcessList";
+import { useProcess } from "@/lib/api/queries";
 
 const TABS = [
   { id: "output", icon: Terminal, label: "Output" },
@@ -147,8 +150,72 @@ function ProblemsPanel() {
 }
 
 function ServicesPanel() {
+  const { selectedProjectId, selectedProcessId, setSelectedProcess } = useUI();
+  const { data: process } = useProcess(selectedProcessId || "");
+
+  if (!selectedProjectId) {
+    return (
+      <div className="p-2 text-sm text-text-secondary">
+        Select a project to view services
+      </div>
+    );
+  }
+
+  if (!selectedProcessId || !process) {
+    return (
+      <div className="h-full flex">
+        <div className="w-64 border-r border-border overflow-auto">
+          <ProcessList projectId={selectedProjectId} />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-sm text-text-muted">
+            Select a process to view its output
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-2 text-sm text-text-secondary">No services running</div>
+    <div className="h-full flex">
+      <div className="w-64 border-r border-border overflow-auto">
+        <ProcessList projectId={selectedProjectId} />
+      </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="h-7 px-2 border-b border-border flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Terminal className="w-3.5 h-3.5 text-text-secondary shrink-0" />
+            <span className="text-xs text-text-primary truncate">
+              {process.label || process.command}
+            </span>
+            <span
+              className={cn(
+                "text-xs px-1.5 py-0.5 rounded shrink-0",
+                process.status === "running" || process.status === "starting"
+                  ? "bg-accent-success/20 text-accent-success"
+                  : process.status === "completed"
+                    ? "bg-bg-elevated text-text-muted"
+                    : "bg-accent-error/20 text-accent-error"
+              )}
+            >
+              {process.status}
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedProcess(null)}
+            className="p-0.5 rounded hover:bg-bg-elevated text-text-muted hover:text-text-secondary"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0">
+          <ProcessTerminal
+            processId={selectedProcessId}
+            projectId={selectedProjectId}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -32,6 +32,7 @@ interface UIState {
   bottomPanelTab: "output" | "problems" | "services";
   theme: "dark" | "light";
   selectedProjectId: string | null;
+  selectedProcessId: string | null;
   revealPath: string | null; // Path to reveal in file tree
 }
 
@@ -42,6 +43,7 @@ interface UIContextValue extends UIState {
   setBottomPanelTab: (tab: UIState["bottomPanelTab"]) => void;
   setTheme: (theme: UIState["theme"]) => void;
   setSelectedProject: (projectId: string | null) => void;
+  setSelectedProcess: (processId: string | null) => void;
   revealInTree: (path: string) => void;
 }
 
@@ -55,6 +57,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
     bottomPanelTab: "output",
     theme: "dark",
     selectedProjectId: loadUIFromStorage().selectedProjectId,
+    selectedProcessId: null,
     revealPath: null,
   }));
 
@@ -75,6 +78,13 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setTheme: (theme) => setState((s) => ({ ...s, theme })),
     setSelectedProject: (projectId) =>
       setState((s) => ({ ...s, selectedProjectId: projectId })),
+    setSelectedProcess: (processId) =>
+      setState((s) => ({
+        ...s,
+        selectedProcessId: processId,
+        bottomPanelVisible: processId !== null,
+        bottomPanelTab: "services",
+      })),
     revealInTree: (path) =>
       setState((s) => ({
         ...s,

@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/utils";
 import { FileContextMenu, CreateInput, type ContextMenuTarget } from "./FileContextMenu";
 import { server } from "@/test/setup";
-import { http, HttpResponse } from "msw";
 
 /**
  * Tests for FileContextMenu component

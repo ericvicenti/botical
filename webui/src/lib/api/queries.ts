@@ -277,6 +277,112 @@ export function useProcess(processId: string) {
   });
 }
 
+export interface ProcessOutput {
+  id: number;
+  processId: string;
+  timestamp: number;
+  data: string;
+  stream: "stdout" | "stderr";
+}
+
+export function useProcessOutput(processId: string) {
+  return useQuery({
+    queryKey: ["processes", processId, "output"],
+    queryFn: async () => {
+      const response = await apiClientRaw<ProcessOutput[]>(
+        `/api/processes/${processId}/output`
+      );
+      return response.data;
+    },
+    enabled: !!processId,
+  });
+}
+
+export function useSpawnProcess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      type,
+      command,
+      cwd,
+      scope,
+      scopeId,
+      label,
+      createdBy,
+    }: {
+      projectId: string;
+      type: "command" | "service";
+      command: string;
+      cwd?: string;
+      scope: "task" | "mission" | "project";
+      scopeId: string;
+      label?: string;
+      createdBy: string;
+    }) =>
+      apiClient<Process>(`/api/projects/${projectId}/processes`, {
+        method: "POST",
+        body: JSON.stringify({
+          type,
+          command,
+          cwd,
+          scope,
+          scopeId,
+          label,
+          createdBy,
+        }),
+      }),
+    onSuccess: (process) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", process.projectId, "processes"],
+      });
+    },
+  });
+}
+
+export function useKillProcess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ processId }: { processId: string }) =>
+      apiClient<{ success: boolean }>(`/api/processes/${processId}/kill`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["processes"] });
+    },
+  });
+}
+
+export function useWriteToProcess() {
+  return useMutation({
+    mutationFn: ({ processId, data }: { processId: string; data: string }) =>
+      apiClient<{ success: boolean }>(`/api/processes/${processId}/write`, {
+        method: "POST",
+        body: JSON.stringify({ data }),
+      }),
+  });
+}
+
+export function useResizeProcess() {
+  return useMutation({
+    mutationFn: ({
+      processId,
+      cols,
+      rows,
+    }: {
+      processId: string;
+      cols: number;
+      rows: number;
+    }) =>
+      apiClient<{ success: boolean }>(`/api/processes/${processId}/resize`, {
+        method: "POST",
+        body: JSON.stringify({ cols, rows }),
+      }),
+  });
+}
+
 // Files
 export interface FileEntry {
   name: string;
