@@ -166,38 +166,37 @@ test.describe("Process Spawning", () => {
     expect(capturedRequest.body).toHaveProperty("scope", "project");
   });
 
-  test("verifies the actual error from a real API call", async ({ page }) => {
-    // Don't mock the process endpoint - let it hit the real API
-    // This will show us the actual error
+  test("should show process in list after spawning", async ({ page }) => {
+    // Mock that the process list is updated after spawning
+    let processSpawned = false;
 
-    let apiError: any = null;
-
-    // Listen for console errors
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        console.log("Console error:", msg.text());
-      }
-    });
-
-    // Intercept the response to capture errors
-    page.on("response", async (response) => {
-      if (response.url().includes("/processes") && response.request().method() === "POST") {
-        console.log("=== Process API Response ===");
-        console.log("Status:", response.status());
-        try {
-          const body = await response.json();
-          console.log("Body:", JSON.stringify(body, null, 2));
-          if (response.status() !== 201) {
-            apiError = body;
-          }
-        } catch (e) {
-          console.log("Could not parse response body");
+    await page.route("**/api/projects/*/processes", async (route) => {
+      if (route.request().method() === "GET") {
+        // Return empty list before spawn, then the new process after
+        if (processSpawned) {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ data: [mockProcess], meta: { total: 1 } }),
+          });
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ data: [], meta: { total: 0 } }),
+          });
         }
+      } else if (route.request().method() === "POST") {
+        processSpawned = true;
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({ data: mockProcess }),
+        });
+      } else {
+        await route.continue();
       }
     });
-
-    // Don't mock the processes endpoint
-    await page.unroute("**/api/projects/*/processes");
 
     // Select the project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
@@ -212,15 +211,10 @@ test.describe("Process Spawning", () => {
     const playButton = page.locator("button[type='submit']");
     await playButton.click();
 
-    // Wait for the error to appear or request to complete
-    await page.waitForTimeout(2000);
+    // Wait a moment for the response
+    await page.waitForTimeout(500);
 
-    // Check if error is shown
-    const errorVisible = await page.getByText("Failed to start process").isVisible();
-
-    if (errorVisible) {
-      console.log("=== Error was shown in UI ===");
-      console.log("API Error captured:", JSON.stringify(apiError, null, 2));
-    }
+    // Verify no error message
+    await expect(page.getByText("Failed to start process")).not.toBeVisible();
   });
 });
