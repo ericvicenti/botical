@@ -7,6 +7,7 @@ import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, FolderTree, External
 import { MessageBubble } from "./MessageBubble";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
+import { ToolCall } from "@/components/ui/ToolCall";
 
 interface TaskChatProps {
   sessionId: string;
@@ -280,7 +281,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
               />
             ))}
             {streamingMessage && (
-              <StreamingMessageBubble message={streamingMessage} />
+              <StreamingMessageBubble message={streamingMessage} projectId={projectId} />
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -455,10 +456,61 @@ interface StreamingMessageBubbleProps {
       toolStatus?: string | null;
     }>;
   };
+  projectId: string;
 }
 
-function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
+interface StreamingGroupedPart {
+  type: "text" | "reasoning" | "tool";
+  textPart?: StreamingMessageBubbleProps["message"]["parts"][0];
+  reasoningPart?: StreamingMessageBubbleProps["message"]["parts"][0];
+  toolCallPart?: StreamingMessageBubbleProps["message"]["parts"][0];
+  toolResultPart?: StreamingMessageBubbleProps["message"]["parts"][0];
+}
+
+function StreamingMessageBubble({ message, projectId }: StreamingMessageBubbleProps) {
   const hasContent = message.parts.length > 0;
+
+  // Group parts - pair tool calls with their results
+  const groupedParts = useMemo(() => {
+    const result: StreamingGroupedPart[] = [];
+    const toolResultsById = new Map<string, StreamingMessageBubbleProps["message"]["parts"][0]>();
+
+    // First pass: collect tool results by their toolCallId
+    for (const part of message.parts) {
+      if (part.type === "tool-result" && part.toolCallId) {
+        toolResultsById.set(part.toolCallId, part);
+      }
+    }
+
+    // Second pass: group parts
+    for (const part of message.parts) {
+      switch (part.type) {
+        case "text":
+          result.push({ type: "text", textPart: part });
+          break;
+        case "reasoning":
+          result.push({ type: "reasoning", reasoningPart: part });
+          break;
+        case "tool-call":
+          const matchingResult = part.toolCallId
+            ? toolResultsById.get(part.toolCallId)
+            : undefined;
+          result.push({
+            type: "tool",
+            toolCallPart: part,
+            toolResultPart: matchingResult,
+          });
+          break;
+        case "tool-result":
+          // Skip - already paired with tool-call above
+          break;
+        default:
+          break;
+      }
+    }
+
+    return result;
+  }, [message.parts]);
 
   return (
     <div className="flex gap-3" data-testid="streaming-message">
@@ -466,13 +518,14 @@ function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
         <Bot className="w-4 h-4 text-text-primary" />
       </div>
       <div className="flex-1 min-w-0 space-y-2">
-        {/* Render all parts in order (text, reasoning, tool calls) */}
-        {message.parts.map((part, index) => (
-          <StreamingPart
-            key={part.id}
-            part={part}
-            isLast={index === message.parts.length - 1}
+        {/* Render all grouped parts in order */}
+        {groupedParts.map((group, index) => (
+          <StreamingGroupedPartRenderer
+            key={index}
+            group={group}
+            isLast={index === groupedParts.length - 1}
             isStreaming={message.isStreaming}
+            projectId={projectId}
           />
         ))}
 
@@ -488,18 +541,20 @@ function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
   );
 }
 
-function StreamingPart({
-  part,
+function StreamingGroupedPartRenderer({
+  group,
   isLast,
   isStreaming,
+  projectId,
 }: {
-  part: StreamingMessageBubbleProps["message"]["parts"][0];
+  group: StreamingGroupedPart;
   isLast: boolean;
   isStreaming: boolean;
+  projectId: string;
 }) {
-  switch (part.type) {
+  switch (group.type) {
     case "text":
-      const textContent = (part.content as { text: string })?.text || "";
+      const textContent = (group.textPart?.content as { text: string })?.text || "";
       if (!textContent) return null;
       return (
         <div className="px-4 py-2.5 rounded-2xl bg-bg-elevated text-text-primary border border-border">
@@ -513,28 +568,31 @@ function StreamingPart({
     case "reasoning":
       return (
         <div className="px-4 py-2 bg-bg-secondary/50 border border-border/50 rounded-lg text-sm text-text-muted italic">
-          <p className="whitespace-pre-wrap">{(part.content as { text: string })?.text || ""}</p>
+          <p className="whitespace-pre-wrap">{(group.reasoningPart?.content as { text: string })?.text || ""}</p>
         </div>
       );
 
-    case "tool-call":
+    case "tool":
+      if (!group.toolCallPart) return null;
+      const callContent = group.toolCallPart.content as { name: string; args: unknown };
+      const toolName = group.toolCallPart.toolName || callContent.name || "unknown";
+      const args = callContent.args as Record<string, unknown> | undefined;
+      const status = (group.toolCallPart.toolStatus || "pending") as
+        | "pending"
+        | "running"
+        | "completed"
+        | "error"
+        | null;
+
       return (
-        <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm">
-          <div className="flex items-center gap-2">
-            {part.toolStatus !== "completed" && (
-              <Loader2 className="w-3.5 h-3.5 text-accent-primary animate-spin" />
-            )}
-            <span className="font-mono font-medium text-text-primary">{part.toolName}</span>
-            <span className={cn(
-              "px-1.5 py-0.5 rounded text-xs",
-              part.toolStatus === "completed" ? "bg-green-500/20 text-green-400" :
-              part.toolStatus === "running" ? "bg-blue-500/20 text-blue-400" :
-              "bg-yellow-500/20 text-yellow-400"
-            )}>
-              {part.toolStatus || "pending"}
-            </span>
-          </div>
-        </div>
+        <ToolCall
+          name={toolName}
+          args={args}
+          result={group.toolResultPart?.content}
+          status={status}
+          projectId={projectId}
+          isStreaming={isStreaming}
+        />
       );
 
     default:

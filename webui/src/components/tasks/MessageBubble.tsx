@@ -1,15 +1,158 @@
+import { useMemo } from "react";
 import { cn } from "@/lib/utils/cn";
-import { User, Bot, AlertCircle, Wrench, FileText, Loader2, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
+import { User, Bot, AlertCircle, FileText, Loader2, ExternalLink } from "lucide-react";
 import type { MessageWithParts, MessagePart } from "@/lib/api/types";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { Markdown } from "@/components/ui/Markdown";
+import { ToolCall } from "@/components/ui/ToolCall";
+
+interface GroupedPart {
+  type: "text" | "reasoning" | "tool" | "file";
+  textPart?: MessagePart;
+  reasoningPart?: MessagePart;
+  toolCallPart?: MessagePart;
+  toolResultPart?: MessagePart;
+  filePart?: MessagePart;
+}
 
 interface MessageBubbleProps {
   message: MessageWithParts;
   projectId: string;
   isOptimistic?: boolean;
+}
+
+/**
+ * Groups message parts for display, pairing tool calls with their results.
+ */
+function GroupedMessageParts({
+  parts,
+  isUser,
+  projectId,
+}: {
+  parts: MessagePart[];
+  isUser: boolean;
+  projectId: string;
+}) {
+  const groupedParts = useMemo(() => {
+    const result: GroupedPart[] = [];
+    const toolResultsById = new Map<string, MessagePart>();
+
+    // First pass: collect tool results by their toolCallId
+    for (const part of parts) {
+      if (part.type === "tool-result" && part.toolCallId) {
+        toolResultsById.set(part.toolCallId, part);
+      }
+    }
+
+    // Second pass: group parts
+    for (const part of parts) {
+      switch (part.type) {
+        case "text":
+          result.push({ type: "text", textPart: part });
+          break;
+        case "reasoning":
+          result.push({ type: "reasoning", reasoningPart: part });
+          break;
+        case "tool-call":
+          // Find matching result
+          const matchingResult = part.toolCallId
+            ? toolResultsById.get(part.toolCallId)
+            : undefined;
+          result.push({
+            type: "tool",
+            toolCallPart: part,
+            toolResultPart: matchingResult,
+          });
+          break;
+        case "tool-result":
+          // Skip - already paired with tool-call above
+          break;
+        case "file":
+          result.push({ type: "file", filePart: part });
+          break;
+        case "step-start":
+        case "step-finish":
+          // Don't render step markers
+          break;
+        default:
+          break;
+      }
+    }
+
+    return result;
+  }, [parts]);
+
+  return (
+    <>
+      {groupedParts.map((group, index) => (
+        <GroupedPartRenderer
+          key={index}
+          group={group}
+          isUser={isUser}
+          projectId={projectId}
+        />
+      ))}
+    </>
+  );
+}
+
+function GroupedPartRenderer({
+  group,
+  isUser,
+  projectId,
+}: {
+  group: GroupedPart;
+  isUser: boolean;
+  projectId: string;
+}) {
+  switch (group.type) {
+    case "text":
+      return group.textPart ? (
+        <TextPart
+          content={group.textPart.content as { text: string }}
+          isUser={isUser}
+        />
+      ) : null;
+
+    case "reasoning":
+      return group.reasoningPart ? (
+        <ReasoningPart content={group.reasoningPart.content as { text: string }} />
+      ) : null;
+
+    case "tool":
+      if (!group.toolCallPart) return null;
+      const callContent = group.toolCallPart.content as { name: string; args: unknown };
+      const toolName = group.toolCallPart.toolName || callContent.name;
+      const args = callContent.args as Record<string, unknown> | undefined;
+      const status = (group.toolCallPart.toolStatus || "pending") as
+        | "pending"
+        | "running"
+        | "completed"
+        | "error"
+        | null;
+
+      return (
+        <ToolCall
+          name={toolName}
+          args={args}
+          result={group.toolResultPart?.content}
+          status={status}
+          projectId={projectId}
+        />
+      );
+
+    case "file":
+      return group.filePart ? (
+        <FilePart
+          content={group.filePart.content as { path: string }}
+          projectId={projectId}
+        />
+      ) : null;
+
+    default:
+      return null;
+  }
 }
 
 export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbleProps) {
@@ -44,9 +187,7 @@ export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbl
           isUser && "flex flex-col items-end"
         )}
       >
-        {message.parts?.map((part) => (
-          <MessagePartContent key={part.id} part={part} isUser={isUser} projectId={projectId} />
-        ))}
+        <GroupedMessageParts parts={message.parts || []} isUser={isUser} projectId={projectId} />
 
         {/* Streaming indicator */}
         {isStreaming && (!message.parts || message.parts.length === 0) && (
@@ -71,48 +212,6 @@ export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbl
       </div>
     </div>
   );
-}
-
-function MessagePartContent({
-  part,
-  isUser,
-  projectId,
-}: {
-  part: MessagePart;
-  isUser: boolean;
-  projectId: string;
-}) {
-  switch (part.type) {
-    case "text":
-      return <TextPart content={part.content as { text: string }} isUser={isUser} />;
-
-    case "reasoning":
-      return <ReasoningPart content={part.content as { text: string }} />;
-
-    case "tool-call":
-      return (
-        <ToolCallPart
-          content={part.content as { name: string; args: unknown }}
-          toolName={part.toolName}
-          status={part.toolStatus}
-          projectId={projectId}
-        />
-      );
-
-    case "tool-result":
-      return <ToolResultPart content={part.content} toolName={part.toolName} projectId={projectId} />;
-
-    case "file":
-      return <FilePart content={part.content as { path: string }} projectId={projectId} />;
-
-    case "step-start":
-    case "step-finish":
-      // Don't render step markers directly
-      return null;
-
-    default:
-      return null;
-  }
 }
 
 function TextPart({
@@ -161,134 +260,6 @@ function ReasoningPart({ content }: { content: { text: string } }) {
   );
 }
 
-function ToolCallPart({
-  content,
-  toolName,
-  status,
-  projectId,
-}: {
-  content: { name: string; args: unknown };
-  toolName: string | null;
-  status: string | null;
-  projectId: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const { openTab } = useTabs();
-  const navigate = useNavigate();
-  const name = toolName || content.name;
-  const args = content.args as Record<string, unknown> | undefined;
-  const hasArgs = !!(args && typeof args === "object" && Object.keys(args).length > 0);
-
-  // Extract file path from common tool args
-  const filePath = args?.path as string | undefined;
-  const isFileOperation = ["read", "write", "edit"].includes(name) && filePath;
-
-  const handleOpenFile = () => {
-    if (!filePath) return;
-    openTab({
-      type: "file",
-      projectId,
-      path: filePath,
-    });
-    navigate({ to: "/files/$", params: { _splat: `${projectId}/${filePath}` } });
-  };
-
-  return (
-    <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-text-muted hover:text-text-primary"
-        >
-          {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-        </button>
-        <Wrench className="w-3.5 h-3.5 text-accent-primary" />
-        <span className="font-mono font-medium text-text-primary">{name}</span>
-        {isFileOperation && (
-          <button
-            onClick={handleOpenFile}
-            className="flex items-center gap-1 text-accent-primary hover:underline font-mono text-xs"
-          >
-            {filePath}
-            <ExternalLink className="w-3 h-3" />
-          </button>
-        )}
-        {status && <ToolStatusBadge status={status} />}
-      </div>
-      {expanded && hasArgs && (
-        <pre className="mt-2 text-xs text-text-muted overflow-auto max-h-32 bg-bg-primary/50 p-2 rounded">
-          {JSON.stringify(args, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
-
-function ToolResultPart({
-  content,
-  toolName,
-  projectId,
-}: {
-  content: unknown;
-  toolName: string | null;
-  projectId: string;
-}): React.ReactElement | null {
-  const [expanded, setExpanded] = useState(false);
-  const { openTab } = useTabs();
-  const navigate = useNavigate();
-
-  // Parse content to extract metadata if available
-  const contentObj = typeof content === "object" && content !== null ? content as Record<string, unknown> : null;
-  const title = contentObj?.title as string | undefined;
-  const output = contentObj?.output as string | undefined;
-  const metadata = contentObj?.metadata as Record<string, unknown> | undefined;
-  const filePath = metadata?.path as string | undefined;
-
-  const resultStr = output || (typeof content === "string" ? content : JSON.stringify(content, null, 2));
-
-  // Truncate very long results
-  const truncated = resultStr.length > 300;
-  const displayContent = (expanded || !truncated) ? resultStr : resultStr.slice(0, 300) + "...";
-
-  const handleOpenFile = () => {
-    if (!filePath) return;
-    openTab({
-      type: "file",
-      projectId,
-      path: filePath,
-    });
-    navigate({ to: "/files/$", params: { _splat: `${projectId}/${filePath}` } });
-  };
-
-  return (
-    <div className="px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm">
-      <div className="flex items-center gap-2 text-text-muted mb-1">
-        <span className="text-xs font-medium">{title || `Result${toolName ? ` from ${toolName}` : ""}`}</span>
-        {filePath && (
-          <button
-            onClick={handleOpenFile}
-            className="flex items-center gap-1 text-accent-primary hover:underline font-mono text-xs"
-          >
-            {filePath}
-            <ExternalLink className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-      <pre className="text-xs text-text-secondary overflow-auto max-h-40 whitespace-pre-wrap break-words">
-        {displayContent}
-      </pre>
-      {truncated && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs text-accent-primary hover:underline mt-1"
-        >
-          {expanded ? "Show less" : "Show more"}
-        </button>
-      )}
-    </div>
-  );
-}
-
 function FilePart({ content, projectId }: { content: { path: string }; projectId: string }) {
   const { openTab } = useTabs();
   const navigate = useNavigate();
@@ -314,27 +285,3 @@ function FilePart({ content, projectId }: { content: { path: string }; projectId
   );
 }
 
-function ToolStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: "bg-yellow-500/20 text-yellow-400",
-    running: "bg-blue-500/20 text-blue-400",
-    completed: "bg-green-500/20 text-green-400",
-    error: "bg-red-500/20 text-red-400",
-  };
-
-  const icons: Record<string, React.ReactNode> = {
-    running: <Loader2 className="w-3 h-3 animate-spin" />,
-  };
-
-  return (
-    <span
-      className={cn(
-        "px-1.5 py-0.5 rounded text-xs flex items-center gap-1",
-        styles[status] || "bg-bg-elevated text-text-muted"
-      )}
-    >
-      {icons[status]}
-      {status}
-    </span>
-  );
-}
