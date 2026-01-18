@@ -734,31 +734,44 @@ See [Git Integration](./12-git-integration.md) for detailed specification.
 
 ---
 
-## Phase 14: WebUI Shell
+## Phase 14: WebUI Shell ✅ COMPLETE
 
 **Goal**: Application shell with tabs, sidebar, and resizable panels
 
 See [WebUI Shell](./14-webui-shell.md) for detailed specification.
 
-- [ ] Tab system for multiple views
-- [ ] Collapsible sidebar with panel switching
-- [ ] Resizable split panels
-- [ ] Bottom panel with tabs
-- [ ] Keyboard shortcuts
+- [x] Tab system for multiple views (project, mission, file, process, diff, settings, task)
+- [x] Collapsible sidebar with panel switching (Navigator, Files, Git, Run)
+- [x] Resizable bottom panel with tabs (Output, Problems, Services)
+- [x] Keyboard shortcuts (Cmd+B, Cmd+J, Cmd+W, Cmd+1-4, etc.)
+- [x] Tab persistence with localStorage
+- [x] Project selector in sidebar
+- [x] Command palette system (Cmd+K)
+
+### Additional Work Completed
+- [x] Tab context with open, close, reorder operations
+- [x] Project list in sidebar when no project selected
+- [x] Settings route placeholder
+- [x] Files route placeholder
+
+**Deliverable**: Complete application shell with tabs, sidebar, and bottom panel
 
 ---
 
-## Phase 15: Editor & Files
+## Phase 15: Editor & Files ⬅️ NEXT
 
 **Goal**: Code editor with file tree navigation
 
 See [Editor & Files](./15-editor-files.md) for detailed specification.
 
 - [ ] CodeMirror 6 integration
-- [ ] File tree component
-- [ ] Multi-file tabs
-- [ ] Syntax highlighting
+- [ ] File tree component with folder expansion
+- [ ] Multi-file tabs (tab system already exists)
+- [ ] Syntax highlighting for TS/JS/JSON/MD/CSS/HTML
 - [ ] File operations (create, rename, delete)
+- [ ] Breadcrumb navigation
+- [ ] File save with Cmd+S
+- [ ] Dirty indicator for unsaved changes
 
 ---
 
@@ -815,6 +828,32 @@ See [Polish & Production](./19-polish-production.md) for detailed specification.
 - [ ] Error boundaries
 - [ ] E2E test suite
 - [ ] Production build configuration
+
+---
+
+## Phase 20: Tasks UI ✅ COMPLETE
+
+**Goal**: Implement the Tasks interface - conversations with AI agents
+
+See [Tasks UI](./20-tasks-ui.md) for detailed specification.
+
+- [x] Tasks sidebar panel showing sessions for a project
+- [x] Task creation interface (new session)
+- [x] Chat interface for agent-user conversation (TaskChat component)
+- [x] Message display with tool calls, results (MessageBubble component)
+- [x] Real-time streaming of agent responses via WebSocket
+- [x] Optimistic updates for sent messages
+- [x] Message ordering fix (chronological sort, duplicate filtering)
+
+### Implementation Details
+- [x] `useTaskMessages` hook for message fetching and streaming
+- [x] `subscribeToStreamingEvents` for WebSocket event handling
+- [x] Server-side `StreamProcessor` emits events to EventBus
+- [x] `bus-bridge` routes events to WebSocket rooms
+- [x] Query invalidation on message.complete/message.error events
+- [x] 66 frontend tests, 1185 backend tests all passing
+
+**Deliverable**: Fully functional chat interface with real-time streaming
 
 ---
 

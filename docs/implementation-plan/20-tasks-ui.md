@@ -1,15 +1,19 @@
-# Phase 20: Tasks UI
+# Phase 20: Tasks UI ✅ COMPLETE
 
 **Goal**: Implement the Tasks interface - conversations with AI agents that work to complete objectives
 
+**Status**: Complete (January 2025)
+
 ## Overview
 
-In Iris, a "Task" is a conversation with an AI agent focused on accomplishing a specific goal. The agent continues working until the task is complete. This phase adds:
+In Iris, a "Task" is a conversation with an AI agent focused on accomplishing a specific goal. The agent continues working until the task is complete. This phase implemented:
 
 - Tasks sidebar panel showing all tasks for a project
 - Task creation interface
 - Chat interface for agent-user conversation
-- Real-time streaming of agent responses
+- Real-time streaming of agent responses via WebSocket
+- Optimistic updates for sent messages
+- Message ordering with chronological sorting
 
 **Terminology Mapping**:
 - UI "Task" = Backend "Session" (agent conversation)
@@ -17,36 +21,41 @@ In Iris, a "Task" is a conversation with an AI agent focused on accomplishing a 
 
 ---
 
-## What Already Exists
+## What Was Implemented
 
-### Backend (Complete)
-- ✅ SessionService with full CRUD (`src/services/sessions.ts`)
-- ✅ MessageService for conversation history (`src/services/messages.ts`)
-- ✅ MessagePartService for streaming content (`src/services/message-parts.ts`)
-- ✅ REST API routes (`/api/sessions`, `/api/messages`)
-- ✅ WebSocket handlers for sessions and messages
-- ✅ Agent orchestrator for processing messages
-- ✅ Real-time streaming via WebSocket events
+### Backend Enhancements
+- ✅ `StreamProcessor` emits events to EventBus (message.text.delta, message.tool.call, etc.)
+- ✅ `bus-bridge` routes message events to session and project WebSocket rooms
+- ✅ `/api/sessions/:id/messages` returns messages WITH parts
+- ✅ `/api/messages` POST endpoint triggers orchestrator with streaming
 
-### Frontend - Already Implemented
-- ✅ `useSessions(projectId)` - fetches sessions for a project
-- ✅ `useSession(sessionId)` - fetches single session
-- ✅ Tab system with localStorage persistence (`contexts/tabs.tsx`)
-- ✅ Sidebar with panel switching (`components/layout/Sidebar.tsx`)
-- ✅ WebSocket context with reconnection
-- ✅ Project selector and navigation
+### Frontend - Completed
+- ✅ `useMessages(sessionId, projectId)` - fetch messages for session
+- ✅ `useSettings()` - fetch user settings including API keys
+- ✅ `useTaskMessages` hook - combines fetching, streaming, and optimistic updates
+- ✅ `subscribeToStreamingEvents` - WebSocket event subscription for streaming
+- ✅ `handleWebSocketEvent` - query invalidation on message.complete/error
+- ✅ `task` tab type in `types/tabs.ts`
+- ✅ Navigator panel shows sessions in sidebar
+- ✅ `TaskChat.tsx` - chat interface with input form
+- ✅ `MessageBubble.tsx` - message display with parts
+- ✅ Streaming message state while agent responds
+- ✅ Message ordering fix (chronological sort, duplicate filtering)
 
-### Frontend - Needs Implementation
-- ❌ `useMessages(sessionId)` - fetch messages for session
-- ❌ `useCreateSession()` - create new session mutation
-- ❌ `useSendMessage()` - send message mutation
-- ❌ `useArchiveSession()` - archive session mutation
-- ❌ `task` tab type in `types/tabs.ts`
-- ❌ Tasks panel in sidebar (currently: Files, Git, Run)
-- ❌ TasksPanel component - list tasks for project
-- ❌ TaskChat component - chat interface
-- ❌ MessageBubble component - message display
-- ❌ Task route (`/tasks/$sessionId`)
+### Key Files
+- `webui/src/hooks/useTaskMessages.ts` - Main hook for message management
+- `webui/src/lib/websocket/events.ts` - Streaming event handling
+- `webui/src/components/tasks/TaskChat.tsx` - Chat UI
+- `webui/src/components/tasks/MessageBubble.tsx` - Message display
+- `src/agents/stream-processor.ts` - Server-side event emission
+- `src/websocket/bus-bridge.ts` - Event routing to WebSocket
+
+### Tests
+- 66 frontend tests passing (including streaming tests)
+- 1185 backend tests passing
+- `useTaskMessages.test.tsx` - Streaming event handling
+- `events.test.ts` - WebSocket event subscription
+- `streaming-integration.test.ts` - Full EventBus → WebSocket flow
 
 ---
 

@@ -147,13 +147,42 @@ webui/
     ├── routeTree.gen.ts    # Auto-generated route tree
     │
     ├── routes/             # File-based routes
-    │   ├── __root.tsx      # Root layout
-    │   ├── index.tsx       # Home page
-    │   └── projects/
-    │       └── $projectId.tsx
+    │   ├── __root.tsx      # Root layout with shell
+    │   ├── index.tsx       # Home/project view
+    │   ├── create-project.tsx
+    │   ├── settings.tsx
+    │   └── files/
+    │       └── $.tsx       # File viewer route
     │
-    ├── components/         # Reusable components
-    │   └── ui/             # Base UI primitives
+    ├── commands/           # Command palette system
+    │   ├── types.ts        # Command types
+    │   ├── registry.ts     # Command registry
+    │   ├── context.tsx     # Command context provider
+    │   └── definitions/    # Command definitions
+    │       ├── index.ts
+    │       ├── view.commands.ts
+    │       ├── tab.commands.ts
+    │       └── navigation.commands.ts
+    │
+    ├── components/
+    │   ├── ui/             # Base UI primitives
+    │   │   ├── Modal.tsx
+    │   │   └── FocusTrap.tsx
+    │   ├── layout/         # App shell components
+    │   │   ├── Sidebar.tsx
+    │   │   ├── TabBar.tsx
+    │   │   ├── BottomPanel.tsx
+    │   │   └── ProjectSelector.tsx
+    │   ├── command-palette/
+    │   │   └── CommandPalette.tsx
+    │   ├── tasks/          # Task/chat components
+    │   │   ├── TaskChat.tsx
+    │   │   └── MessageBubble.tsx
+    │   └── files/          # File browser (Phase 15)
+    │
+    ├── hooks/
+    │   ├── useKeyboardShortcuts.ts  # Global keyboard shortcuts
+    │   └── useTaskMessages.ts       # Message fetching + streaming
     │
     ├── lib/
     │   ├── api/
@@ -162,18 +191,20 @@ webui/
     │   │   └── types.ts    # API response types
     │   ├── websocket/
     │   │   ├── context.tsx # WebSocket provider
-    │   │   └── events.ts   # Event handlers
+    │   │   └── events.ts   # Event handlers + streaming
     │   └── utils/
     │       └── cn.ts       # Class name utility
     │
     ├── contexts/
-    │   └── ui.tsx          # UI state (sidebar, theme)
+    │   ├── ui.tsx          # UI state (sidebar, theme, panels)
+    │   └── tabs.tsx        # Tab state with localStorage persistence
     │
     ├── styles/
     │   └── globals.css     # Tailwind imports + custom styles
     │
     └── types/
-        └── index.ts        # Shared TypeScript types
+        ├── index.ts        # Shared TypeScript types
+        └── tabs.ts         # Tab type definitions
 ```
 
 ---
@@ -270,6 +301,57 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
 }
 ```
 
+### Streaming Events
+
+For real-time streaming of agent responses, use `subscribeToStreamingEvents`:
+
+```typescript
+// In a component or hook
+useEffect(() => {
+  const unsubscribe = subscribeToStreamingEvents((event) => {
+    if (event.payload.sessionId !== sessionId) return;
+
+    switch (event.type) {
+      case "message.created":
+        // Start streaming state
+        break;
+      case "message.text.delta":
+        // Append text to streaming message
+        break;
+      case "message.tool.call":
+        // Show tool call in progress
+        break;
+      case "message.complete":
+        // Clear streaming state, refetch
+        break;
+    }
+  });
+  return unsubscribe;
+}, [sessionId]);
+```
+
+### Command Palette
+
+The command palette system provides VS Code-style command execution:
+
+```typescript
+// Register commands in commands/definitions/
+export const viewCommands: Command[] = [
+  {
+    id: "view.toggleSidebar",
+    label: "Toggle Sidebar",
+    shortcut: { key: "b", mod: true },
+    execute: (ctx) => ctx.ui.toggleSidebar(),
+  },
+];
+
+// Use in components
+const { execute, openPalette } = useCommands();
+execute("view.toggleSidebar");
+```
+
+Commands are shared between keyboard shortcuts and the command palette (Cmd+K).
+
 ### Class Name Utility
 
 Combines clsx and tailwind-merge for conditional classes:
@@ -337,16 +419,21 @@ WebSocket connects automatically on app load with exponential backoff reconnecti
 ### Subscribing to Rooms
 
 ```typescript
-// Subscribe to project events
-send({ type: "subscribe", room: `project:${projectId}` });
+// Subscribe to session events (for streaming)
+subscribe(`session:${sessionId}`);
 
-// Subscribe to session events
-send({ type: "subscribe", room: `session:${sessionId}` });
+// Unsubscribe when component unmounts
+unsubscribe(`session:${sessionId}`);
+
+// The context handles the wire format:
+// { id: "req_xxx", type: "subscribe", payload: { channel: "session:xxx" } }
 ```
 
 ### Receiving Events
 
 Events from the server trigger query cache invalidations, keeping the UI in sync without polling.
+
+Streaming events (message.text.delta, message.tool.call, etc.) are handled separately via `subscribeToStreamingEvents` for real-time UI updates without full refetches.
 
 ---
 
