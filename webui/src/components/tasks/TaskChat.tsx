@@ -457,7 +457,7 @@ interface StreamingMessageBubbleProps {
 }
 
 function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
-  const hasContent = message.content || message.parts.length > 0;
+  const hasContent = message.parts.length > 0;
 
   return (
     <div className="flex gap-3" data-testid="streaming-message">
@@ -465,22 +465,15 @@ function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
         <Bot className="w-4 h-4 text-text-primary" />
       </div>
       <div className="flex-1 min-w-0 space-y-2">
-        {/* Render parts (reasoning, tool calls) */}
-        {message.parts.map((part) => (
-          <StreamingPart key={part.id} part={part} />
+        {/* Render all parts in order (text, reasoning, tool calls) */}
+        {message.parts.map((part, index) => (
+          <StreamingPart
+            key={part.id}
+            part={part}
+            isLast={index === message.parts.length - 1}
+            isStreaming={message.isStreaming}
+          />
         ))}
-
-        {/* Render text content if present */}
-        {message.content && (
-          <div className="px-4 py-2.5 rounded-2xl bg-bg-elevated text-text-primary border border-border">
-            <p className="whitespace-pre-wrap break-words">
-              {message.content}
-              {message.isStreaming && (
-                <span className="inline-block w-2 h-4 bg-accent-primary/50 ml-1 animate-pulse" />
-              )}
-            </p>
-          </div>
-        )}
 
         {/* Show thinking indicator if no content yet */}
         {!hasContent && message.isStreaming && (
@@ -494,8 +487,30 @@ function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
   );
 }
 
-function StreamingPart({ part }: { part: StreamingMessageBubbleProps["message"]["parts"][0] }) {
+function StreamingPart({
+  part,
+  isLast,
+  isStreaming,
+}: {
+  part: StreamingMessageBubbleProps["message"]["parts"][0];
+  isLast: boolean;
+  isStreaming: boolean;
+}) {
   switch (part.type) {
+    case "text":
+      const textContent = (part.content as { text: string })?.text || "";
+      if (!textContent) return null;
+      return (
+        <div className="px-4 py-2.5 rounded-2xl bg-bg-elevated text-text-primary border border-border">
+          <p className="whitespace-pre-wrap break-words">
+            {textContent}
+            {isLast && isStreaming && (
+              <span className="inline-block w-2 h-4 bg-accent-primary/50 ml-1 animate-pulse" />
+            )}
+          </p>
+        </div>
+      );
+
     case "reasoning":
       return (
         <div className="px-4 py-2 bg-bg-secondary/50 border border-border/50 rounded-lg text-sm text-text-muted italic">
@@ -507,7 +522,9 @@ function StreamingPart({ part }: { part: StreamingMessageBubbleProps["message"][
       return (
         <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm">
           <div className="flex items-center gap-2">
-            <Loader2 className="w-3.5 h-3.5 text-accent-primary animate-spin" />
+            {part.toolStatus !== "completed" && (
+              <Loader2 className="w-3.5 h-3.5 text-accent-primary animate-spin" />
+            )}
             <span className="font-mono font-medium text-text-primary">{part.toolName}</span>
             <span className={cn(
               "px-1.5 py-0.5 rounded text-xs",

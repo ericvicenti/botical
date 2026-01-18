@@ -103,15 +103,42 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           break;
 
         case "message.text.delta":
-          // Append text delta to streaming message
+          // Append text delta as a part to maintain order with tool calls
           setStreamingMessage((prev) => {
             if (!prev || prev.id !== event.payload.messageId) return prev;
-            const newContent = prev.content + (event.payload.delta as string);
-            log("streaming", "Appending text delta", { newLength: newContent.length });
-            return {
-              ...prev,
-              content: newContent,
-            };
+            const partId = event.payload.partId as string;
+            const delta = event.payload.delta as string;
+
+            // Find if we already have this text part
+            const existingPartIndex = prev.parts.findIndex(p => p.id === partId);
+
+            if (existingPartIndex >= 0) {
+              // Update existing text part
+              const updatedParts = [...prev.parts];
+              const existingPart = updatedParts[existingPartIndex];
+              updatedParts[existingPartIndex] = {
+                ...existingPart,
+                content: { text: ((existingPart.content as { text: string }).text || "") + delta },
+              };
+              log("streaming", "Updating text part", { partId, newLength: ((updatedParts[existingPartIndex].content as { text: string }).text || "").length });
+              return { ...prev, parts: updatedParts };
+            } else {
+              // Create new text part
+              const textPart: MessagePart = {
+                id: partId,
+                messageId: prev.id,
+                sessionId,
+                type: "text",
+                content: { text: delta },
+                toolName: null,
+                toolCallId: null,
+                toolStatus: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              log("streaming", "Adding new text part", { partId });
+              return { ...prev, parts: [...prev.parts, textPart] };
+            }
           });
           break;
 
