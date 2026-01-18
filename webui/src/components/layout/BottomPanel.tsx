@@ -1,4 +1,5 @@
 import { useUI } from "@/contexts/ui";
+import { useWebSocket } from "@/lib/websocket/context";
 import { cn } from "@/lib/utils/cn";
 import { Terminal, AlertCircle, Radio, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -16,6 +17,7 @@ export function BottomPanel() {
     setBottomPanelTab,
     toggleBottomPanel,
   } = useUI();
+  const { status } = useWebSocket();
   const [height, setHeight] = useState(200);
 
   const handleResize = useCallback(
@@ -58,12 +60,15 @@ export function BottomPanel() {
             </button>
           ))}
         </div>
-        <button
-          onClick={toggleBottomPanel}
-          className="text-text-secondary hover:text-text-primary"
-        >
-          <ChevronUp className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <ConnectionStatus status={status} />
+          <button
+            onClick={toggleBottomPanel}
+            className="text-text-secondary hover:text-text-primary"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -96,12 +101,15 @@ export function BottomPanel() {
             </button>
           ))}
         </div>
-        <button
-          onClick={toggleBottomPanel}
-          className="text-text-secondary hover:text-text-primary"
-        >
-          <ChevronDown className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <ConnectionStatus status={status} />
+          <button
+            onClick={toggleBottomPanel}
+            className="text-text-secondary hover:text-text-primary"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -141,5 +149,32 @@ function ProblemsPanel() {
 function ServicesPanel() {
   return (
     <div className="p-2 text-sm text-text-secondary">No services running</div>
+  );
+}
+
+function ConnectionStatus({ status }: { status: "connected" | "connecting" | "disconnected" }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 text-xs",
+        status === "connected"
+          ? "text-accent-success"
+          : status === "connecting"
+            ? "text-accent-warning"
+            : "text-accent-error"
+      )}
+    >
+      <div
+        className={cn(
+          "w-1.5 h-1.5 rounded-full",
+          status === "connected"
+            ? "bg-accent-success"
+            : status === "connecting"
+              ? "bg-accent-warning"
+              : "bg-accent-error"
+        )}
+      />
+      {status}
+    </div>
   );
 }
