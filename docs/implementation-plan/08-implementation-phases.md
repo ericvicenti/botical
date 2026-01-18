@@ -857,4 +857,83 @@ See [Tasks UI](./20-tasks-ui.md) for detailed specification.
 
 ---
 
+## Phase 20.1: Tasks UI Polish ✅ COMPLETE
+
+**Goal**: Improve the chat experience with better streaming, tool display, and UX polish
+
+### Multi-Step Tool Execution Fix
+- [x] Migrate from deprecated `maxSteps` to `stopWhen: stepCountIs()` (Vercel AI SDK 6.0.35)
+- [x] Agent now correctly continues tool execution loop after first tool call
+- [x] Tools execute in sequence until task completion or step limit
+
+### Streaming Event Improvements
+- [x] Add handlers for `reasoning-delta` events (Claude's thinking tokens)
+- [x] Add handlers for `tool-input-start` and `tool-input-delta` events
+- [x] Add handlers for `start-step` and `finish-step` events
+- [x] Store text deltas as parts (not separate content field) for proper ordering
+- [x] Tool calls and text interleave correctly during streaming
+
+### Model Selection
+- [x] Model dropdown in chat input area
+- [x] Filter available models based on configured API keys
+- [x] Support Anthropic (Claude Opus 4, Sonnet 4, 3.5 Haiku), OpenAI (GPT-4o, GPT-4o Mini, o1), Google (Gemini 2.0 Flash)
+- [x] Remember last used model per session
+
+### Markdown Rendering
+- [x] Add `react-markdown` and `remark-gfm` packages
+- [x] Create `Markdown.tsx` component with custom styling for dark theme
+- [x] Render assistant messages as GitHub Flavored Markdown
+- [x] Support code blocks, tables, lists, blockquotes, links
+- [x] User messages remain plain text
+
+### Unified Tool Call UI
+- [x] Create unified `ToolCall.tsx` component
+- [x] Group tool calls with their results in single collapsible box
+- [x] Share UI code between streaming and completed message rendering
+- [x] Expandable input/output sections for tool inspection
+- [x] File path links to open files in editor
+- [x] Consistent status badges (pending, running, completed, error)
+
+### Layout Improvements
+- [x] Remove top header bar (was showing "Iris" branding)
+- [x] Move connection status indicator to bottom right footer
+- [x] More vertical space for content
+
+### Technical Implementation
+- `src/agents/llm.ts` - Core fix for multi-step execution
+- `src/agents/stream-processor.ts` - New event handlers
+- `webui/src/components/ui/Markdown.tsx` - Markdown renderer
+- `webui/src/components/ui/ToolCall.tsx` - Unified tool call component
+- `webui/src/components/tasks/MessageBubble.tsx` - Part grouping logic
+- `webui/src/components/tasks/TaskChat.tsx` - Streaming message grouping
+- `webui/src/components/layout/BottomPanel.tsx` - Connection status
+- `webui/src/routes/__root.tsx` - Header removal
+
+**Deliverable**: Polished chat experience with proper streaming, markdown, and tool display
+
+---
+
+## Phase 15: Editor & Files ⬅️ IN PROGRESS
+
+**Goal**: Code editor with file tree navigation
+
+See [Editor & Files](./15-editor-files.md) for detailed specification.
+
+### Completed
+- [x] File tree component (`FileTree.tsx`) with folder expansion
+- [x] Files route (`/files/$`) for file viewing
+- [x] File read API integration
+- [x] Basic file display
+
+### Remaining
+- [ ] CodeMirror 6 integration for code editing
+- [ ] Syntax highlighting for TS/JS/JSON/MD/CSS/HTML
+- [ ] File write/save with Cmd+S
+- [ ] File create, rename, delete operations
+- [ ] Breadcrumb navigation
+- [ ] Dirty indicator for unsaved changes
+- [ ] Search within file
+
+---
+
 Each phase document contains detailed specifications for both backend and frontend work, including pseudocode, API designs, component structures, and comprehensive test requirements

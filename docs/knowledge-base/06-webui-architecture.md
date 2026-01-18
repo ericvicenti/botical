@@ -167,18 +167,22 @@ webui/
     ├── components/
     │   ├── ui/             # Base UI primitives
     │   │   ├── Modal.tsx
-    │   │   └── FocusTrap.tsx
+    │   │   ├── FocusTrap.tsx
+    │   │   ├── Markdown.tsx      # Markdown renderer for chat
+    │   │   └── ToolCall.tsx      # Unified tool call display
     │   ├── layout/         # App shell components
     │   │   ├── Sidebar.tsx
     │   │   ├── TabBar.tsx
-    │   │   ├── BottomPanel.tsx
+    │   │   ├── BottomPanel.tsx   # Includes connection status
     │   │   └── ProjectSelector.tsx
     │   ├── command-palette/
     │   │   └── CommandPalette.tsx
     │   ├── tasks/          # Task/chat components
-    │   │   ├── TaskChat.tsx
-    │   │   └── MessageBubble.tsx
-    │   └── files/          # File browser (Phase 15)
+    │   │   ├── TasksPanel.tsx    # Session list sidebar
+    │   │   ├── TaskChat.tsx      # Chat interface with model selector
+    │   │   └── MessageBubble.tsx # Message display with part grouping
+    │   └── files/          # File browser
+    │       └── FileTree.tsx      # Folder tree with expansion
     │
     ├── hooks/
     │   ├── useKeyboardShortcuts.ts  # Global keyboard shortcuts
@@ -318,8 +322,14 @@ useEffect(() => {
       case "message.text.delta":
         // Append text to streaming message
         break;
+      case "message.reasoning.delta":
+        // Append reasoning/thinking text
+        break;
       case "message.tool.call":
         // Show tool call in progress
+        break;
+      case "message.tool.result":
+        // Show tool result
         break;
       case "message.complete":
         // Clear streaming state, refetch
@@ -329,6 +339,67 @@ useEffect(() => {
   return unsubscribe;
 }, [sessionId]);
 ```
+
+### Message Part Grouping
+
+Messages contain multiple parts (text, tool calls, tool results, reasoning). The UI groups these for display:
+
+```typescript
+// Group tool-call parts with their matching tool-result parts
+const groupedParts = useMemo(() => {
+  const result = [];
+  const toolResultsById = new Map();
+
+  // First pass: collect tool results by toolCallId
+  for (const part of parts) {
+    if (part.type === "tool-result" && part.toolCallId) {
+      toolResultsById.set(part.toolCallId, part);
+    }
+  }
+
+  // Second pass: create groups
+  for (const part of parts) {
+    switch (part.type) {
+      case "text":
+        result.push({ type: "text", textPart: part });
+        break;
+      case "tool-call":
+        const matchingResult = toolResultsById.get(part.toolCallId);
+        result.push({
+          type: "tool",
+          toolCallPart: part,
+          toolResultPart: matchingResult,
+        });
+        break;
+      // tool-result: skip (already paired above)
+    }
+  }
+  return result;
+}, [parts]);
+```
+
+### Markdown Rendering
+
+Assistant messages are rendered as GitHub Flavored Markdown using `react-markdown`:
+
+```tsx
+import { Markdown } from "@/components/ui/Markdown";
+
+// In message display
+{isUser ? (
+  <p className="whitespace-pre-wrap">{text}</p>
+) : (
+  <Markdown>{text}</Markdown>
+)}
+```
+
+The Markdown component supports:
+- Headings, paragraphs, lists
+- Code blocks with language hints
+- Tables (GFM)
+- Links (open in new tab)
+- Blockquotes
+- Bold, italic, strikethrough
 
 ### Command Palette
 
