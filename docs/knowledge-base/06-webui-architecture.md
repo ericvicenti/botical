@@ -181,12 +181,19 @@ webui/
     │   │   ├── TasksPanel.tsx    # Session list sidebar
     │   │   ├── TaskChat.tsx      # Chat interface with model selector
     │   │   └── MessageBubble.tsx # Message display with part grouping
-    │   └── files/          # File browser
-    │       └── FileTree.tsx      # Folder tree with expansion
+    │   ├── files/          # File browser
+    │   │   └── FileTree.tsx      # Folder tree with expansion
+    │   └── processes/      # Process management
+    │       ├── ProcessTerminal.tsx  # xterm.js terminal
+    │       ├── ProcessItem.tsx      # Process list item
+    │       ├── ProcessList.tsx      # Grouped process list
+    │       ├── SpawnProcessForm.tsx # New process form
+    │       └── ProcessesPanel.tsx   # Sidebar Run panel
     │
     ├── hooks/
     │   ├── useKeyboardShortcuts.ts  # Global keyboard shortcuts
-    │   └── useTaskMessages.ts       # Message fetching + streaming
+    │   ├── useTaskMessages.ts       # Message fetching + streaming
+    │   └── useProcessOutput.ts      # Process output streaming
     │
     ├── lib/
     │   ├── api/
@@ -340,6 +347,29 @@ useEffect(() => {
 }, [sessionId]);
 ```
 
+### Process Events
+
+For real-time process output streaming, use `subscribeToProcessEvents`:
+
+```typescript
+useEffect(() => {
+  const unsubscribe = subscribeToProcessEvents((event) => {
+    if (event.payload.id !== processId) return;
+
+    switch (event.type) {
+      case "process.output":
+        // Append output to terminal
+        break;
+      case "process.exited":
+      case "process.killed":
+        // Process has ended
+        break;
+    }
+  });
+  return unsubscribe;
+}, [processId]);
+```
+
 ### Message Part Grouping
 
 Messages contain multiple parts (text, tool calls, tool results, reasoning). The UI groups these for display:
@@ -464,10 +494,13 @@ UI-only state lives in React contexts:
 // src/contexts/ui.tsx
 interface UIState {
   sidebarCollapsed: boolean;
-  sidebarPanel: "nav" | "files" | "git" | "run";
+  sidebarPanel: "tasks" | "files" | "git" | "run";
   bottomPanelVisible: boolean;
   bottomPanelTab: "output" | "problems" | "services";
   theme: "dark" | "light";
+  selectedProjectId: string | null;
+  selectedProcessId: string | null;  // For process terminal display
+  revealPath: string | null;         // For file tree reveal
 }
 ```
 

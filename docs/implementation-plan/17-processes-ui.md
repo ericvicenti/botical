@@ -1,5 +1,7 @@
 # Phase 17: Processes UI
 
+**Status**: COMPLETED
+
 **Goal**: Implement terminal emulation for commands and services using xterm.js
 
 ## Overview
@@ -9,12 +11,124 @@ This phase adds:
 - Command output display
 - Service management panel
 - Process spawning from UI
+- Agent service tool for long-running processes
+
+---
+
+## What Was Implemented
+
+### Frontend Components
+
+1. **ProcessTerminal.tsx** - xterm.js terminal with:
+   - Dark theme matching app
+   - FitAddon for auto-resize
+   - WebLinksAddon for clickable links
+   - User input → stdin
+   - Status indicator overlay
+
+2. **ProcessItem.tsx** - Single process row with:
+   - Status icons (running, completed, failed, killed)
+   - Type icons (command vs service)
+   - Runtime display
+   - Kill button for running processes
+
+3. **ProcessList.tsx** - Grouped process list:
+   - Running processes first
+   - Recent completed/failed after
+   - Empty state handling
+
+4. **SpawnProcessForm.tsx** - Process creation form:
+   - Command input
+   - Type selector (command/service)
+   - Optional label
+   - Collapsible options
+
+5. **ProcessesPanel.tsx** - Sidebar Run panel:
+   - Form at top
+   - List below
+
+### Hooks
+
+- **useProcessOutput.ts** - Real-time process output streaming:
+  - WebSocket subscription to project room
+  - Output accumulation from events
+  - write(), resize(), kill() methods
+  - Integrates with REST API for initial output
+
+### API Additions (queries.ts)
+
+- `useProcessOutput()` - Fetch process output chunks
+- `useSpawnProcess()` - Spawn new processes
+- `useKillProcess()` - Kill running processes
+- `useWriteToProcess()` - Write to stdin
+- `useResizeProcess()` - Resize PTY
+
+### WebSocket Events (events.ts)
+
+- `subscribeToProcessEvents()` - Subscribe to process events
+- Handles: process.spawned, process.output, process.exited, process.killed
+
+### UI Context (ui.tsx)
+
+- Added `selectedProcessId` state
+- `setSelectedProcess()` auto-opens bottom panel Services tab
+
+### Backend Tool
+
+- **service.ts** - Non-blocking service tool for agents:
+  - Uses ProcessService with PTY
+  - Returns processId immediately
+  - Optional waitForReady parameter
+  - Scoped to task session
 
 ---
 
 ## Backend
 
-No new backend changes required - uses APIs from Phase 11 (Process Management).
+Backend process management was completed in Phase 11:
+- ProcessService with PTY support
+- REST API for spawn, list, kill, write, resize
+- WebSocket handlers for real-time I/O
+- EventBus for process events
+
+---
+
+## File Structure
+
+```
+webui/src/
+├── components/processes/
+│   ├── index.ts             # Exports
+│   ├── ProcessItem.tsx      # Process list item
+│   ├── ProcessList.tsx      # Grouped process list
+│   ├── ProcessTerminal.tsx  # xterm.js terminal
+│   ├── SpawnProcessForm.tsx # New process form
+│   └── ProcessesPanel.tsx   # Sidebar panel
+├── hooks/
+│   └── useProcessOutput.ts  # Streaming hook
+└── lib/
+    ├── api/queries.ts       # Process mutations
+    └── websocket/events.ts  # Process event handlers
+
+src/tools/
+└── service.ts               # Agent service tool
+```
+
+---
+
+## Validation Criteria
+
+- [x] Terminal renders with proper styling
+- [x] Command output displays in terminal
+- [x] Interactive input works (via write)
+- [x] Services panel shows running services
+- [x] Run panel allows spawning new processes
+- [x] Stop button kills process
+- [x] Process status updates in real-time
+- [x] Terminal resize works
+- [x] Build passes type checks
+
+**Deliverable**: Full terminal emulation with process management
 
 ---
 
