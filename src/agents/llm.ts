@@ -43,6 +43,7 @@ export interface LLMCallOptions {
  */
 export type StreamEvent =
   | { type: "text-delta"; text: string }
+  | { type: "reasoning-delta"; text: string }
   | { type: "tool-call-start"; toolCallId: string; toolName: string }
   | { type: "tool-call-delta"; toolCallId: string; argsText: string }
   | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown }
@@ -141,8 +142,35 @@ export class LLM {
             await onStreamEvent?.({ type: "text-delta", text: event.text });
             break;
 
+          case "reasoning-delta":
+            // Handle reasoning/thinking tokens from Claude
+            await onStreamEvent?.({ type: "reasoning-delta", text: event.text });
+            break;
+
+          case "tool-input-start": {
+            // Tool call is starting - emit start event with tool info
+            const toolEvent = event as { id: string; toolName: string };
+            await onStreamEvent?.({
+              type: "tool-call-start",
+              toolCallId: toolEvent.id,
+              toolName: toolEvent.toolName,
+            });
+            break;
+          }
+
+          case "tool-input-delta": {
+            // Tool arguments are streaming - emit delta
+            const deltaEvent = event as { id: string; delta: string };
+            await onStreamEvent?.({
+              type: "tool-call-delta",
+              toolCallId: deltaEvent.id,
+              argsText: deltaEvent.delta,
+            });
+            break;
+          }
+
           case "tool-call": {
-            // Get args from the tool call - use 'input' property
+            // Complete tool call - get args from the tool call
             const toolArgs = (event as { input?: unknown }).input ?? {};
             await onStreamEvent?.({
               type: "tool-call",
@@ -167,6 +195,21 @@ export class LLM {
               type: "tool-result",
               toolCallId: event.toolCallId,
               result: resultOutput,
+            });
+            break;
+          }
+
+          case "start-step":
+            stepCount++;
+            await onStreamEvent?.({ type: "step-start", stepNumber: stepCount });
+            break;
+
+          case "finish-step": {
+            const stepEvent = event as { finishReason?: string };
+            await onStreamEvent?.({
+              type: "step-finish",
+              stepNumber: stepCount,
+              finishReason: stepEvent.finishReason ?? "unknown",
             });
             break;
           }

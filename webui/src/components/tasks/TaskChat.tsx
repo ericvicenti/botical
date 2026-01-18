@@ -445,27 +445,83 @@ interface StreamingMessageBubbleProps {
     id: string;
     content: string;
     isStreaming: boolean;
+    parts: Array<{
+      id: string;
+      type: string;
+      content: unknown;
+      toolName?: string | null;
+      toolCallId?: string | null;
+      toolStatus?: string | null;
+    }>;
   };
 }
 
 function StreamingMessageBubble({ message }: StreamingMessageBubbleProps) {
+  const hasContent = message.content || message.parts.length > 0;
+
   return (
     <div className="flex gap-3" data-testid="streaming-message">
-      <div className="w-8 h-8 rounded-full bg-accent-primary/20 flex items-center justify-center shrink-0">
-        <Bot className="w-4 h-4 text-accent-primary" />
+      <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center shrink-0">
+        <Bot className="w-4 h-4 text-text-primary" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="bg-bg-secondary rounded-lg p-3">
-          <p className="text-text-primary whitespace-pre-wrap">
-            {message.content || (
-              <span className="text-text-muted italic">Thinking...</span>
-            )}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 bg-accent-primary/50 ml-1 animate-pulse" />
-            )}
-          </p>
-        </div>
+      <div className="flex-1 min-w-0 space-y-2">
+        {/* Render parts (reasoning, tool calls) */}
+        {message.parts.map((part) => (
+          <StreamingPart key={part.id} part={part} />
+        ))}
+
+        {/* Render text content if present */}
+        {message.content && (
+          <div className="px-4 py-2.5 rounded-2xl bg-bg-elevated text-text-primary border border-border">
+            <p className="whitespace-pre-wrap break-words">
+              {message.content}
+              {message.isStreaming && (
+                <span className="inline-block w-2 h-4 bg-accent-primary/50 ml-1 animate-pulse" />
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Show thinking indicator if no content yet */}
+        {!hasContent && message.isStreaming && (
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Thinking...</span>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function StreamingPart({ part }: { part: StreamingMessageBubbleProps["message"]["parts"][0] }) {
+  switch (part.type) {
+    case "reasoning":
+      return (
+        <div className="px-4 py-2 bg-bg-secondary/50 border border-border/50 rounded-lg text-sm text-text-muted italic">
+          <p className="whitespace-pre-wrap">{(part.content as { text: string })?.text || ""}</p>
+        </div>
+      );
+
+    case "tool-call":
+      return (
+        <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 text-accent-primary animate-spin" />
+            <span className="font-mono font-medium text-text-primary">{part.toolName}</span>
+            <span className={cn(
+              "px-1.5 py-0.5 rounded text-xs",
+              part.toolStatus === "completed" ? "bg-green-500/20 text-green-400" :
+              part.toolStatus === "running" ? "bg-blue-500/20 text-blue-400" :
+              "bg-yellow-500/20 text-yellow-400"
+            )}>
+              {part.toolStatus || "pending"}
+            </span>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
 }

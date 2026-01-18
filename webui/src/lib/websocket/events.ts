@@ -111,6 +111,11 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
       emitStreamingEvent(event);
       break;
 
+    case "message.reasoning.delta":
+      log(`Reasoning delta for message: ${event.payload.messageId}`, { delta: event.payload.delta });
+      emitStreamingEvent(event);
+      break;
+
     case "message.tool.call":
     case "message.tool.result":
       log(`Tool event: ${event.type}`, event.payload);

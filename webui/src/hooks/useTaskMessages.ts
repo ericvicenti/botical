@@ -115,27 +115,74 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           });
           break;
 
-        case "message.tool.call":
-          // Add tool call to streaming message parts
+        case "message.reasoning.delta":
+          // Add or update reasoning part
           setStreamingMessage((prev) => {
             if (!prev || prev.id !== event.payload.messageId) return prev;
-            const toolPart: MessagePart = {
-              id: event.payload.partId as string,
-              messageId: prev.id,
-              sessionId,
-              type: "tool-call",
-              content: { name: event.payload.toolName, args: event.payload.args },
-              toolName: event.payload.toolName as string,
-              toolCallId: event.payload.toolCallId as string,
-              toolStatus: "running",
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            };
-            log("streaming", "Adding tool call", { toolName: event.payload.toolName });
-            return {
-              ...prev,
-              parts: [...prev.parts, toolPart],
-            };
+            const partId = event.payload.partId as string;
+            const existingPart = prev.parts.find(p => p.id === partId);
+
+            if (existingPart) {
+              // Update existing reasoning part
+              const updatedParts = prev.parts.map(p =>
+                p.id === partId
+                  ? { ...p, content: { text: ((p.content as { text: string }).text || "") + (event.payload.delta as string) } }
+                  : p
+              );
+              return { ...prev, parts: updatedParts };
+            } else {
+              // Create new reasoning part
+              const reasoningPart: MessagePart = {
+                id: partId,
+                messageId: prev.id,
+                sessionId,
+                type: "reasoning",
+                content: { text: event.payload.delta as string },
+                toolName: null,
+                toolCallId: null,
+                toolStatus: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              log("streaming", "Adding reasoning part");
+              return { ...prev, parts: [...prev.parts, reasoningPart] };
+            }
+          });
+          break;
+
+        case "message.tool.call":
+          // Add or update tool call in streaming message parts
+          setStreamingMessage((prev) => {
+            if (!prev || prev.id !== event.payload.messageId) return prev;
+            const toolCallId = event.payload.toolCallId as string;
+            const existingPart = prev.parts.find(p => p.toolCallId === toolCallId);
+
+            if (existingPart) {
+              // Update existing tool call with args and status
+              const updatedParts = prev.parts.map(p =>
+                p.toolCallId === toolCallId
+                  ? { ...p, content: { name: event.payload.toolName, args: event.payload.args }, toolStatus: "running" as const }
+                  : p
+              );
+              log("streaming", "Updating tool call", { toolName: event.payload.toolName });
+              return { ...prev, parts: updatedParts };
+            } else {
+              // Create new tool call part
+              const toolPart: MessagePart = {
+                id: event.payload.partId as string,
+                messageId: prev.id,
+                sessionId,
+                type: "tool-call",
+                content: { name: event.payload.toolName, args: event.payload.args },
+                toolName: event.payload.toolName as string,
+                toolCallId: toolCallId,
+                toolStatus: "running",
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+              log("streaming", "Adding tool call", { toolName: event.payload.toolName });
+              return { ...prev, parts: [...prev.parts, toolPart] };
+            }
           });
           break;
 

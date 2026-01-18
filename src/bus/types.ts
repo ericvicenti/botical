@@ -60,6 +60,16 @@ export const MessageTextDeltaEvent = z.object({
   }),
 });
 
+export const MessageReasoningDeltaEvent = z.object({
+  type: z.literal("message.reasoning.delta"),
+  payload: z.object({
+    sessionId: z.string(),
+    messageId: z.string(),
+    partId: z.string(),
+    delta: z.string(),
+  }),
+});
+
 export const MessageToolCallEvent = z.object({
   type: z.literal("message.tool.call"),
   payload: z.object({
@@ -191,6 +201,7 @@ export const IrisEvent = z.discriminatedUnion("type", [
   SessionDeletedEvent,
   MessageCreatedEvent,
   MessageTextDeltaEvent,
+  MessageReasoningDeltaEvent,
   MessageToolCallEvent,
   MessageToolResultEvent,
   MessageCompleteEvent,

@@ -39,6 +39,7 @@ export interface StreamProcessorOptions {
  */
 export type ProcessedEvent =
   | { type: "text-delta"; partId: string; text: string }
+  | { type: "reasoning-delta"; partId: string; text: string }
   | { type: "tool-call-start"; partId: string; toolCallId: string; toolName: string }
   | { type: "tool-call"; partId: string; toolCallId: string; toolName: string; args: unknown }
   | { type: "tool-result"; partId: string; toolCallId: string; result: unknown }
@@ -61,6 +62,7 @@ export class StreamProcessor {
 
   // State for tracking current parts
   private currentTextPart: { id: string; text: string } | null = null;
+  private currentReasoningPart: { id: string; text: string } | null = null;
   private toolCallParts: Map<string, string> = new Map(); // toolCallId -> partId
 
   constructor(options: StreamProcessorOptions) {
@@ -80,6 +82,14 @@ export class StreamProcessor {
     switch (event.type) {
       case "text-delta":
         await this.handleTextDelta(event.text);
+        break;
+
+      case "reasoning-delta":
+        await this.handleReasoningDelta(event.text);
+        break;
+
+      case "tool-call-start":
+        await this.handleToolCallStart(event.toolCallId, event.toolName);
         break;
 
       case "tool-call":
@@ -150,25 +160,68 @@ export class StreamProcessor {
   }
 
   /**
-   * Handle tool call events
+   * Handle reasoning delta events (Claude's thinking/reasoning tokens)
    */
-  private async handleToolCall(
-    toolCallId: string,
-    toolName: string,
-    args: unknown
-  ): Promise<void> {
-    // Finalize any open text part
+  private async handleReasoningDelta(text: string): Promise<void> {
+    // Finalize any open text part when reasoning starts
     this.currentTextPart = null;
 
-    // Create tool call part
+    // Create reasoning part if it doesn't exist
+    if (!this.currentReasoningPart) {
+      const part = MessagePartService.create(this.db, {
+        messageId: this.messageId,
+        sessionId: this.sessionId,
+        type: "reasoning",
+        content: { text: "" },
+      });
+      this.currentReasoningPart = { id: part.id, text: "" };
+    }
+
+    // Append reasoning text
+    this.currentReasoningPart.text += text;
+    MessagePartService.updateContent(this.db, this.currentReasoningPart.id, {
+      text: this.currentReasoningPart.text,
+    });
+
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.reasoning.delta",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        partId: this.currentReasoningPart.id,
+        delta: text,
+      },
+    });
+
+    // Emit callback event
+    await this.onEvent?.({
+      type: "reasoning-delta",
+      partId: this.currentReasoningPart.id,
+      text,
+    });
+  }
+
+  /**
+   * Handle tool call start events (shows tool call before args are complete)
+   */
+  private async handleToolCallStart(
+    toolCallId: string,
+    toolName: string
+  ): Promise<void> {
+    // Finalize any open text/reasoning parts
+    this.currentTextPart = null;
+    this.currentReasoningPart = null;
+
+    // Create tool call part with pending status
     const part = MessagePartService.create(this.db, {
       messageId: this.messageId,
       sessionId: this.sessionId,
       type: "tool-call",
-      content: { args },
+      content: { args: {} }, // Empty args initially
       toolName,
       toolCallId,
-      toolStatus: "running",
+      toolStatus: "pending",
     });
 
     this.toolCallParts.set(toolCallId, part.id);
@@ -182,13 +235,69 @@ export class StreamProcessor {
         partId: part.id,
         toolName,
         toolCallId,
+        args: {},
+      },
+    });
+
+    // Emit callback event
+    await this.onEvent?.({
+      type: "tool-call-start",
+      partId: part.id,
+      toolCallId,
+      toolName,
+    });
+  }
+
+  /**
+   * Handle tool call events
+   */
+  private async handleToolCall(
+    toolCallId: string,
+    toolName: string,
+    args: unknown
+  ): Promise<void> {
+    // Finalize any open text/reasoning parts
+    this.currentTextPart = null;
+    this.currentReasoningPart = null;
+
+    // Check if we already have a part from tool-call-start
+    let partId = this.toolCallParts.get(toolCallId);
+
+    if (partId) {
+      // Update existing part with complete args and set status to running
+      MessagePartService.updateContent(this.db, partId, { args });
+      MessagePartService.updateToolStatus(this.db, partId, "running");
+    } else {
+      // Create new tool call part
+      const part = MessagePartService.create(this.db, {
+        messageId: this.messageId,
+        sessionId: this.sessionId,
+        type: "tool-call",
+        content: { args },
+        toolName,
+        toolCallId,
+        toolStatus: "running",
+      });
+      partId = part.id;
+      this.toolCallParts.set(toolCallId, partId);
+    }
+
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.tool.call",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        partId,
+        toolName,
+        toolCallId,
         args,
       },
     });
 
     await this.onEvent?.({
       type: "tool-call",
-      partId: part.id,
+      partId,
       toolCallId,
       toolName,
       args,
