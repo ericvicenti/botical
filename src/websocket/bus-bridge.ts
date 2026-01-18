@@ -68,22 +68,35 @@ export function setupBusBridge(): void {
   // Subscribe to message events → broadcast to session room
   const messageSub = EventBus.subscribe("message.*", (envelope) => {
     const { projectId, event } = envelope;
-    if (!projectId) return;
+    if (!projectId) {
+      console.log(`[bus-bridge] Ignoring message event without projectId:`, event.type);
+      return;
+    }
 
     const wsEventType = mapEventType(event.type);
-    if (!wsEventType) return;
+    if (!wsEventType) {
+      console.log(`[bus-bridge] No mapping for event type:`, event.type);
+      return;
+    }
 
     // Extract sessionId from payload
     const payload = event.payload as { sessionId?: string };
-    if (!payload.sessionId) return;
+    if (!payload.sessionId) {
+      console.log(`[bus-bridge] Message event missing sessionId:`, event.type);
+      return;
+    }
 
     const wsEvent = createEvent(wsEventType, event.payload);
 
     // Broadcast to session subscribers
-    RoomManager.broadcast(getSessionRoom(payload.sessionId), wsEvent);
+    const sessionRoom = getSessionRoom(payload.sessionId);
+    const sessionCount = RoomManager.broadcast(sessionRoom, wsEvent);
+    console.log(`[bus-bridge] Broadcast ${event.type} to ${sessionRoom}: ${sessionCount} clients`);
 
     // Also broadcast to project room for clients that want all events
-    RoomManager.broadcast(getProjectRoom(projectId), wsEvent);
+    const projectRoom = getProjectRoom(projectId);
+    const projectCount = RoomManager.broadcast(projectRoom, wsEvent);
+    console.log(`[bus-bridge] Broadcast ${event.type} to ${projectRoom}: ${projectCount} clients`);
   });
   subscriptions.push(messageSub);
 

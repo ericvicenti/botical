@@ -10,6 +10,7 @@ import type { Database } from "bun:sqlite";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ProviderRegistry } from "./providers.ts";
+import { EventBus } from "@/bus/index.ts";
 import type { StreamEvent } from "./llm.ts";
 import type { ProviderId, FinishReason } from "./types.ts";
 
@@ -19,6 +20,8 @@ import type { ProviderId, FinishReason } from "./types.ts";
 export interface StreamProcessorOptions {
   /** Database connection */
   db: Database;
+  /** Project ID for event publishing */
+  projectId: string;
   /** Session ID */
   sessionId: string;
   /** Message ID being processed */
@@ -49,6 +52,7 @@ export type ProcessedEvent =
  */
 export class StreamProcessor {
   private db: Database;
+  private projectId: string;
   private sessionId: string;
   private messageId: string;
   private providerId: ProviderId;
@@ -61,6 +65,7 @@ export class StreamProcessor {
 
   constructor(options: StreamProcessorOptions) {
     this.db = options.db;
+    this.projectId = options.projectId;
     this.sessionId = options.sessionId;
     this.messageId = options.messageId;
     this.providerId = options.providerId;
@@ -124,7 +129,19 @@ export class StreamProcessor {
       text: this.currentTextPart.text,
     });
 
-    // Emit event
+    // Emit to EventBus for WebSocket broadcast
+    console.log(`[StreamProcessor] Emitting message.text.delta for session ${this.sessionId}, delta length: ${text.length}`);
+    EventBus.publish(this.projectId, {
+      type: "message.text.delta",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        partId: this.currentTextPart.id,
+        delta: text,
+      },
+    });
+
+    // Emit callback event
     await this.onEvent?.({
       type: "text-delta",
       partId: this.currentTextPart.id,
@@ -155,6 +172,19 @@ export class StreamProcessor {
     });
 
     this.toolCallParts.set(toolCallId, part.id);
+
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.tool.call",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        partId: part.id,
+        toolName,
+        toolCallId,
+        args,
+      },
+    });
 
     await this.onEvent?.({
       type: "tool-call",
@@ -187,6 +217,18 @@ export class StreamProcessor {
     if (toolCallPartId) {
       MessagePartService.updateToolStatus(this.db, toolCallPartId, "completed");
     }
+
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.tool.result",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        partId: part.id,
+        toolCallId,
+        result,
+      },
+    });
 
     await this.onEvent?.({
       type: "tool-result",
@@ -270,6 +312,16 @@ export class StreamProcessor {
       tokensOutput: usage.outputTokens,
     });
 
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.complete",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        finishReason: this.mapFinishReason(finishReason),
+      },
+    });
+
     await this.onEvent?.({
       type: "finish",
       finishReason: this.mapFinishReason(finishReason),
@@ -295,6 +347,17 @@ export class StreamProcessor {
     MessageService.setError(this.db, this.messageId, {
       type: error.name || "Error",
       message: error.message,
+    });
+
+    // Emit to EventBus for WebSocket broadcast
+    EventBus.publish(this.projectId, {
+      type: "message.error",
+      payload: {
+        sessionId: this.sessionId,
+        messageId: this.messageId,
+        errorType: error.name || "Error",
+        errorMessage: error.message,
+      },
     });
 
     await this.onEvent?.({

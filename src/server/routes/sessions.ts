@@ -28,7 +28,7 @@ import {
   SessionCreateSchema,
   SessionUpdateSchema,
 } from "@/services/sessions.ts";
-import { MessageService } from "@/services/messages.ts";
+import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { ValidationError } from "@/utils/errors.ts";
 import type { SessionStatus } from "@/agents/types.ts";
 
@@ -199,7 +199,7 @@ sessions.delete("/:id", async (c) => {
 
 /**
  * GET /api/sessions/:id/messages
- * List messages in session
+ * List messages in session with their parts
  */
 sessions.get("/:id/messages", async (c) => {
   const sessionId = c.req.param("id");
@@ -242,10 +242,16 @@ sessions.get("/:id/messages", async (c) => {
     offset,
   });
 
+  // Include parts for each message
+  const messagesWithParts = messages.map((message) => ({
+    ...message,
+    parts: MessagePartService.listByMessage(db, message.id),
+  }));
+
   const total = MessageService.countBySession(db, sessionId);
 
   return c.json({
-    data: messages,
+    data: messagesWithParts,
     meta: {
       total,
       limit,

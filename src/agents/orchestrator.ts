@@ -23,6 +23,7 @@ import type { ProviderId, AgentRunResult, AgentConfig } from "./types.ts";
 import { AgentRegistry } from "./registry.ts";
 import { SubAgentRunner } from "./subagent-runner.ts";
 import type { TaskParams } from "@/tools/task.ts";
+import { EventBus } from "@/bus/index.ts";
 
 /**
  * Options for running an agent
@@ -133,6 +134,16 @@ export class AgentOrchestrator {
       agent: effectiveAgentName,
     });
 
+    // Emit message.created event for WebSocket clients
+    EventBus.publish(projectId, {
+      type: "message.created",
+      payload: {
+        sessionId,
+        messageId: assistantMessage.id,
+        role: "assistant",
+      },
+    });
+
     // Build conversation history
     const messages = this.buildMessages(db, sessionId, content);
 
@@ -195,6 +206,7 @@ export class AgentOrchestrator {
     // Create stream processor
     const processor = new StreamProcessor({
       db,
+      projectId,
       sessionId,
       messageId: assistantMessage.id,
       providerId,

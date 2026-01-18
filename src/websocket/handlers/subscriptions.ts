@@ -45,6 +45,8 @@ export const SubscriptionHandlers = {
     validateChannel(input.channel, ctx);
 
     RoomManager.join(input.channel, ctx.connectionId);
+    console.log(`[Subscription] Connection ${ctx.connectionId} subscribed to ${input.channel}`);
+    console.log(`[Subscription] Room ${input.channel} now has ${RoomManager.getMemberCount(input.channel)} members`);
 
     return {
       subscribed: true,
@@ -59,6 +61,7 @@ export const SubscriptionHandlers = {
     const input = UnsubscribePayload.parse(payload);
 
     RoomManager.leave(input.channel, ctx.connectionId);
+    console.log(`[Subscription] Connection ${ctx.connectionId} unsubscribed from ${input.channel}`);
 
     return {
       unsubscribed: true,
