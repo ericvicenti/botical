@@ -4,15 +4,20 @@ import type { MessageWithParts, MessagePart } from "@/lib/api/types";
 
 interface MessageBubbleProps {
   message: MessageWithParts;
+  isOptimistic?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, isOptimistic }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isError = !!message.errorType;
   const isStreaming = !message.completedAt && message.role === "assistant";
 
   return (
-    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
+    <div
+      className={cn("flex gap-3", isUser && "flex-row-reverse")}
+      data-testid={isUser ? "user-message" : "assistant-message"}
+      data-optimistic={isOptimistic || undefined}
+    >
       {/* Avatar */}
       <div
         className={cn(

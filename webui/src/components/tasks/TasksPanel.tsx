@@ -2,6 +2,7 @@ import { useSessions, useCreateSession } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 import { Plus, MessageSquare, MoreHorizontal } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import type { Session } from "@/lib/api/types";
 
 interface TasksPanelProps {
@@ -12,6 +13,7 @@ export function TasksPanel({ projectId }: TasksPanelProps) {
   const { data: sessions, isLoading } = useSessions(projectId);
   const createSession = useCreateSession();
   const { openTab } = useTabs();
+  const navigate = useNavigate();
 
   const activeSessions = sessions?.filter((s) => s.status === "active") || [];
   const archivedSessions = sessions?.filter((s) => s.status === "archived") || [];
@@ -28,6 +30,7 @@ export function TasksPanel({ projectId }: TasksPanelProps) {
         projectId,
         title: session.title,
       });
+      navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
     } catch (err) {
       console.error("Failed to create task:", err);
     }
@@ -54,6 +57,7 @@ export function TasksPanel({ projectId }: TasksPanelProps) {
             createSession.isPending && "opacity-50 cursor-not-allowed"
           )}
           title="New Task"
+          data-testid="new-task-button"
         >
           <Plus className="w-3.5 h-3.5" />
         </button>
@@ -113,6 +117,7 @@ function TaskItem({
   archived?: boolean;
 }) {
   const { openTab } = useTabs();
+  const navigate = useNavigate();
 
   const handleClick = () => {
     openTab({
@@ -121,6 +126,7 @@ function TaskItem({
       projectId,
       title: session.title,
     });
+    navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
   };
 
   const timeAgo = formatTimeAgo(session.createdAt);
@@ -134,6 +140,7 @@ function TaskItem({
         "flex items-start gap-2 group",
         archived && "opacity-60"
       )}
+      data-testid={`task-item-${session.id}`}
     >
       <MessageSquare className="w-4 h-4 mt-0.5 text-text-muted shrink-0" />
       <div className="flex-1 min-w-0">
