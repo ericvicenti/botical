@@ -4,7 +4,9 @@ export type TabType =
   | "file"
   | "process"
   | "diff"
-  | "settings";
+  | "settings"
+  | "create-project"
+  | "task";
 
 export interface Tab {
   id: string;
@@ -21,4 +23,6 @@ export type TabData =
   | { type: "file"; path: string; projectId: string }
   | { type: "process"; processId: string; projectId: string }
   | { type: "diff"; path: string; projectId: string; base?: string }
-  | { type: "settings" };
+  | { type: "settings" }
+  | { type: "create-project" }
+  | { type: "task"; sessionId: string; projectId: string; title: string };

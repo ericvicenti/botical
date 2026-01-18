@@ -9,6 +9,8 @@ import {
   Terminal,
   GitCompare,
   Settings,
+  Plus,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { Tab } from "@/types/tabs";
@@ -20,6 +22,8 @@ const TAB_ICONS = {
   process: Terminal,
   diff: GitCompare,
   settings: Settings,
+  "create-project": Plus,
+  task: MessageSquare,
 } as const;
 
 function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } {
@@ -28,8 +32,14 @@ function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } 
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "mission":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "file":
+      return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
+    case "task":
+      return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
     case "settings":
       return { to: "/settings" };
+    case "create-project":
+      return { to: "/create-project" };
     default:
       return { to: "/" };
   }

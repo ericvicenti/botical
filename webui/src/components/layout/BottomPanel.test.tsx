@@ -46,7 +46,6 @@ describe("BottomPanel", () => {
     expect(screen.getByText("Output will appear here...")).toBeInTheDocument();
 
     // Find and click the collapse button (ChevronDown)
-    const collapseButton = screen.getByRole("button", { name: "" });
     // The collapse button is in the header, find by SVG
     const buttons = screen.getAllByRole("button");
     const chevronButton = buttons.find((btn) =>

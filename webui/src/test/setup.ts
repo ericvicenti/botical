@@ -17,7 +17,7 @@ class MockWebSocket {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
 
-  constructor(url: string) {
+  constructor(_url: string) {
     // Simulate connection after a tick
     setTimeout(() => {
       if (this.onopen) {
@@ -157,6 +157,8 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  // Clear localStorage to ensure test isolation
+  localStorage.clear();
 });
 
 afterAll(() => {

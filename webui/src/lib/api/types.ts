@@ -37,8 +37,34 @@ export interface Message {
   id: string;
   sessionId: string;
   role: "user" | "assistant" | "system";
-  content: string;
+  parentId: string | null;
+  finishReason: string | null;
+  cost: number;
+  tokensInput: number;
+  tokensOutput: number;
+  tokensReasoning: number;
+  errorType: string | null;
+  errorMessage: string | null;
   createdAt: number;
+  completedAt: number | null;
+  parts?: MessagePart[];
+}
+
+export interface MessagePart {
+  id: string;
+  messageId: string;
+  sessionId: string;
+  type: "text" | "reasoning" | "tool-call" | "tool-result" | "file" | "step-start" | "step-finish";
+  content: unknown;
+  toolName: string | null;
+  toolCallId: string | null;
+  toolStatus: "pending" | "running" | "completed" | "error" | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MessageWithParts extends Message {
+  parts: MessagePart[];
 }
 
 export interface Mission {

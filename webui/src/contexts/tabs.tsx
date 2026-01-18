@@ -3,9 +3,12 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 import type { Tab, TabData } from "@/types/tabs";
+
+const STORAGE_KEY = "iris:tabs";
 
 interface TabsContextValue {
   tabs: Tab[];
@@ -23,6 +26,30 @@ interface TabsContextValue {
 
 const TabsContext = createContext<TabsContextValue | null>(null);
 
+function loadTabsFromStorage(): { tabs: Tab[]; activeTabId: string | null } {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        tabs: Array.isArray(parsed.tabs) ? parsed.tabs : [],
+        activeTabId: parsed.activeTabId ?? null,
+      };
+    }
+  } catch (e) {
+    console.warn("Failed to load tabs from storage:", e);
+  }
+  return { tabs: [], activeTabId: null };
+}
+
+function saveTabsToStorage(tabs: Tab[], activeTabId: string | null) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, activeTabId }));
+  } catch (e) {
+    console.warn("Failed to save tabs to storage:", e);
+  }
+}
+
 function generateTabId(data: TabData): string {
   switch (data.type) {
     case "project":
@@ -37,6 +64,10 @@ function generateTabId(data: TabData): string {
       return `diff:${data.projectId}:${data.path}:${data.base || "working"}`;
     case "settings":
       return "settings";
+    case "create-project":
+      return "create-project";
+    case "task":
+      return `task:${data.sessionId}`;
   }
 }
 
@@ -54,12 +85,23 @@ function generateTabLabel(data: TabData): string {
       return `Diff: ${data.path.split("/").pop()}`;
     case "settings":
       return "Settings";
+    case "create-project":
+      return "New Project";
+    case "task":
+      return data.title || "Task";
   }
 }
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [tabs, setTabs] = useState<Tab[]>(() => loadTabsFromStorage().tabs);
+  const [activeTabId, setActiveTabId] = useState<string | null>(
+    () => loadTabsFromStorage().activeTabId
+  );
+
+  // Persist to localStorage when tabs or activeTabId change
+  useEffect(() => {
+    saveTabsToStorage(tabs, activeTabId);
+  }, [tabs, activeTabId]);
 
   const openTab = useCallback((data: TabData) => {
     const id = generateTabId(data);
