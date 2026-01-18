@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, FolderTree, ExternalLink, Info, X, ChevronDown } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Markdown } from "@/components/ui/Markdown";
 
 interface TaskChatProps {
   sessionId: string;
@@ -502,12 +503,10 @@ function StreamingPart({
       if (!textContent) return null;
       return (
         <div className="px-4 py-2.5 rounded-2xl bg-bg-elevated text-text-primary border border-border">
-          <p className="whitespace-pre-wrap break-words">
-            {textContent}
-            {isLast && isStreaming && (
-              <span className="inline-block w-2 h-4 bg-accent-primary/50 ml-1 animate-pulse" />
-            )}
-          </p>
+          <Markdown>{textContent}</Markdown>
+          {isLast && isStreaming && (
+            <span className="inline-block w-2 h-4 bg-accent-primary/50 animate-pulse" />
+          )}
         </div>
       );
 

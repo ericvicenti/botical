@@ -4,6 +4,7 @@ import type { MessageWithParts, MessagePart } from "@/lib/api/types";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Markdown } from "@/components/ui/Markdown";
 
 interface MessageBubbleProps {
   message: MessageWithParts;
@@ -139,7 +140,13 @@ function TextPart({
           : "bg-bg-elevated text-text-primary border border-border"
       )}
     >
-      <p className="whitespace-pre-wrap break-words">{cleanedText}</p>
+      {isUser ? (
+        // User messages: plain text (users don't typically write markdown)
+        <p className="whitespace-pre-wrap break-words">{cleanedText}</p>
+      ) : (
+        // Assistant messages: render as markdown
+        <Markdown>{cleanedText}</Markdown>
+      )}
     </div>
   );
 }
