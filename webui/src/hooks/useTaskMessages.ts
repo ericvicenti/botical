@@ -27,12 +27,18 @@ interface UseTaskMessagesOptions {
   projectId: string;
 }
 
+interface SendMessageOptions {
+  agentName?: string;
+  providerId?: string;
+  modelId?: string;
+}
+
 interface UseTaskMessagesResult {
   messages: MessageWithParts[];
   streamingMessage: StreamingMessage | null;
   isLoading: boolean;
   isSending: boolean;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
   error: string | null;
 }
 
@@ -203,8 +209,8 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
     }
   }, [fetchedMessages]);
 
-  const sendMessage = useCallback(async (content: string) => {
-    log("sendMessage", "Starting sendMessage", { content: content.substring(0, 50), isSending, hasSettings: !!settings });
+  const sendMessage = useCallback(async (content: string, options?: SendMessageOptions) => {
+    log("sendMessage", "Starting sendMessage", { content: content.substring(0, 50), isSending, hasSettings: !!settings, options });
 
     if (!settings || isSending) {
       log("sendMessage", "Aborting - no settings or already sending");
@@ -250,10 +256,13 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
       return [...prev, optimisticMessage];
     });
 
+    // Use provided provider/model or fall back to defaults
+    const providerId = options?.providerId ?? settings.defaultProvider;
+
     // Get API key for the selected provider
-    const apiKey = settings.defaultProvider === "anthropic"
+    const apiKey = providerId === "anthropic"
       ? settings.anthropicApiKey
-      : settings.defaultProvider === "openai"
+      : providerId === "openai"
       ? settings.openaiApiKey
       : settings.googleApiKey;
 
@@ -268,9 +277,10 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           sessionId,
           content,
           userId: settings.userId,
-          providerId: settings.defaultProvider,
+          providerId,
           apiKey,
-          modelId: settings.defaultProvider === "anthropic" ? "claude-3-5-haiku-20241022" : undefined,
+          modelId: options?.modelId,
+          agentName: options?.agentName,
         }),
       });
 

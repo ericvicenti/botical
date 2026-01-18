@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { render } from "@/test/utils";
 import { MessageBubble } from "./MessageBubble";
@@ -36,7 +36,7 @@ describe("MessageBubble", () => {
       ],
     };
 
-    render(<MessageBubble message={message} />, { withRouter: false });
+    render(<MessageBubble message={message} projectId="prj_test" />, { withRouter: false });
 
     expect(screen.getByText("Hello, this is a test message")).toBeInTheDocument();
     expect(screen.getByTestId("user-message")).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("MessageBubble", () => {
       ],
     };
 
-    render(<MessageBubble message={message} />, { withRouter: false });
+    render(<MessageBubble message={message} projectId="prj_test" />, { withRouter: false });
 
     expect(screen.getByText("Hello! How can I help you today?")).toBeInTheDocument();
     expect(screen.getByTestId("assistant-message")).toBeInTheDocument();
@@ -97,12 +97,12 @@ describe("MessageBubble", () => {
       parts: [], // No parts yet
     };
 
-    render(<MessageBubble message={message} />, { withRouter: false });
+    render(<MessageBubble message={message} projectId="prj_test" />, { withRouter: false });
 
     expect(screen.getByText("Thinking...")).toBeInTheDocument();
   });
 
-  it("renders tool call part", () => {
+  it("renders tool call part", async () => {
     const message: MessageWithParts = {
       id: "msg_4",
       sessionId: "ses_1",
@@ -133,9 +133,11 @@ describe("MessageBubble", () => {
       ],
     };
 
-    render(<MessageBubble message={message} />, { withRouter: false });
+    render(<MessageBubble message={message} projectId="prj_test" />);
 
-    expect(screen.getByText("read_file")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("read_file")).toBeInTheDocument();
+    });
     expect(screen.getByText("running")).toBeInTheDocument();
   });
 
@@ -157,7 +159,7 @@ describe("MessageBubble", () => {
       parts: [],
     };
 
-    render(<MessageBubble message={message} />, { withRouter: false });
+    render(<MessageBubble message={message} projectId="prj_test" />, { withRouter: false });
 
     expect(screen.getByText("rate_limit")).toBeInTheDocument();
     expect(screen.getByText("Too many requests. Please try again later.")).toBeInTheDocument();

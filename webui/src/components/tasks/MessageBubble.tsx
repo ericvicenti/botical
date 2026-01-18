@@ -1,13 +1,17 @@
 import { cn } from "@/lib/utils/cn";
-import { User, Bot, AlertCircle, Wrench, FileText, Loader2 } from "lucide-react";
+import { User, Bot, AlertCircle, Wrench, FileText, Loader2, ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import type { MessageWithParts, MessagePart } from "@/lib/api/types";
+import { useTabs } from "@/contexts/tabs";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 interface MessageBubbleProps {
   message: MessageWithParts;
+  projectId: string;
   isOptimistic?: boolean;
 }
 
-export function MessageBubble({ message, isOptimistic }: MessageBubbleProps) {
+export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isError = !!message.errorType;
   const isStreaming = !message.completedAt && message.role === "assistant";
@@ -40,7 +44,7 @@ export function MessageBubble({ message, isOptimistic }: MessageBubbleProps) {
         )}
       >
         {message.parts?.map((part) => (
-          <MessagePartContent key={part.id} part={part} isUser={isUser} />
+          <MessagePartContent key={part.id} part={part} isUser={isUser} projectId={projectId} />
         ))}
 
         {/* Streaming indicator */}
@@ -71,9 +75,11 @@ export function MessageBubble({ message, isOptimistic }: MessageBubbleProps) {
 function MessagePartContent({
   part,
   isUser,
+  projectId,
 }: {
   part: MessagePart;
   isUser: boolean;
+  projectId: string;
 }) {
   switch (part.type) {
     case "text":
@@ -88,14 +94,15 @@ function MessagePartContent({
           content={part.content as { name: string; args: unknown }}
           toolName={part.toolName}
           status={part.toolStatus}
+          projectId={projectId}
         />
       );
 
     case "tool-result":
-      return <ToolResultPart content={part.content} toolName={part.toolName} />;
+      return <ToolResultPart content={part.content} toolName={part.toolName} projectId={projectId} />;
 
     case "file":
-      return <FilePart content={part.content as { path: string }} />;
+      return <FilePart content={part.content as { path: string }} projectId={projectId} />;
 
     case "step-start":
     case "step-finish":
@@ -116,6 +123,13 @@ function TextPart({
 }) {
   if (!content.text) return null;
 
+  // Filter out artifact XML tags that the model might generate instead of using tools
+  // This is a fallback for when tools aren't properly configured
+  const cleanedText = content.text.replace(
+    /<antsArtifact[^>]*>[\s\S]*?<\/antsArtifact>/g,
+    "[Tool call attempted - please restart the server to enable tools]"
+  );
+
   return (
     <div
       className={cn(
@@ -125,7 +139,7 @@ function TextPart({
           : "bg-bg-elevated text-text-primary border border-border"
       )}
     >
-      <p className="whitespace-pre-wrap break-words">{content.text}</p>
+      <p className="whitespace-pre-wrap break-words">{cleanedText}</p>
     </div>
   );
 }
@@ -144,24 +158,59 @@ function ToolCallPart({
   content,
   toolName,
   status,
+  projectId,
 }: {
   content: { name: string; args: unknown };
   toolName: string | null;
   status: string | null;
+  projectId: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
   const name = toolName || content.name;
-  const hasArgs = !!(content.args && typeof content.args === "object" && Object.keys(content.args).length > 0);
+  const args = content.args as Record<string, unknown> | undefined;
+  const hasArgs = !!(args && typeof args === "object" && Object.keys(args).length > 0);
+
+  // Extract file path from common tool args
+  const filePath = args?.path as string | undefined;
+  const isFileOperation = ["read", "write", "edit"].includes(name) && filePath;
+
+  const handleOpenFile = () => {
+    if (!filePath) return;
+    openTab({
+      type: "file",
+      projectId,
+      path: filePath,
+    });
+    navigate({ to: "/files/$", params: { _splat: `${projectId}/${filePath}` } });
+  };
 
   return (
     <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm">
       <div className="flex items-center gap-2">
-        <Wrench className="w-3.5 h-3.5 text-text-muted" />
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 text-text-muted hover:text-text-primary"
+        >
+          {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </button>
+        <Wrench className="w-3.5 h-3.5 text-accent-primary" />
         <span className="font-mono font-medium text-text-primary">{name}</span>
+        {isFileOperation && (
+          <button
+            onClick={handleOpenFile}
+            className="flex items-center gap-1 text-accent-primary hover:underline font-mono text-xs"
+          >
+            {filePath}
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        )}
         {status && <ToolStatusBadge status={status} />}
       </div>
-      {hasArgs && (
+      {expanded && hasArgs && (
         <pre className="mt-2 text-xs text-text-muted overflow-auto max-h-32 bg-bg-primary/50 p-2 rounded">
-          {JSON.stringify(content.args, null, 2)}
+          {JSON.stringify(args, null, 2)}
         </pre>
       )}
     </div>
@@ -171,35 +220,90 @@ function ToolCallPart({
 function ToolResultPart({
   content,
   toolName,
+  projectId,
 }: {
   content: unknown;
   toolName: string | null;
+  projectId: string;
 }): React.ReactElement | null {
-  const resultStr =
-    typeof content === "string" ? content : JSON.stringify(content, null, 2);
+  const [expanded, setExpanded] = useState(false);
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  // Parse content to extract metadata if available
+  const contentObj = typeof content === "object" && content !== null ? content as Record<string, unknown> : null;
+  const title = contentObj?.title as string | undefined;
+  const output = contentObj?.output as string | undefined;
+  const metadata = contentObj?.metadata as Record<string, unknown> | undefined;
+  const filePath = metadata?.path as string | undefined;
+
+  const resultStr = output || (typeof content === "string" ? content : JSON.stringify(content, null, 2));
 
   // Truncate very long results
-  const truncated = resultStr.length > 500;
-  const displayContent = truncated ? resultStr.slice(0, 500) + "..." : resultStr;
+  const truncated = resultStr.length > 300;
+  const displayContent = (expanded || !truncated) ? resultStr : resultStr.slice(0, 300) + "...";
+
+  const handleOpenFile = () => {
+    if (!filePath) return;
+    openTab({
+      type: "file",
+      projectId,
+      path: filePath,
+    });
+    navigate({ to: "/files/$", params: { _splat: `${projectId}/${filePath}` } });
+  };
 
   return (
     <div className="px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm">
       <div className="flex items-center gap-2 text-text-muted mb-1">
-        <span className="text-xs">Result{toolName ? ` from ${toolName}` : ""}</span>
+        <span className="text-xs font-medium">{title || `Result${toolName ? ` from ${toolName}` : ""}`}</span>
+        {filePath && (
+          <button
+            onClick={handleOpenFile}
+            className="flex items-center gap-1 text-accent-primary hover:underline font-mono text-xs"
+          >
+            {filePath}
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        )}
       </div>
       <pre className="text-xs text-text-secondary overflow-auto max-h-40 whitespace-pre-wrap break-words">
         {displayContent}
       </pre>
+      {truncated && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-accent-primary hover:underline mt-1"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
     </div>
   );
 }
 
-function FilePart({ content }: { content: { path: string } }) {
+function FilePart({ content, projectId }: { content: { path: string }; projectId: string }) {
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleOpenFile = () => {
+    openTab({
+      type: "file",
+      projectId,
+      path: content.path,
+    });
+    navigate({ to: "/files/$", params: { _splat: `${projectId}/${content.path}` } });
+  };
+
   return (
-    <div className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm flex items-center gap-2">
-      <FileText className="w-4 h-4 text-text-muted" />
+    <button
+      onClick={handleOpenFile}
+      className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm flex items-center gap-2 hover:border-accent-primary transition-colors"
+    >
+      <FileText className="w-4 h-4 text-accent-primary" />
       <span className="font-mono text-text-primary">{content.path}</span>
-    </div>
+      <ExternalLink className="w-3 h-3 text-text-muted" />
+    </button>
   );
 }
 

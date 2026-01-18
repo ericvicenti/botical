@@ -8,6 +8,7 @@ import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
+import { ProjectService } from "@/services/projects.ts";
 import type {
   ListResponse,
   ItemResponse,
@@ -55,6 +56,26 @@ describe("Messages API Routes", () => {
     if (DatabaseManager.projectDbExists(testProjectId)) {
       DatabaseManager.deleteProjectDb(testProjectId);
     }
+    // Create project in root database for messages API to find
+    const rootDb = DatabaseManager.getRootDb();
+    try {
+      ProjectService.permanentDelete(rootDb, testProjectId);
+    } catch {
+      // Project doesn't exist, that's fine
+    }
+    // Create test user if doesn't exist
+    const now = Date.now();
+    const existingUser = rootDb.prepare("SELECT id FROM users WHERE id = ?").get("test-user");
+    if (!existingUser) {
+      rootDb.prepare(
+        `INSERT INTO users (id, username, created_at, updated_at) VALUES (?, ?, ?, ?)`
+      ).run("test-user", "test-user", now, now);
+    }
+    // Insert test project directly to avoid workspace initialization
+    rootDb.prepare(
+      `INSERT INTO projects (id, name, owner_id, type, path, settings, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(testProjectId, "Test Project", "test-user", "local", testDataDir, "{}", now, now);
   });
 
   const app = createApp();

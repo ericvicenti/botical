@@ -6,7 +6,7 @@
  * See: docs/knowledge-base/04-patterns.md#stream-processing-pattern
  */
 
-import { streamText, generateText, type ModelMessage, type Tool, type ToolSet } from "ai";
+import { streamText, generateText, stepCountIs, type ModelMessage, type Tool, type ToolSet } from "ai";
 import { ProviderRegistry } from "./providers.ts";
 import type { ProviderId } from "./types.ts";
 
@@ -26,6 +26,8 @@ export interface LLMCallOptions {
   messages: ModelMessage[];
   /** Tools available for the model */
   tools?: ToolSet;
+  /** Maximum number of tool execution steps */
+  maxSteps?: number;
   /** Temperature (0-2) */
   temperature?: number;
   /** Top P (0-1) */
@@ -93,6 +95,7 @@ export class LLM {
       system,
       messages,
       tools,
+      maxSteps,
       temperature,
       topP,
       abortSignal,
@@ -116,6 +119,7 @@ export class LLM {
         system,
         messages,
         tools,
+        stopWhen: stepCountIs(maxSteps ?? 1),
         temperature,
         topP,
         abortSignal,
@@ -123,6 +127,14 @@ export class LLM {
 
       // Process the stream
       for await (const event of result.fullStream) {
+        // Debug logging for stream events
+        console.log(`[LLM] Stream event type: ${event.type}`,
+          event.type === "tool-call" ? { toolName: (event as { toolName?: string }).toolName } :
+          event.type === "tool-result" ? { toolCallId: (event as { toolCallId?: string }).toolCallId } :
+          event.type === "finish" ? { finishReason: (event as { finishReason?: string }).finishReason } :
+          event.type === "start-step" || event.type === "finish-step" ? { step: event } : {}
+        );
+
         switch (event.type) {
           case "text-delta":
             fullText += event.text;
@@ -288,28 +300,38 @@ export class LLM {
   }): string {
     const parts: string[] = [];
 
-    // Base instructions
-    parts.push(`You are an AI assistant helping with software engineering tasks.`);
-    parts.push(`You have access to tools for reading, writing, and editing files, as well as executing commands.`);
+    // Base instructions with clear tool usage guidance
+    parts.push(`You are an AI coding assistant with access to tools for reading, writing, and editing files, as well as executing commands.`);
+    parts.push(``);
+    parts.push(`IMPORTANT: When you need to read files, write code, or execute commands, you MUST use the available tools. Do NOT just describe what you would do - actually call the tools to do it.`);
+    parts.push(``);
+    parts.push(`For example:`);
+    parts.push(`- To read a file, call the "read" tool with the file path`);
+    parts.push(`- To list files, call the "glob" tool with a pattern`);
+    parts.push(`- To search for code, call the "grep" tool`);
+    parts.push(`- To edit a file, call the "edit" tool`);
+    parts.push(`- To run a command, call the "bash" tool`);
+    parts.push(``);
     parts.push(`Be concise and helpful. Focus on completing the user's request efficiently.`);
-
-    // Agent-specific prompt
-    if (options.agentPrompt) {
-      parts.push("");
-      parts.push(options.agentPrompt);
-    }
 
     // Project context
     if (options.projectContext) {
       parts.push("");
-      parts.push("Project Context:");
+      parts.push("## Project Context");
       parts.push(options.projectContext);
+    }
+
+    // Agent-specific prompt
+    if (options.agentPrompt) {
+      parts.push("");
+      parts.push("## Agent Instructions");
+      parts.push(options.agentPrompt);
     }
 
     // Additional instructions
     if (options.additionalInstructions?.length) {
       parts.push("");
-      parts.push("Additional Instructions:");
+      parts.push("## Additional Instructions");
       for (const instruction of options.additionalInstructions) {
         parts.push(`- ${instruction}`);
       }

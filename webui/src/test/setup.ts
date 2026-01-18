@@ -146,6 +146,88 @@ export const handlers = [
       meta: { total: 0, limit: 50, offset: 0, hasMore: false },
     });
   }),
+
+  // Files - list directory
+  http.get("/api/projects/:projectId/files", ({ request }) => {
+    const url = new URL(request.url);
+    const path = url.searchParams.get("path");
+
+    // Root directory
+    if (!path) {
+      return HttpResponse.json({
+        data: [
+          { name: "src", path: "src", type: "directory" },
+          { name: "package.json", path: "package.json", type: "file", size: 1024, modified: Date.now() },
+          { name: "README.md", path: "README.md", type: "file", size: 512, modified: Date.now() },
+        ],
+      });
+    }
+
+    // src directory
+    if (path === "src") {
+      return HttpResponse.json({
+        data: [
+          { name: "index.ts", path: "src/index.ts", type: "file", size: 256, modified: Date.now() },
+          { name: "utils", path: "src/utils", type: "directory" },
+        ],
+      });
+    }
+
+    // src/utils directory
+    if (path === "src/utils") {
+      return HttpResponse.json({
+        data: [
+          { name: "helpers.ts", path: "src/utils/helpers.ts", type: "file", size: 128, modified: Date.now() },
+        ],
+      });
+    }
+
+    // Empty directory for others
+    return HttpResponse.json({ data: [] });
+  }),
+
+  // Files - get file content
+  http.get("/api/projects/:projectId/files/:path", ({ params }) => {
+    const path = decodeURIComponent(params.path as string);
+
+    const fileContents: Record<string, string> = {
+      "package.json": '{\n  "name": "test-project",\n  "version": "1.0.0"\n}',
+      "README.md": "# Test Project\n\nA test project for testing.",
+      "src/index.ts": 'export function main() {\n  console.log("Hello, world!");\n}',
+      "src/utils/helpers.ts": "export const add = (a: number, b: number) => a + b;",
+    };
+
+    const content = fileContents[path] || "";
+
+    return HttpResponse.json({
+      content,
+      path,
+      size: content.length,
+      modified: Date.now(),
+    });
+  }),
+
+  // Files - save file
+  http.put("/api/projects/:projectId/files/:path", async ({ params }) => {
+    const path = decodeURIComponent(params.path as string);
+
+    return HttpResponse.json({
+      path,
+      size: 100,
+      modified: Date.now(),
+    });
+  }),
+
+  // Files - delete file
+  http.delete("/api/projects/:projectId/files/:path", () => {
+    return HttpResponse.json({ success: true });
+  }),
+
+  // Files - rename/move file
+  http.post("/api/projects/:projectId/files/:path/move", async ({ request }) => {
+    const body = (await request.json()) as { destination: string };
+    return HttpResponse.json({ path: body.destination });
+  }),
 ];
 
 export const server = setupServer(...handlers);

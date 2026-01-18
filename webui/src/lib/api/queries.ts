@@ -420,3 +420,29 @@ export function useRenameFile() {
     },
   });
 }
+
+// Agents
+export interface AgentConfig {
+  id: string;
+  name: string;
+  description: string;
+  prompt?: string;
+  tools: string[];
+  mode: "all" | "primary" | "subagent";
+  modelId?: string | null;
+  maxSteps?: number | null;
+  temperature?: number | null;
+  isBuiltin: boolean;
+  hidden?: boolean;
+}
+
+export function useAgents(projectId?: string) {
+  return useQuery({
+    queryKey: ["agents", projectId],
+    queryFn: async () => {
+      const params = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+      const response = await apiClientRaw<AgentConfig[]>(`/api/agents${params}`);
+      return response.data;
+    },
+  });
+}

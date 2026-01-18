@@ -198,9 +198,10 @@ export class AgentOrchestrator {
       };
     }
 
-    // Build system prompt
+    // Build system prompt with project context
     const systemPrompt = LLM.buildSystemPrompt({
       agentPrompt: effectivePrompt,
+      projectContext: `Working directory: ${projectPath}`,
     });
 
     // Create stream processor
@@ -223,6 +224,7 @@ export class AgentOrchestrator {
         system: systemPrompt,
         messages,
         tools,
+        maxSteps: effectiveMaxSteps,
         temperature: effectiveTemperature,
         abortSignal,
         onStreamEvent: async (event) => {

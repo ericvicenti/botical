@@ -8,10 +8,88 @@
  */
 
 import { z } from "zod";
+import * as fs from "fs";
+import * as path from "path";
+import { execSync } from "child_process";
 import { generateId, IdPrefixes } from "@/utils/id.ts";
 import { NotFoundError, ForbiddenError, ConflictError } from "@/utils/errors.ts";
 import { DatabaseManager } from "@/database/index.ts";
+import { Config } from "@/config/index.ts";
 import type { Database } from "bun:sqlite";
+
+/**
+ * Convert a string to a URL-safe slug
+ */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "") // Remove non-word chars (except spaces and hyphens)
+    .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+}
+
+/**
+ * Generate a unique workspace path for a project
+ * If the path already exists, append a number
+ */
+function generateUniqueWorkspacePath(name: string): string {
+  const baseSlug = slugify(name) || "project";
+  const workspacesDir = Config.getWorkspacesDir();
+
+  // Ensure workspaces directory exists
+  if (!fs.existsSync(workspacesDir)) {
+    fs.mkdirSync(workspacesDir, { recursive: true });
+  }
+
+  let slug = baseSlug;
+  let counter = 1;
+  let workspacePath = Config.getDefaultWorkspacePath(slug);
+
+  // Find a unique path
+  while (fs.existsSync(workspacePath)) {
+    slug = `${baseSlug}-${counter}`;
+    workspacePath = Config.getDefaultWorkspacePath(slug);
+    counter++;
+  }
+
+  return workspacePath;
+}
+
+/**
+ * Initialize a workspace directory with git and a README
+ */
+function initializeWorkspace(workspacePath: string, projectName: string): void {
+  // Create the directory
+  if (!fs.existsSync(workspacePath)) {
+    fs.mkdirSync(workspacePath, { recursive: true });
+  }
+
+  // Check if it's already a git repo
+  const gitDir = path.join(workspacePath, ".git");
+  if (!fs.existsSync(gitDir)) {
+    try {
+      // Initialize git repository
+      execSync("git init", { cwd: workspacePath, stdio: "ignore" });
+
+      // Create README.md
+      const readmeContent = `# ${projectName}
+
+A project managed by Iris.
+`;
+      const readmePath = path.join(workspacePath, "README.md");
+      fs.writeFileSync(readmePath, readmeContent, "utf-8");
+
+      // Add and commit the README
+      execSync("git add README.md", { cwd: workspacePath, stdio: "ignore" });
+      execSync('git commit -m "Initial commit"', { cwd: workspacePath, stdio: "ignore" });
+    } catch (error) {
+      // Git init failed, but we still have a valid directory
+      // Log the error but don't fail project creation
+      console.error("Failed to initialize git repository:", error);
+    }
+  }
+}
 
 /**
  * Project creation input schema
@@ -156,6 +234,21 @@ export class ProjectService {
     const now = Date.now();
     const id = generateId(IdPrefixes.project, { descending: true });
 
+    // Generate default path if not provided (for local projects)
+    let projectPath = validated.path ?? null;
+    if (!projectPath && validated.type === "local") {
+      projectPath = generateUniqueWorkspacePath(validated.name);
+    }
+
+    // Initialize workspace with git and README (for local projects with auto-generated path)
+    if (projectPath && validated.type === "local" && !validated.path) {
+      // Only initialize if we generated the path (not user-provided)
+      initializeWorkspace(projectPath, validated.name);
+    } else if (projectPath && !fs.existsSync(projectPath)) {
+      // For user-provided paths, just create the directory
+      fs.mkdirSync(projectPath, { recursive: true });
+    }
+
     rootDb.prepare(
       `
       INSERT INTO projects (
@@ -169,7 +262,7 @@ export class ProjectService {
       validated.description ?? null,
       validated.ownerId,
       validated.type,
-      validated.path ?? null,
+      projectPath,
       validated.gitRemote ?? null,
       validated.iconUrl ?? null,
       validated.color ?? null,
@@ -195,7 +288,7 @@ export class ProjectService {
       description: validated.description ?? null,
       ownerId: validated.ownerId,
       type: validated.type,
-      path: validated.path ?? null,
+      path: projectPath,
       gitRemote: validated.gitRemote ?? null,
       iconUrl: validated.iconUrl ?? null,
       color: validated.color ?? null,

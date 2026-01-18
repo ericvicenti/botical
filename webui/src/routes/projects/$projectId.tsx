@@ -4,8 +4,10 @@ import {
   useSessions,
   useMissions,
   useProcesses,
+  useFiles,
 } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
+import { FolderTree, AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 export const Route = createFileRoute("/projects/$projectId")({
   component: ProjectPage,
@@ -17,6 +19,7 @@ function ProjectPage() {
   const { data: sessions } = useSessions(projectId);
   const { data: missions } = useMissions(projectId);
   const { data: processes } = useProcesses(projectId);
+  const { data: files, isLoading: filesLoading, error: filesError } = useFiles(projectId);
 
   if (projectLoading) {
     return (
@@ -64,6 +67,80 @@ function ProjectPage() {
         {project.description && (
           <p className="text-text-secondary mt-2">{project.description}</p>
         )}
+      </div>
+
+      {/* Project Info Panel */}
+      <div className="bg-bg-elevated rounded-lg border border-border p-4 mb-6">
+        <h2 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <Info className="w-4 h-4" />
+          Project Settings
+        </h2>
+
+        <div className="space-y-3">
+          {/* Project ID */}
+          <div>
+            <label className="text-xs text-text-muted uppercase tracking-wide">Project ID</label>
+            <p className="font-mono text-sm text-text-secondary">{project.id}</p>
+          </div>
+
+          {/* Project Path */}
+          <div>
+            <label className="text-xs text-text-muted uppercase tracking-wide">Filesystem Path</label>
+            {project.path ? (
+              <p className="font-mono text-sm text-text-primary break-all">{project.path}</p>
+            ) : (
+              <div className="flex items-center gap-2 text-accent-warning">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm">No path configured - files panel will be empty</span>
+              </div>
+            )}
+          </div>
+
+          {/* Files Status */}
+          <div>
+            <label className="text-xs text-text-muted uppercase tracking-wide">Files Status</label>
+            {filesLoading ? (
+              <p className="text-sm text-text-muted">Loading files...</p>
+            ) : filesError ? (
+              <div className="flex items-center gap-2 text-accent-error">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm">Error loading files: {filesError instanceof Error ? filesError.message : "Unknown error"}</span>
+              </div>
+            ) : files && files.length > 0 ? (
+              <div className="flex items-center gap-2 text-accent-success">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm">{files.length} items in root directory</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-accent-warning">
+                <FolderTree className="w-4 h-4" />
+                <span className="text-sm">No files found (directory may be empty or path may be invalid)</span>
+              </div>
+            )}
+          </div>
+
+          {/* File list preview */}
+          {files && files.length > 0 && (
+            <div>
+              <label className="text-xs text-text-muted uppercase tracking-wide">Root Files Preview</label>
+              <div className="mt-1 bg-bg-primary rounded border border-border p-2 max-h-32 overflow-auto">
+                <ul className="text-sm font-mono space-y-0.5">
+                  {files.slice(0, 10).map((file) => (
+                    <li key={file.path} className="flex items-center gap-2 text-text-secondary">
+                      <span className={file.type === "directory" ? "text-accent-warning" : "text-text-muted"}>
+                        {file.type === "directory" ? "📁" : "📄"}
+                      </span>
+                      {file.name}
+                    </li>
+                  ))}
+                  {files.length > 10 && (
+                    <li className="text-text-muted">... and {files.length - 10} more</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

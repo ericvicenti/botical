@@ -28,6 +28,7 @@ import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
+import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
@@ -80,6 +81,11 @@ messages.post("/", async (c) => {
 
   // Get the project database
   const db = DatabaseManager.getProjectDb(projectId);
+  const rootDb = DatabaseManager.getRootDb();
+
+  // Get project to access its filesystem path
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+  const projectPath = project.path || process.cwd();
 
   // Verify session exists
   const session = SessionService.getByIdOrThrow(db, sessionId);
@@ -91,10 +97,6 @@ messages.post("/", async (c) => {
       `No API key found for provider "${providerId}". Please add credentials first or provide an API key.`
     );
   }
-
-  // Get project path - for now use a placeholder
-  // In a real implementation, this would come from the project service
-  const projectPath = process.cwd();
 
   // Create abort controller for this request
   const abortController = new AbortController();

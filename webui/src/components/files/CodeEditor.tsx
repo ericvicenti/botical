@@ -15,6 +15,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { useFileContent, useSaveFile } from "@/lib/api/queries";
+import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 
 interface CodeEditorProps {
@@ -56,6 +57,15 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
 
   const { data: fileData, isLoading, error } = useFileContent(projectId, path);
   const saveFile = useSaveFile();
+  const { markDirty } = useTabs();
+
+  // Generate tab ID for this file
+  const tabId = `file:${projectId}:${path}`;
+
+  // Update dirty state in tab context
+  useEffect(() => {
+    markDirty(tabId, isDirty);
+  }, [tabId, isDirty, markDirty]);
 
   // Save handler
   const handleSave = useCallback(async () => {

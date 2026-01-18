@@ -142,6 +142,20 @@ class ConfigManager {
   getProjectDir(projectId: string): string {
     return path.join(this.getDataDir(), "projects", projectId);
   }
+
+  /**
+   * Get the workspaces directory where project files are stored
+   */
+  getWorkspacesDir(): string {
+    return path.join(this.getDataDir(), "workspaces");
+  }
+
+  /**
+   * Get the default workspace path for a project
+   */
+  getDefaultWorkspacePath(slug: string): string {
+    return path.join(this.getWorkspacesDir(), slug);
+  }
 }
 
 export const Config = ConfigManager.getInstance();

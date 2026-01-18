@@ -1,19 +1,45 @@
-import { useState, useRef, useEffect } from "react";
-import { useSession, useSettings } from "@/lib/api/queries";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useSession, useSettings, useProject } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
+import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, FolderTree, ExternalLink, Info, X, ChevronDown } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 interface TaskChatProps {
   sessionId: string;
   projectId: string;
 }
 
+// Model definitions matching the backend providers.ts
+interface ModelOption {
+  id: string;
+  name: string;
+  providerId: "anthropic" | "openai" | "google";
+  providerName: string;
+}
+
+const AVAILABLE_MODELS: ModelOption[] = [
+  // Anthropic
+  { id: "claude-opus-4-20250514", name: "Claude Opus 4", providerId: "anthropic", providerName: "Anthropic" },
+  { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", providerId: "anthropic", providerName: "Anthropic" },
+  { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", providerId: "anthropic", providerName: "Anthropic" },
+  // OpenAI
+  { id: "gpt-4o", name: "GPT-4o", providerId: "openai", providerName: "OpenAI" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", providerId: "openai", providerName: "OpenAI" },
+  { id: "o1", name: "o1", providerId: "openai", providerName: "OpenAI" },
+  // Google
+  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", providerId: "google", providerName: "Google" },
+  { id: "gemini-2.0-flash-thinking-exp", name: "Gemini 2.0 Flash Thinking", providerId: "google", providerName: "Google" },
+];
+
 export function TaskChat({ sessionId, projectId }: TaskChatProps) {
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
+  const { data: project } = useProject(projectId);
   const { data: settings } = useSettings();
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
   const {
     messages,
     streamingMessage,
@@ -24,10 +50,85 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
   } = useTaskMessages({ sessionId, projectId });
 
   const [input, setInput] = useState("");
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter models based on which API keys are configured
+  const availableModels = useMemo(() => {
+    if (!settings) return [];
+    return AVAILABLE_MODELS.filter(model => {
+      if (model.providerId === "anthropic" && settings.anthropicApiKey) return true;
+      if (model.providerId === "openai" && settings.openaiApiKey) return true;
+      if (model.providerId === "google" && settings.googleApiKey) return true;
+      return false;
+    });
+  }, [settings]);
+
+  // Get the default model based on the default provider
+  const defaultModel = useMemo(() => {
+    if (!settings) return null;
+    const defaultProvider = settings.defaultProvider;
+    const defaultModels: Record<string, string> = {
+      anthropic: "claude-sonnet-4-20250514",
+      openai: "gpt-4o",
+      google: "gemini-2.0-flash",
+    };
+    return defaultModels[defaultProvider] || null;
+  }, [settings]);
+
+  const currentModelId = selectedModel ?? defaultModel;
+  const currentModel = availableModels.find(m => m.id === currentModelId) ?? availableModels[0];
 
   const hasApiKey = settings?.anthropicApiKey || settings?.openaiApiKey || settings?.googleApiKey;
+
+  // Generate system prompt preview (matches server-side generation)
+  const systemPromptPreview = `You are an AI coding assistant with access to tools for reading, writing, and editing files, as well as executing commands.
+
+IMPORTANT: When you need to read files, write code, or execute commands, you MUST use the available tools. Do NOT just describe what you would do - actually call the tools to do it.
+
+For example:
+- To read a file, call the "read" tool with the file path
+- To list files, call the "glob" tool with a pattern
+- To search for code, call the "grep" tool
+- To edit a file, call the "edit" tool
+- To run a command, call the "bash" tool
+
+Be concise and helpful. Focus on completing the user's request efficiently.
+
+## Project Context
+Working directory: ${project?.path || "(not set)"}
+
+## Agent Instructions
+${session?.agent === "default" ? `You are a helpful AI coding assistant. You help users with software engineering tasks including:
+- Writing and editing code
+- Debugging and fixing issues
+- Explaining code and concepts
+- Refactoring and improving code quality
+- Writing tests and documentation
+
+Guidelines:
+- Be concise and direct in your responses
+- Focus on solving the user's problem efficiently
+- Use tools to read files before making assumptions about their content
+- Make targeted edits rather than rewriting entire files
+- Test your changes when appropriate
+- Ask clarifying questions if the task is ambiguous
+
+You have access to tools for reading, writing, and editing files, as well as executing commands.` : `Agent: ${session?.agent || "default"}`}`;
+
+  const handleOpenProject = () => {
+    if (!project) return;
+    openTab({
+      type: "project",
+      projectId: project.id,
+      projectName: project.name,
+    });
+    navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -39,13 +140,29 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
     inputRef.current?.focus();
   }, [sessionId]);
 
+  // Close model dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+    if (showModelDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showModelDropdown]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const content = input.trim();
-    if (!content || isSending || !hasApiKey) return;
+    if (!content || isSending || !hasApiKey || !currentModel) return;
 
     setInput("");
-    await sendMessage(content);
+    await sendMessage(content, {
+      providerId: currentModel.providerId,
+      modelId: currentModel.id,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -78,6 +195,17 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-bg-secondary flex items-center justify-between">
         <div>
+          {/* Project link */}
+          {project && (
+            <button
+              onClick={handleOpenProject}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent-primary mb-1 transition-colors group"
+            >
+              <FolderTree className="w-3 h-3" />
+              <span>{project.name}</span>
+              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
+          )}
           <h2 className="text-lg font-medium text-text-primary">
             {session?.title || "Task"}
           </h2>
@@ -87,13 +215,47 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
             {session?.messageCount ? ` · ${session.messageCount} messages` : ""}
           </p>
         </div>
-        <button
-          className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
-          title="Task options"
-        >
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowSystemPrompt(true)}
+            className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
+            title="View system prompt"
+          >
+            <Info className="w-5 h-5" />
+          </button>
+          <button
+            className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
+            title="Task options"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </div>
       </div>
+
+      {/* System Prompt Modal */}
+      {showSystemPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-bg-primary border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h3 className="font-medium text-text-primary">System Prompt</h3>
+              <button
+                onClick={() => setShowSystemPrompt(false)}
+                className="p-1 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
+                {systemPromptPreview}
+              </pre>
+            </div>
+            <div className="px-4 py-3 border-t border-border text-xs text-text-muted">
+              This is the system prompt sent to the AI model at the start of each conversation turn.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
@@ -112,6 +274,7 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
               <MessageBubble
                 key={message.id}
                 message={message}
+                projectId={projectId}
                 isOptimistic={message.id.startsWith("optimistic-")}
               />
             ))}
@@ -144,6 +307,75 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
       {/* Input */}
       <div className="border-t border-border bg-bg-secondary p-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Model selector */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="relative" ref={modelDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                disabled={availableModels.length === 0}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
+                  "bg-bg-primary border border-border",
+                  "hover:border-accent-primary/50 transition-colors",
+                  "text-text-primary",
+                  availableModels.length === 0 && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <Bot className="w-4 h-4 text-accent-primary" />
+                <span>{currentModel?.name ?? "Select model"}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+              </button>
+              {showModelDropdown && availableModels.length > 0 && (
+                <div className="absolute bottom-full left-0 mb-1 w-72 bg-bg-primary border border-border rounded-lg shadow-lg z-10 overflow-hidden max-h-80 overflow-y-auto">
+                  <div className="py-1">
+                    {/* Group models by provider */}
+                    {["anthropic", "openai", "google"].map(providerId => {
+                      const providerModels = availableModels.filter(m => m.providerId === providerId);
+                      if (providerModels.length === 0) return null;
+                      return (
+                        <div key={providerId}>
+                          <div className="px-3 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
+                            {providerModels[0]?.providerName}
+                          </div>
+                          {providerModels.map((model) => (
+                            <button
+                              key={model.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedModel(model.id);
+                                setShowModelDropdown(false);
+                              }}
+                              className={cn(
+                                "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
+                                currentModel?.id === model.id && "bg-bg-elevated"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm text-text-primary">
+                                    {model.name}
+                                  </div>
+                                </div>
+                                {currentModel?.id === model.id && (
+                                  <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            {currentModel && (
+              <span className="text-xs text-text-muted">
+                {currentModel.providerName}
+              </span>
+            )}
+          </div>
           <div className="flex gap-3 items-end">
             <div className="flex-1 relative">
               <textarea

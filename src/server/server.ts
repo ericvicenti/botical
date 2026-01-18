@@ -3,6 +3,7 @@ import { Config } from "../config/index.ts";
 import { DatabaseManager } from "../database/index.ts";
 import { setupBusBridge, teardownBusBridge } from "../websocket/index.ts";
 import { websocket } from "hono/bun";
+import { registerCoreTools } from "../tools/index.ts";
 
 export interface ServerOptions {
   port?: number;
@@ -26,6 +27,9 @@ export async function createServer(
 
   // Initialize database
   await DatabaseManager.initialize();
+
+  // Register core tools for agent use
+  registerCoreTools();
 
   // Create app with WebSocket route
   const app = createApp();
