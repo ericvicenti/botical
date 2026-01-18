@@ -1,4 +1,30 @@
 import type { Command, ExecutionContext } from "../types";
+import type { Tab } from "@/types/tabs";
+
+function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } {
+  switch (tab.data.type) {
+    case "project":
+      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "mission":
+      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "file":
+      return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
+    case "task":
+      return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
+    case "settings":
+      return { to: "/settings" };
+    case "create-project":
+      return { to: "/create-project" };
+    default:
+      return { to: "/" };
+  }
+}
+
+function navigateToTab(ctx: ExecutionContext, tab: Tab) {
+  ctx.tabActions.setActiveTab(tab.id);
+  const route = getTabRoute(tab);
+  ctx.navigate({ to: route.to, params: route.params });
+}
 
 export const tabCommands: Command[] = [
   {
@@ -47,7 +73,7 @@ export const tabCommands: Command[] = [
       const currentIndex = ctx.tabs.findIndex((t) => t.id === ctx.activeTabId);
       if (currentIndex !== -1) {
         const nextIndex = (currentIndex + 1) % ctx.tabs.length;
-        ctx.tabActions.setActiveTab(ctx.tabs[nextIndex].id);
+        navigateToTab(ctx, ctx.tabs[nextIndex]);
       }
     },
   },
@@ -63,7 +89,7 @@ export const tabCommands: Command[] = [
       if (currentIndex !== -1) {
         const prevIndex =
           currentIndex === 0 ? ctx.tabs.length - 1 : currentIndex - 1;
-        ctx.tabActions.setActiveTab(ctx.tabs[prevIndex].id);
+        navigateToTab(ctx, ctx.tabs[prevIndex]);
       }
     },
   },
@@ -77,7 +103,7 @@ export const tabCommands: Command[] = [
     when: (ctx: ExecutionContext) => ctx.tabs.length > i,
     execute: (ctx: ExecutionContext) => {
       if (ctx.tabs[i]) {
-        ctx.tabActions.setActiveTab(ctx.tabs[i].id);
+        navigateToTab(ctx, ctx.tabs[i]);
       }
     },
   })),

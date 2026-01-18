@@ -71,29 +71,27 @@ describe("CodeEditor", () => {
     });
   });
 
-  describe("Breadcrumb", () => {
-    it("shows file path in breadcrumb", async () => {
+  describe("Header", () => {
+    it("shows full file path in header", async () => {
       render(<CodeEditor projectId="prj_test" path="src/index.ts" />);
 
       await waitFor(() => {
         expect(screen.queryByText("Loading file...")).not.toBeInTheDocument();
       });
 
-      // Should show path parts
-      expect(screen.getByText("src")).toBeInTheDocument();
-      expect(screen.getByText("index.ts")).toBeInTheDocument();
+      // Should show full path as title
+      expect(screen.getByText("src/index.ts")).toBeInTheDocument();
     });
 
-    it("shows path separators", async () => {
+    it("shows project name in header", async () => {
       render(<CodeEditor projectId="prj_test" path="src/utils/helpers.ts" />);
 
       await waitFor(() => {
         expect(screen.queryByText("Loading file...")).not.toBeInTheDocument();
       });
 
-      // Should have path separators (/)
-      const slashes = screen.getAllByText("/");
-      expect(slashes.length).toBeGreaterThan(0);
+      // Should show project name
+      expect(screen.getByText("Test Project")).toBeInTheDocument();
     });
   });
 

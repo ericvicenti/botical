@@ -7,16 +7,18 @@ import {
   highlightActiveLine,
   highlightActiveLineGutter,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
-import { useFileContent, useSaveFile } from "@/lib/api/queries";
+import { useFileContent, useSaveFile, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
+import { ContentHeader } from "@/components/layout/ContentHeader";
+import { FileText } from "lucide-react";
 
 interface CodeEditorProps {
   projectId: string;
@@ -56,8 +58,9 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
   const initialContentRef = useRef<string>("");
 
   const { data: fileData, isLoading, error } = useFileContent(projectId, path);
+  const { data: project } = useProject(projectId);
   const saveFile = useSaveFile();
-  const { markDirty } = useTabs();
+  const { markDirty, getDirtyContent, setDirtyContent } = useTabs();
 
   // Generate tab ID for this file
   const tabId = `file:${projectId}:${path}`;
@@ -75,19 +78,30 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       await saveFile.mutateAsync({ projectId, path, content });
       initialContentRef.current = content;
       setIsDirty(false);
+      // Clear dirty content on successful save
+      setDirtyContent(tabId, null);
     } catch (err) {
       console.error("Failed to save:", err);
     }
-  }, [projectId, path, content, isDirty, saveFile]);
+  }, [projectId, path, content, isDirty, saveFile, tabId, setDirtyContent]);
+
+  // Store setDirtyContent in a ref to avoid dependency issues
+  const setDirtyContentRef = useRef(setDirtyContent);
+  setDirtyContentRef.current = setDirtyContent;
 
   // Initialize editor when file data loads
   useEffect(() => {
     if (!containerRef.current || fileData === undefined) return;
 
-    const initialContent = fileData?.content || "";
-    initialContentRef.current = initialContent;
+    const serverContent = fileData?.content || "";
+    // Check if we have unsaved changes from a previous session
+    const savedDirtyContent = getDirtyContent(tabId);
+    const initialContent = savedDirtyContent ?? serverContent;
+    const hasDirtyContent = savedDirtyContent !== null;
+
+    initialContentRef.current = serverContent;
     setContent(initialContent);
-    setIsDirty(false);
+    setIsDirty(hasDirtyContent);
 
     // Destroy existing view
     if (viewRef.current) {
@@ -99,7 +113,14 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       if (update.docChanged) {
         const newContent = update.state.doc.toString();
         setContent(newContent);
-        setIsDirty(newContent !== initialContentRef.current);
+        const newIsDirty = newContent !== initialContentRef.current;
+        setIsDirty(newIsDirty);
+        // Persist dirty content to survive tab switches and refreshes
+        if (newIsDirty) {
+          setDirtyContentRef.current(tabId, newContent);
+        } else {
+          setDirtyContentRef.current(tabId, null);
+        }
       }
     });
 
@@ -110,7 +131,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
         highlightActiveLine(),
         highlightActiveLineGutter(),
         history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         getLanguageExtension(path),
         oneDark,
         updateListener,
@@ -142,7 +163,9 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       view.destroy();
       viewRef.current = null;
     };
-  }, [fileData, path]);
+    // Note: getDirtyContent is intentionally read once when fileData changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileData, path, tabId]);
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -174,11 +197,32 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
   }
 
   const filename = path.split("/").pop() || path;
+  const extension = filename.split(".").pop()?.toUpperCase() || "";
 
   return (
     <div className="h-full flex flex-col bg-bg-primary">
-      {/* Breadcrumb */}
-      <Breadcrumb path={path} isDirty={isDirty} onSave={handleSave} />
+      {/* Header */}
+      <ContentHeader
+        project={project ? { id: project.id, name: project.name } : null}
+        title={path}
+        subtitle={
+          <span className="flex items-center gap-1">
+            <FileText className="w-3.5 h-3.5" />
+            {extension} file
+            {isDirty && <span className="text-accent-warning ml-1">· Modified</span>}
+          </span>
+        }
+      >
+        {isDirty && (
+          <button
+            onClick={handleSave}
+            disabled={saveFile.isPending}
+            className="px-3 py-1.5 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50"
+          >
+            {saveFile.isPending ? "Saving..." : "Save"}
+          </button>
+        )}
+      </ContentHeader>
 
       {/* Editor */}
       <div ref={containerRef} className="flex-1 overflow-hidden" />
@@ -189,48 +233,9 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
           {isDirty ? "Modified" : "Saved"}
           {saveFile.isPending && " (Saving...)"}
         </span>
-        <span>{filename.split(".").pop()?.toUpperCase()}</span>
+        <span>{extension}</span>
       </div>
     </div>
   );
 }
 
-function Breadcrumb({
-  path,
-  isDirty,
-  onSave,
-}: {
-  path: string;
-  isDirty: boolean;
-  onSave: () => void;
-}) {
-  const parts = path.split("/").filter(Boolean);
-
-  return (
-    <div className="h-8 px-2 flex items-center justify-between bg-bg-secondary border-b border-border text-sm">
-      <div className="flex items-center gap-1">
-        {parts.map((part, i) => (
-          <span key={i} className="flex items-center gap-1">
-            {i > 0 && <span className="text-text-muted">/</span>}
-            <span
-              className={
-                i === parts.length - 1 ? "text-text-primary" : "text-text-secondary"
-              }
-            >
-              {part}
-            </span>
-          </span>
-        ))}
-        {isDirty && <span className="text-accent-warning ml-1">*</span>}
-      </div>
-      {isDirty && (
-        <button
-          onClick={onSave}
-          className="text-xs px-2 py-0.5 rounded bg-accent-primary text-white hover:bg-accent-primary/90"
-        >
-          Save
-        </button>
-      )}
-    </div>
-  );
-}

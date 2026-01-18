@@ -766,3 +766,98 @@ tests/integration/file-operations.test.ts
 - [ ] All 60+ tests pass
 
 **Deliverable**: Fully functional file browser and code editor
+
+---
+
+## Implementation Status
+
+### Completed ✓
+
+**File Tree (`src/components/files/FileTree.tsx`)**
+- [x] Hierarchical file/folder display with lazy-loading
+- [x] Folder expansion/collapse on click
+- [x] File opening in tabs on click
+- [x] Color-coded file icons by extension
+- [x] Context menu (right-click) for files and folders
+- [x] Inline file/folder creation with auto-focus input
+- [x] Inline rename functionality
+- [x] Delete confirmation dialog
+- [x] "Reveal in tree" - auto-expand to and highlight a specific file
+- [x] External triggering via `FileTreeRef` (forwardRef/useImperativeHandle)
+
+**File Context Menu (`src/components/files/FileContextMenu.tsx`)**
+- [x] Context-aware menu (empty area, folder, file show different options)
+- [x] New File / New Folder options for folders and empty areas
+- [x] Rename / Delete options for files and folders
+- [x] Click-outside-to-close behavior
+- [x] CreateInput component for inline name input
+
+**Code Editor (`src/components/files/CodeEditor.tsx`)**
+- [x] CodeMirror 6 integration with syntax highlighting
+- [x] Language detection by file extension
+- [x] Cmd+S / Ctrl+S for save
+- [x] Tab key indentation (using `indentWithTab`)
+- [x] Dirty state tracking with visual indicator
+- [x] Dirty content persistence across tab switches (localStorage)
+- [x] Breadcrumb navigation with "reveal in tree" functionality
+- [x] Shared ContentHeader component with project name display
+
+**FilesPanel in Sidebar (`src/components/layout/Sidebar.tsx`)**
+- [x] "..." dropdown menu with New File / New Folder
+- [x] Integration with FileTree via ref
+- [x] Click-outside-to-close behavior
+
+**Tab Integration**
+- [x] File tabs with dirty indicator (circle icon)
+- [x] Confirmation before closing dirty tabs
+- [x] Tab navigation navigates to correct route
+- [x] Cmd+1-9 tab switching works correctly
+
+### Tests
+
+**FileTree Tests (21 tests)**
+- File tree rendering and loading
+- Folder expansion/collapse
+- File opening in tabs
+- Context menu display and interaction
+- Inline creation via ref methods
+- CreateInput keyboard handling (Escape, Enter)
+
+**FileContextMenu Tests (20 tests)**
+- Empty area context menu options
+- Folder context menu options
+- File context menu options
+- Click-outside-to-close
+- Menu positioning
+- CreateInput functionality
+
+**CodeEditor Tests (existing)**
+- Loading and error states
+- Keyboard shortcuts
+- Language detection
+- Dirty state tracking
+
+### Key Implementation Details
+
+**FileTreeRef Pattern**
+The FileTree exposes `createFile()` and `createFolder()` methods via `forwardRef` and `useImperativeHandle`. This allows the FilesPanel dropdown to trigger file creation without duplicating state management logic.
+
+```typescript
+export interface FileTreeRef {
+  createFile: () => void;
+  createFolder: () => void;
+}
+```
+
+**ContextMenuTarget Discriminated Union**
+The context menu uses a discriminated union to type-safely determine which options to show:
+
+```typescript
+export type ContextMenuTarget =
+  | { type: "empty"; parentPath: string }
+  | { type: "folder"; path: string; name: string }
+  | { type: "file"; path: string; name: string };
+```
+
+**Dirty Content Persistence**
+Unsaved changes are stored in localStorage via the tabs context, allowing changes to persist across tab switches and browser refreshes until explicitly saved or discarded.

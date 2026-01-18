@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderPlus, FolderTree, MessageSquare, Settings } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
-import { FileTree } from "@/components/files/FileTree";
+import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
-import { useCreateFile, useProjects } from "@/lib/api/queries";
+import { useProjects } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
 const PANELS = [
@@ -212,34 +212,38 @@ function SidebarPanel({ panel }: { panel: string }) {
   }
 }
 
+/**
+ * FilesPanel Component
+ *
+ * Displays the project file tree with a dropdown menu for creating files/folders.
+ * The "..." dropdown button in the header provides quick access to file creation
+ * without requiring a right-click context menu.
+ *
+ * Uses FileTreeRef to communicate with the FileTree component:
+ * - createFile(): Triggers inline file creation at root level
+ * - createFolder(): Triggers inline folder creation at root level
+ *
+ * @param selectedProjectId - Currently selected project ID, or null if none
+ */
 function FilesPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
-  const [isCreating, setIsCreating] = useState<"file" | "folder" | null>(null);
-  const [newName, setNewName] = useState("");
-  const createFile = useCreateFile();
+  /** Ref to FileTree for triggering creation externally */
+  const fileTreeRef = useRef<FileTreeRef>(null);
+  /** Controls dropdown menu visibility */
+  const [menuOpen, setMenuOpen] = useState(false);
+  /** Ref for click-outside detection */
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleCreate = async () => {
-    if (!selectedProjectId || !newName.trim()) return;
-
-    const path = isCreating === "folder" ? `${newName.trim()}/.gitkeep` : newName.trim();
-    const content = "";
-
-    try {
-      await createFile.mutateAsync({ projectId: selectedProjectId, path, content });
-      setNewName("");
-      setIsCreating(null);
-    } catch (err) {
-      console.error("Failed to create:", err);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleCreate();
-    } else if (e.key === "Escape") {
-      setNewName("");
-      setIsCreating(null);
-    }
-  };
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   if (!selectedProjectId) {
     return (
@@ -260,43 +264,45 @@ function FilesPanel({ selectedProjectId }: { selectedProjectId: string | null })
         <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
           Files
         </div>
-        <div className="flex items-center gap-1">
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setIsCreating("file")}
-            className="p-1 hover:bg-bg-elevated rounded text-text-secondary hover:text-text-primary"
-            title="New File"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className={cn(
+              "p-0.5 rounded hover:bg-bg-elevated transition-colors",
+              "text-text-secondary hover:text-text-primary"
+            )}
+            title="File actions"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <MoreHorizontal className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setIsCreating("folder")}
-            className="p-1 hover:bg-bg-elevated rounded text-text-secondary hover:text-text-primary"
-            title="New Folder"
-          >
-            <FolderPlus className="w-3.5 h-3.5" />
-          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-bg-elevated border border-border rounded shadow-lg py-1 min-w-32">
+              <button
+                onClick={() => {
+                  fileTreeRef.current?.createFile();
+                  setMenuOpen(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+              >
+                <FilePlus className="w-3.5 h-3.5" />
+                New File
+              </button>
+              <button
+                onClick={() => {
+                  fileTreeRef.current?.createFolder();
+                  setMenuOpen(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+                New Folder
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {isCreating && (
-        <div className="px-2 py-1 border-b border-border">
-          <div className="text-xs text-text-secondary mb-1">
-            New {isCreating === "folder" ? "Folder" : "File"}:
-          </div>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isCreating === "folder" ? "folder-name" : "filename.ts"}
-            className="w-full px-2 py-1 text-sm bg-bg-primary border border-border rounded focus:outline-none focus:border-accent-primary"
-            autoFocus
-          />
-        </div>
-      )}
-
       <div className="flex-1 overflow-auto py-1">
-        <FileTree projectId={selectedProjectId} />
+        <FileTree ref={fileTreeRef} projectId={selectedProjectId} />
       </div>
     </div>
   );

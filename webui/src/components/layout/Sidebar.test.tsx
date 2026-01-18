@@ -296,3 +296,15 @@ describe("Sidebar", () => {
     expect(filesButton).not.toHaveClass("text-accent-primary");
   });
 });
+
+/**
+ * Note: FilesPanel dropdown menu tests are not included here because they require
+ * importing the actual Sidebar component which creates circular dependencies.
+ *
+ * The FilesPanel dropdown functionality is tested via:
+ * - FileTree.test.tsx - Tests ref methods (createFile, createFolder) that the dropdown calls
+ * - FileContextMenu.test.tsx - Tests the context menu and CreateInput components
+ *
+ * The integration between FilesPanel dropdown and FileTree works through the FileTreeRef
+ * interface exposed via forwardRef/useImperativeHandle.
+ */

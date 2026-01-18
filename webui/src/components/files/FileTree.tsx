@@ -1,6 +1,33 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useFiles, useDeleteFile, useRenameFile, type FileEntry } from "@/lib/api/queries";
+/**
+ * FileTree Component
+ *
+ * A hierarchical file browser component that displays project files in a tree structure.
+ * Supports file operations (open, rename, delete), folder expansion, and inline creation.
+ *
+ * Features:
+ * - Lazy-loading of folder contents on expand
+ * - Context menu for file operations (right-click)
+ * - Inline file/folder creation with auto-focus
+ * - "Reveal in tree" functionality to navigate to a specific file
+ * - External triggering of creation via ref (for dropdown menus)
+ *
+ * @example
+ * // Basic usage
+ * <FileTree projectId="prj_123" />
+ *
+ * // With ref for external triggering
+ * const fileTreeRef = useRef<FileTreeRef>(null);
+ * <FileTree ref={fileTreeRef} projectId="prj_123" />
+ * fileTreeRef.current?.createFile(); // Triggers inline file creation at root
+ *
+ * @see FileContextMenu - Context menu component used for file operations
+ * @see CreateInput - Inline input component for file/folder creation
+ */
+import { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useFiles, useRenameFile, type FileEntry } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
+import { useUI } from "@/contexts/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
 import {
   ChevronRight,
@@ -8,73 +35,197 @@ import {
   File,
   Folder,
   FolderOpen,
-  Pencil,
-  Trash2,
 } from "lucide-react";
+import {
+  FileContextMenu,
+  CreateInput,
+  type ContextMenuPosition,
+  type ContextMenuTarget,
+} from "./FileContextMenu";
 
+/** Props for the FileTree component */
 interface FileTreeProps {
   projectId: string;
 }
 
-export function FileTree({ projectId }: FileTreeProps) {
+/** State for tracking inline file/folder creation */
+interface CreateState {
+  type: "file" | "folder";
+  parentPath: string;
+}
+
+/**
+ * Ref interface for external control of the FileTree.
+ * Allows parent components (like FilesPanel dropdown) to trigger
+ * file/folder creation without direct access to internal state.
+ */
+export interface FileTreeRef {
+  /** Triggers inline file creation at the root level */
+  createFile: () => void;
+  /** Triggers inline folder creation at the root level */
+  createFolder: () => void;
+}
+
+export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree({ projectId }, ref) {
   const { data: rootFiles, isLoading } = useFiles(projectId);
+  const { revealPath } = useUI();
+  const [contextMenu, setContextMenu] = useState<{
+    position: ContextMenuPosition;
+    target: ContextMenuTarget;
+  } | null>(null);
+  const [createState, setCreateState] = useState<CreateState | null>(null);
+
+  const handleStartCreate = useCallback((type: "file" | "folder", parentPath: string) => {
+    setCreateState({ type, parentPath });
+  }, []);
+
+  // Expose methods via ref for external triggering
+  useImperativeHandle(ref, () => ({
+    createFile: () => handleStartCreate("file", ""),
+    createFolder: () => handleStartCreate("folder", ""),
+  }), [handleStartCreate]);
+
+  const handleEmptyContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      target: { type: "empty", parentPath: "" },
+    });
+  };
 
   if (isLoading) {
     return <div className="p-2 text-text-secondary text-sm">Loading...</div>;
   }
 
   if (!rootFiles?.length) {
-    return <div className="p-2 text-text-muted text-sm">No files</div>;
+    return (
+      <div
+        className="h-full min-h-16 p-2 text-text-muted text-sm"
+        onContextMenu={handleEmptyContextMenu}
+      >
+        No files
+        {contextMenu && (
+          <FileContextMenu
+            projectId={projectId}
+            position={contextMenu.position}
+            target={contextMenu.target}
+            onClose={() => setContextMenu(null)}
+            onStartCreate={handleStartCreate}
+          />
+        )}
+        {createState && createState.parentPath === "" && (
+          <CreateInput
+            type={createState.type}
+            parentPath=""
+            projectId={projectId}
+            onComplete={() => setCreateState(null)}
+          />
+        )}
+      </div>
+    );
   }
 
   return (
-    <div className="text-sm">
+    <div className="text-sm h-full" onContextMenu={handleEmptyContextMenu}>
+      {createState && createState.parentPath === "" && (
+        <CreateInput
+          type={createState.type}
+          parentPath=""
+          projectId={projectId}
+          onComplete={() => setCreateState(null)}
+        />
+      )}
       {rootFiles.map((file) => (
         <FileTreeNode
           key={file.path}
           file={file}
           projectId={projectId}
           depth={0}
+          revealPath={revealPath}
+          createState={createState}
+          onStartCreate={handleStartCreate}
+          onCreateComplete={() => setCreateState(null)}
         />
       ))}
+      {contextMenu && (
+        <FileContextMenu
+          projectId={projectId}
+          position={contextMenu.position}
+          target={contextMenu.target}
+          onClose={() => setContextMenu(null)}
+          onStartCreate={handleStartCreate}
+        />
+      )}
     </div>
   );
-}
+});
 
+/** Props for individual file/folder nodes in the tree */
 interface FileTreeNodeProps {
+  /** The file or folder entry to display */
   file: FileEntry;
+  /** Project identifier for API calls */
   projectId: string;
+  /** Current nesting depth (used for indentation) */
   depth: number;
+  /** Path to reveal/highlight in the tree (for "reveal in tree" feature) */
+  revealPath: string | null;
+  /** Current inline creation state (if any) */
+  createState: CreateState | null;
+  /** Callback to initiate file/folder creation */
+  onStartCreate: (type: "file" | "folder", parentPath: string) => void;
+  /** Callback when creation is complete or cancelled */
+  onCreateComplete: () => void;
 }
 
-function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
+/**
+ * Recursive component that renders a single file or folder node.
+ * Handles expansion, selection, context menus, and inline renaming.
+ */
+function FileTreeNode({
+  file,
+  projectId,
+  depth,
+  revealPath,
+  createState,
+  onStartCreate,
+  onCreateComplete,
+}: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(file.name);
-  const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: children, isLoading } = useFiles(projectId, file.path);
   const { openTab } = useTabs();
-  const deleteFile = useDeleteFile();
+  const navigate = useNavigate();
   const renameFile = useRenameFile();
 
-  // Only fetch children when expanded and it's a directory
-  const shouldShowChildren = file.type === "directory" && expanded;
+  // Check if this node should be expanded to reveal the target path
+  const shouldReveal = revealPath && (
+    revealPath === file.path ||
+    revealPath.startsWith(file.path + "/")
+  );
+  const isTarget = revealPath === file.path;
 
-  // Close context menu when clicking outside
+  // Check if we're creating inside this folder
+  const isCreatingHere = createState && createState.parentPath === file.path;
+
+  // Auto-expand when this folder is on the reveal path or when creating inside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-    if (contextMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+    if ((shouldReveal || isCreatingHere) && file.type === "directory" && !expanded) {
+      setExpanded(true);
     }
-  }, [contextMenu]);
+  }, [shouldReveal, isCreatingHere, file.type, expanded]);
+
+  // Scroll into view when this is the target
+  useEffect(() => {
+    if (isTarget && nodeRef.current) {
+      nodeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isTarget]);
 
   // Focus input when renaming
   useEffect(() => {
@@ -83,6 +234,9 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
       inputRef.current.select();
     }
   }, [isRenaming]);
+
+  // Only show children when expanded and it's a directory
+  const shouldShowChildren = file.type === "directory" && expanded;
 
   const handleClick = useCallback(() => {
     if (isRenaming) return;
@@ -94,8 +248,9 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
         projectId,
         path: file.path,
       });
+      navigate({ to: `/files/${projectId}/${file.path}` });
     }
-  }, [file, projectId, expanded, openTab, isRenaming]);
+  }, [file, projectId, expanded, openTab, navigate, isRenaming]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -103,19 +258,7 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const handleDelete = async () => {
-    setContextMenu(null);
-    if (confirm(`Delete "${file.name}"?`)) {
-      try {
-        await deleteFile.mutateAsync({ projectId, path: file.path });
-      } catch (err) {
-        console.error("Failed to delete:", err);
-      }
-    }
-  };
-
   const handleRenameStart = () => {
-    setContextMenu(null);
     setNewName(file.name);
     setIsRenaming(true);
   };
@@ -148,15 +291,21 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
     }
   };
 
+  const contextMenuTarget: ContextMenuTarget = file.type === "directory"
+    ? { type: "folder", path: file.path, name: file.name }
+    : { type: "file", path: file.path, name: file.name };
+
   return (
     <div>
       <div
+        ref={nodeRef}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={cn(
           "flex items-center gap-1 py-0.5 px-2 cursor-pointer",
           "hover:bg-bg-elevated rounded",
-          "text-text-primary"
+          "text-text-primary",
+          isTarget && "bg-accent-primary/20 ring-1 ring-accent-primary/50"
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -197,30 +346,28 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
 
       {/* Context Menu */}
       {contextMenu && (
-        <div
-          ref={menuRef}
-          className="fixed z-50 bg-bg-elevated border border-border rounded shadow-lg py-1 min-w-32"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-        >
-          <button
-            onClick={handleRenameStart}
-            className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Rename
-          </button>
-          <button
-            onClick={handleDelete}
-            className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2 text-accent-error"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
-        </div>
+        <FileContextMenu
+          projectId={projectId}
+          position={contextMenu}
+          target={contextMenuTarget}
+          onClose={() => setContextMenu(null)}
+          onStartRename={handleRenameStart}
+          onStartCreate={onStartCreate}
+        />
       )}
 
       {shouldShowChildren && (
         <div>
+          {/* Show create input at the top of folder contents */}
+          {isCreatingHere && (
+            <CreateInput
+              type={createState!.type}
+              parentPath={file.path}
+              projectId={projectId}
+              onComplete={onCreateComplete}
+              depth={depth + 1}
+            />
+          )}
           {isLoading ? (
             <div
               className="text-text-muted text-xs py-0.5"
@@ -235,25 +382,34 @@ function FileTreeNode({ file, projectId, depth }: FileTreeNodeProps) {
                 file={child}
                 projectId={projectId}
                 depth={depth + 1}
+                revealPath={revealPath}
+                createState={createState}
+                onStartCreate={onStartCreate}
+                onCreateComplete={onCreateComplete}
               />
             ))
-          ) : (
+          ) : !isCreatingHere ? (
             <div
               className="text-text-muted text-xs py-0.5"
               style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
             >
               Empty
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
   );
 }
 
+/**
+ * File icon component with color-coding based on file extension.
+ * Provides visual differentiation for common file types.
+ */
 function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split(".").pop()?.toLowerCase();
 
+  /** Map of file extensions to Tailwind color classes */
   const colorMap: Record<string, string> = {
     ts: "text-blue-400",
     tsx: "text-blue-400",

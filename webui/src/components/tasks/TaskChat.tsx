@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession, useSettings, useProject } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
-import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, FolderTree, ExternalLink, Info, X, ChevronDown } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
 import { ToolCall } from "@/components/ui/ToolCall";
+import { ContentHeader } from "@/components/layout/ContentHeader";
 
 interface TaskChatProps {
   sessionId: string;
@@ -40,8 +40,6 @@ export function TaskChat({ sessionId, projectId }: TaskChatProps) {
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
   const { data: project } = useProject(projectId);
   const { data: settings } = useSettings();
-  const { openTab } = useTabs();
-  const navigate = useNavigate();
   const {
     messages,
     streamingMessage,
@@ -122,16 +120,6 @@ Guidelines:
 
 You have access to tools for reading, writing, and editing files, as well as executing commands.` : `Agent: ${session?.agent || "default"}`}`;
 
-  const handleOpenProject = () => {
-    if (!project) return;
-    openTab({
-      type: "project",
-      projectId: project.id,
-      projectName: project.name,
-    });
-    navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
-  };
-
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -195,44 +183,31 @@ You have access to tools for reading, writing, and editing files, as well as exe
   return (
     <div className="h-full flex flex-col bg-bg-primary">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-bg-secondary flex items-center justify-between">
-        <div>
-          {/* Project link */}
-          {project && (
-            <button
-              onClick={handleOpenProject}
-              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent-primary mb-1 transition-colors group"
-            >
-              <FolderTree className="w-3 h-3" />
-              <span>{project.name}</span>
-              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-          )}
-          <h2 className="text-lg font-medium text-text-primary">
-            {session?.title || "Task"}
-          </h2>
-          <p className="text-sm text-text-muted flex items-center gap-1">
+      <ContentHeader
+        project={project ? { id: project.id, name: project.name } : null}
+        title={session?.title || "Task"}
+        subtitle={
+          <span className="flex items-center gap-1">
             <Bot className="w-3.5 h-3.5" />
             {session?.agent || "default"} agent
             {session?.messageCount ? ` · ${session.messageCount} messages` : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowSystemPrompt(true)}
-            className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
-            title="View system prompt"
-          >
-            <Info className="w-5 h-5" />
-          </button>
-          <button
-            className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
-            title="Task options"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+          </span>
+        }
+      >
+        <button
+          onClick={() => setShowSystemPrompt(true)}
+          className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
+          title="View system prompt"
+        >
+          <Info className="w-5 h-5" />
+        </button>
+        <button
+          className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
+          title="Task options"
+        >
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
+      </ContentHeader>
 
       {/* System Prompt Modal */}
       {showSystemPrompt && (

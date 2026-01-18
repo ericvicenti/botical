@@ -228,6 +228,16 @@ export const handlers = [
     const body = (await request.json()) as { destination: string };
     return HttpResponse.json({ path: body.destination });
   }),
+
+  // Files - create file
+  http.post("/api/projects/:projectId/files", async ({ request }) => {
+    const body = (await request.json()) as { path: string; content: string };
+    return HttpResponse.json({
+      path: body.path,
+      size: body.content.length,
+      modified: Date.now(),
+    });
+  }),
 ];
 
 export const server = setupServer(...handlers);
