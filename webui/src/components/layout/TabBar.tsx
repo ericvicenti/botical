@@ -20,6 +20,7 @@ import type { Tab } from "@/types/tabs";
 const TAB_ICONS = {
   projects: FolderTree,
   project: Folder,
+  "project-settings": Settings,
   mission: Target,
   file: FileText,
   folder: Folder,
@@ -61,6 +62,26 @@ export function TabBar() {
     }
   };
 
+  const handleCloseTab = (tab: Tab) => {
+    // If closing the tab that matches the current URL, navigate away first
+    if (tab.id === currentTabId) {
+      const tabIndex = tabs.findIndex((t) => t.id === tab.id);
+      const remainingTabs = tabs.filter((t) => t.id !== tab.id);
+
+      if (remainingTabs.length > 0) {
+        // Navigate to the next tab, or previous if closing the last one
+        const newIndex = Math.min(tabIndex, remainingTabs.length - 1);
+        const nextTab = remainingTabs[newIndex];
+        const route = getTabRoute(nextTab);
+        navigate({ to: route.to, params: route.params });
+      } else {
+        // No tabs remaining, go home
+        navigate({ to: "/" });
+      }
+    }
+    closeTab(tab.id);
+  };
+
   if (tabs.length === 0 && !currentTabData) {
     return (
       <div className="h-9 bg-bg-secondary border-b border-border flex items-center px-3">
@@ -99,7 +120,7 @@ export function TabBar() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  closeTab(tab.id);
+                  handleCloseTab(tab);
                 }}
                 className="opacity-0 group-hover:opacity-100 hover:bg-bg-elevated rounded p-0.5 shrink-0"
               >

@@ -12,12 +12,12 @@ interface ProcessItemProps {
 
 export function ProcessItem({ process }: ProcessItemProps) {
   const killProcess = useKillProcess();
-  const { openTab } = useTabs();
+  const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
   const isRunning = process.status === "running" || process.status === "starting";
 
   const handleClick = () => {
-    openTab({
+    openPreviewTab({
       type: "process",
       processId: process.id,
       projectId: process.projectId,

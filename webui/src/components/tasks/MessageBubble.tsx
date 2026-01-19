@@ -261,11 +261,11 @@ function ReasoningPart({ content }: { content: { text: string } }) {
 }
 
 function FilePart({ content, projectId }: { content: { path: string }; projectId: string }) {
-  const { openTab } = useTabs();
+  const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
   const handleOpenFile = () => {
-    openTab({
+    openPreviewTab({
       type: "file",
       projectId,
       path: content.path,

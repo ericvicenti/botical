@@ -31,7 +31,7 @@ interface ServiceItemProps {
 
 export function ServiceItem({ service }: ServiceItemProps) {
   const [showActions, setShowActions] = useState(false);
-  const { openTab } = useTabs();
+  const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
   const startService = useStartService();
   const stopService = useStopService();
@@ -47,7 +47,7 @@ export function ServiceItem({ service }: ServiceItemProps) {
     updateService.isPending;
 
   const openProcessTab = (processId: string) => {
-    openTab({
+    openPreviewTab({
       type: "process",
       processId,
       projectId: service.projectId,

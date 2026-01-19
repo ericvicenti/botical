@@ -60,7 +60,7 @@ export function ToolCall({
   projectId,
 }: ToolCallProps) {
   const [expanded, setExpanded] = useState(false);
-  const { openTab } = useTabs();
+  const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
   // Get tool info
@@ -93,7 +93,7 @@ export function ToolCall({
   const rawResult = resultOutput || resultResult || (typeof result === "string" ? result : null);
 
   const handleOpenFile = (path: string) => {
-    openTab({
+    openPreviewTab({
       type: "file",
       projectId,
       path,

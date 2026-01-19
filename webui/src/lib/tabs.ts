@@ -17,6 +17,8 @@ export function generateTabId(data: TabData): string {
       return "projects";
     case "project":
       return `project:${data.projectId}`;
+    case "project-settings":
+      return `project-settings:${data.projectId}`;
     case "mission":
       return `mission:${data.missionId}`;
     case "file":
@@ -45,6 +47,8 @@ export function generateTabLabel(data: TabData): string {
       return "Projects";
     case "project":
       return data.projectName;
+    case "project-settings":
+      return `${data.projectName} Settings`;
     case "mission":
       return data.missionTitle;
     case "file":
@@ -73,6 +77,8 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
       return { to: "/" };
     case "project":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
+    case "project-settings":
+      return { to: "/projects/$projectId/settings", params: { projectId: tab.data.projectId } };
     case "mission":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "file":
@@ -97,6 +103,16 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
  * when navigating to a URL that doesn't have an open tab.
  */
 export function parseUrlToTabData(pathname: string): { data: TabData; label: string; type: TabType } | null {
+  // /projects/:projectId/settings
+  const projectSettingsMatch = pathname.match(/^\/projects\/([^/]+)\/settings$/);
+  if (projectSettingsMatch) {
+    return {
+      type: "project-settings",
+      data: { type: "project-settings", projectId: projectSettingsMatch[1], projectName: "Project" },
+      label: "Settings",
+    };
+  }
+
   // /projects/:projectId
   const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) {

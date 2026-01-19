@@ -1,6 +1,7 @@
 export type TabType =
   | "projects"
   | "project"
+  | "project-settings"
   | "mission"
   | "file"
   | "folder"
@@ -26,6 +27,7 @@ export interface Tab {
 export type TabData =
   | { type: "projects" }
   | { type: "project"; projectId: string; projectName: string }
+  | { type: "project-settings"; projectId: string; projectName: string }
   | { type: "mission"; missionId: string; projectId: string; missionTitle: string }
   | { type: "file"; path: string; projectId: string }
   | { type: "folder"; path: string; projectId: string }

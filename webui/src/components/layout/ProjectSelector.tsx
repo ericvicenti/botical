@@ -11,7 +11,7 @@ export function ProjectSelector() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: projects, isLoading } = useProjects();
   const { selectedProjectId, setSelectedProject } = useUI();
-  const { openTab } = useTabs();
+  const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
   const selectedProject = projects?.find((p) => p.id === selectedProjectId);
@@ -32,7 +32,7 @@ export function ProjectSelector() {
 
   const handleSelectProject = (project: { id: string; name: string }) => {
     setSelectedProject(project.id);
-    openTab({
+    openPreviewTab({
       type: "project",
       projectId: project.id,
       projectName: project.name,
@@ -48,7 +48,7 @@ export function ProjectSelector() {
   };
 
   const handleViewAllProjects = () => {
-    openTab({ type: "projects" });
+    openPreviewTab({ type: "projects" });
     navigate({ to: "/" });
     setIsOpen(false);
   };

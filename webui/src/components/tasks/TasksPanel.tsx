@@ -116,11 +116,11 @@ function TaskItem({
   projectId: string;
   archived?: boolean;
 }) {
-  const { openTab } = useTabs();
+  const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
   const handleClick = () => {
-    openTab({
+    openPreviewTab({
       type: "task",
       sessionId: session.id,
       projectId,

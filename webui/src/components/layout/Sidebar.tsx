@@ -208,12 +208,12 @@ function ResizeHandle({
 function ProjectList() {
   const { data: projects, isLoading } = useProjects();
   const { setSelectedProject } = useUI();
-  const { openTab } = useTabs();
+  const { openPreviewTab, openTab } = useTabs();
   const navigate = useNavigate();
 
   const handleSelectProject = (project: { id: string; name: string }) => {
     setSelectedProject(project.id);
-    openTab({
+    openPreviewTab({
       type: "project",
       projectId: project.id,
       projectName: project.name,

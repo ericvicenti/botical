@@ -29,6 +29,8 @@ interface TabsContextValue {
   closeTabsToRight: (id: string) => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   markDirty: (id: string, dirty: boolean) => void;
+  /** Update a tab's label */
+  updateTabLabel: (id: string, label: string) => void;
 
   // Dirty content management for preserving unsaved changes
   getDirtyContent: (id: string) => string | null;
@@ -226,6 +228,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, dirty } : t)));
   }, []);
 
+  const updateTabLabel = useCallback((id: string, label: string) => {
+    setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, label } : t)));
+  }, []);
+
   const getDirtyContent = useCallback(
     (id: string): string | null => {
       return dirtyContent[id] ?? null;
@@ -259,6 +265,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         closeTabsToRight,
         reorderTabs,
         markDirty,
+        updateTabLabel,
         getDirtyContent,
         setDirtyContent,
       }}

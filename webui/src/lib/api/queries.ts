@@ -36,6 +36,22 @@ export function useCreateProject() {
   });
 }
 
+export function useUpdateProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { id: string; name?: string; path?: string; description?: string; icon?: string }) =>
+      apiClient<Project>(`/api/projects/${data.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", project.id] });
+    },
+  });
+}
+
 // Sessions
 export function useSessions(projectId: string) {
   return useQuery({
