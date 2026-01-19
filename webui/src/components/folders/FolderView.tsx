@@ -74,7 +74,7 @@ function getTypeColor(entry: DetailedFileEntry): string {
 
 export function FolderView({ projectId, path }: FolderViewProps) {
   const { data: folder, isLoading, error } = useFolderDetails(projectId, path);
-  const { openTab } = useTabs();
+  const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
   const [showHidden, setShowHidden] = useState(false);
@@ -90,7 +90,27 @@ export function FolderView({ projectId, path }: FolderViewProps) {
     }
   };
 
+  // Single click opens preview tab
   const handleOpenItem = (entry: DetailedFileEntry) => {
+    if (entry.type === "directory") {
+      openPreviewTab({
+        type: "folder",
+        projectId,
+        path: entry.path,
+      });
+      navigate({ to: `/folders/${projectId}/${entry.path}` });
+    } else {
+      openPreviewTab({
+        type: "file",
+        projectId,
+        path: entry.path,
+      });
+      navigate({ to: `/files/${projectId}/${entry.path}` });
+    }
+  };
+
+  // Double click opens permanent tab
+  const handleOpenItemPermanent = (entry: DetailedFileEntry) => {
     if (entry.type === "directory") {
       openTab({
         type: "folder",
@@ -111,7 +131,7 @@ export function FolderView({ projectId, path }: FolderViewProps) {
   const handleNavigateUp = () => {
     if (!path) return;
     const parentPath = path.split("/").slice(0, -1).join("/");
-    openTab({
+    openPreviewTab({
       type: "folder",
       projectId,
       path: parentPath,
@@ -120,7 +140,7 @@ export function FolderView({ projectId, path }: FolderViewProps) {
   };
 
   const handleNavigateRoot = () => {
-    openTab({
+    openPreviewTab({
       type: "folder",
       projectId,
       path: "",
@@ -306,6 +326,7 @@ export function FolderView({ projectId, path }: FolderViewProps) {
                   <tr
                     key={entry.path}
                     onClick={() => handleOpenItem(entry)}
+                    onDoubleClick={() => handleOpenItemPermanent(entry)}
                     className={cn(
                       "cursor-pointer border-b border-border/50 hover:bg-bg-elevated transition-colors",
                       entry.isHidden && "opacity-60"

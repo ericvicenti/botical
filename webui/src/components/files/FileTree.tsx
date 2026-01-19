@@ -199,7 +199,7 @@ function FileTreeNode({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: children, isLoading } = useFiles(projectId, file.path);
-  const { openTab } = useTabs();
+  const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
   const renameFile = useRenameFile();
 
@@ -238,17 +238,38 @@ function FileTreeNode({
   // Only show children when expanded and it's a directory
   const shouldShowChildren = file.type === "directory" && expanded;
 
+  // Single click opens preview tab
   const handleClick = useCallback(() => {
     if (isRenaming) return;
     if (file.type === "directory") {
-      // Open folder tab and toggle expansion
-      openTab({
+      // Open folder preview tab and toggle expansion
+      openPreviewTab({
         type: "folder",
         projectId,
         path: file.path,
       });
       navigate({ to: `/folders/${projectId}/${file.path}` });
       setExpanded(!expanded);
+    } else {
+      openPreviewTab({
+        type: "file",
+        projectId,
+        path: file.path,
+      });
+      navigate({ to: `/files/${projectId}/${file.path}` });
+    }
+  }, [file, projectId, expanded, openPreviewTab, navigate, isRenaming]);
+
+  // Double click opens permanent tab
+  const handleDoubleClick = useCallback(() => {
+    if (isRenaming) return;
+    if (file.type === "directory") {
+      openTab({
+        type: "folder",
+        projectId,
+        path: file.path,
+      });
+      navigate({ to: `/folders/${projectId}/${file.path}` });
     } else {
       openTab({
         type: "file",
@@ -257,7 +278,7 @@ function FileTreeNode({
       });
       navigate({ to: `/files/${projectId}/${file.path}` });
     }
-  }, [file, projectId, expanded, openTab, navigate, isRenaming]);
+  }, [file, projectId, openTab, navigate, isRenaming]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -307,6 +328,7 @@ function FileTreeNode({
       <div
         ref={nodeRef}
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         className={cn(
           "flex items-center gap-1 py-0.5 px-2 cursor-pointer",

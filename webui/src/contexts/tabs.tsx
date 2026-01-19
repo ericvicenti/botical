@@ -16,7 +16,12 @@ interface TabsContextValue {
   tabs: Tab[];
   activeTabId: string | null;
 
+  /** Open a permanent tab (used for double-click) */
   openTab: (data: TabData) => void;
+  /** Open a preview tab that replaces any existing preview (used for single-click) */
+  openPreviewTab: (data: TabData) => void;
+  /** Convert a preview tab to permanent */
+  pinTab: (id: string) => void;
   closeTab: (id: string, force?: boolean) => void;
   setActiveTab: (id: string) => void;
   closeOtherTabs: (id: string) => void;
@@ -99,20 +104,58 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const id = generateTabId(data);
 
     setTabs((prev) => {
-      if (prev.find((t) => t.id === id)) {
+      // If tab already exists, just pin it if it was a preview
+      const existing = prev.find((t) => t.id === id);
+      if (existing) {
+        if (existing.preview) {
+          return prev.map((t) => (t.id === id ? { ...t, preview: false } : t));
+        }
         return prev;
       }
+      // Remove any existing preview tab and add new permanent tab
+      const withoutPreview = prev.filter((t) => !t.preview);
       return [
-        ...prev,
+        ...withoutPreview,
         {
           id,
           type: data.type,
           label: generateTabLabel(data),
           data,
+          preview: false,
         },
       ];
     });
     setActiveTabId(id);
+  }, []);
+
+  const openPreviewTab = useCallback((data: TabData) => {
+    const id = generateTabId(data);
+
+    setTabs((prev) => {
+      // If tab already exists (preview or permanent), just activate it
+      if (prev.find((t) => t.id === id)) {
+        return prev;
+      }
+      // Remove any existing preview tab and add new preview tab
+      const withoutPreview = prev.filter((t) => !t.preview);
+      return [
+        ...withoutPreview,
+        {
+          id,
+          type: data.type,
+          label: generateTabLabel(data),
+          data,
+          preview: true,
+        },
+      ];
+    });
+    setActiveTabId(id);
+  }, []);
+
+  const pinTab = useCallback((id: string) => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, preview: false } : t))
+    );
   }, []);
 
   const closeTab = useCallback(
@@ -207,6 +250,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabs,
         activeTabId,
         openTab,
+        openPreviewTab,
+        pinTab,
         closeTab,
         setActiveTab: setActiveTabId,
         closeOtherTabs,

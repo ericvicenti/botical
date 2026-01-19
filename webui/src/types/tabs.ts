@@ -19,6 +19,8 @@ export interface Tab {
   icon?: string;
   data: TabData;
   dirty?: boolean;
+  /** Preview tabs are temporary - replaced when opening another preview */
+  preview?: boolean;
 }
 
 export type TabData =

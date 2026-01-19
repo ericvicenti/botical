@@ -31,7 +31,7 @@ const TAB_ICONS = {
 } as const;
 
 export function TabBar() {
-  const { tabs, setActiveTab, closeTab, openTab } = useTabs();
+  const { tabs, setActiveTab, closeTab, openTab, pinTab } = useTabs();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,6 +47,12 @@ export function TabBar() {
     setActiveTab(tab.id);
     const route = getTabRoute(tab);
     navigate({ to: route.to, params: route.params });
+  };
+
+  const handleTabDoubleClick = (tab: Tab) => {
+    if (tab.preview) {
+      pinTab(tab.id);
+    }
   };
 
   const handlePreviewClick = () => {
@@ -72,13 +78,16 @@ export function TabBar() {
           <div
             key={tab.id}
             onClick={() => handleTabClick(tab)}
+            onDoubleClick={() => handleTabDoubleClick(tab)}
             className={cn(
               "group h-full px-3 flex items-center gap-2 border-r border-border cursor-pointer shrink-0",
               "hover:bg-bg-elevated transition-colors max-w-48",
               isActive
                 ? "bg-bg-primary text-text-primary border-b-2 border-b-accent-primary"
-                : "text-text-secondary border-b-2 border-b-transparent"
+                : "text-text-secondary border-b-2 border-b-transparent",
+              tab.preview && "italic"
             )}
+            title={tab.preview ? "Preview tab - double-click to pin" : undefined}
           >
             <Icon className="w-4 h-4 shrink-0 opacity-60" />
 
