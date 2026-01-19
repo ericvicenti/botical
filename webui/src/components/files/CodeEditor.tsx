@@ -149,6 +149,7 @@ const lightHighlightStyle = HighlightStyle.define([
 interface CodeEditorProps {
   projectId: string;
   path: string;
+  commit?: string;
 }
 
 function getLanguageExtension(filename: string): Extension {
@@ -176,14 +177,17 @@ function getLanguageExtension(filename: string): Extension {
   }
 }
 
-export function CodeEditor({ projectId, path }: CodeEditorProps) {
+export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [content, setContent] = useState<string>("");
   const initialContentRef = useRef<string>("");
 
-  const { data: fileData, isLoading, error } = useFileContent(projectId, path);
+  // When viewing at a specific commit, file is read-only
+  const isReadOnly = !!commit;
+
+  const { data: fileData, isLoading, error } = useFileContent(projectId, path, commit);
   const { data: project } = useProject(projectId);
   const saveFile = useSaveFile();
   const { markDirty, getDirtyContent, setDirtyContent, openPreviewTab } = useTabs();
@@ -263,11 +267,11 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
         lineNumbers(),
         highlightActiveLine(),
         highlightActiveLineGutter(),
-        history(),
+        ...(isReadOnly ? [EditorState.readOnly.of(true)] : [history()]),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         getLanguageExtension(path),
         ...editorTheme,
-        updateListener,
+        ...(isReadOnly ? [] : [updateListener]),
         EditorView.theme({
           "&": {
             height: "100%",
@@ -294,7 +298,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
     };
     // Note: getDirtyContent is intentionally read once when fileData changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileData, path, tabId, resolvedTheme]);
+  }, [fileData, path, tabId, resolvedTheme, isReadOnly]);
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -344,6 +348,15 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
 
   return (
     <div className="h-full flex flex-col bg-bg-primary">
+      {/* Commit indicator banner when viewing at a specific commit */}
+      {commit && (
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+          <span className="font-mono">{commit.substring(0, 7)}</span>
+          <span className="text-text-muted">|</span>
+          <span>Viewing file at this commit (read-only)</span>
+        </div>
+      )}
+
       {/* Header with breadcrumb navigation */}
       <div className="border-b border-border px-4 py-3 bg-bg-secondary">
         {/* Project link */}
@@ -386,7 +399,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       {/* Status bar */}
       <div className="h-6 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
         <span className={cn(isDirty && "text-accent-warning")}>
-          {isDirty ? "Modified" : "Saved"}
+          {isReadOnly ? "Read-only" : isDirty ? "Modified" : "Saved"}
           {saveFile.isPending && " (Saving...)"}
         </span>
         <span>{extension}</span>

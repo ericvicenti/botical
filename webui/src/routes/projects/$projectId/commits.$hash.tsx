@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, Copy, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
+import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, Copy, ChevronDown, ChevronRight, User, Clock, ExternalLink, FolderOpen } from "lucide-react";
 import { useGitCommit, useGitCommitDiff } from "@/lib/api/queries";
 import type { FileStatus } from "@/lib/api/types";
 
@@ -38,10 +38,19 @@ function formatDate(timestamp: number): string {
 
 function CommitViewPage() {
   const { projectId, hash } = Route.useParams();
+  const navigate = useNavigate();
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   const { data: commit, isLoading: commitLoading, error: commitError } = useGitCommit(projectId, hash);
   const { data: diff } = useGitCommitDiff(projectId, hash);
+
+  const handleBrowseAtCommit = () => {
+    navigate({ to: `/folders/${projectId}`, search: { commit: hash } });
+  };
+
+  const handleViewFileAtCommit = (filePath: string) => {
+    navigate({ to: `/files/${projectId}/${filePath}`, search: { commit: hash } });
+  };
 
   const toggleFileExpanded = (path: string) => {
     setExpandedFiles((prev) => {
@@ -183,6 +192,13 @@ function CommitViewPage() {
             </div>
           </div>
         </div>
+        <button
+          onClick={handleBrowseAtCommit}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-md transition-colors"
+        >
+          <FolderOpen className="w-4 h-4" />
+          Browse at this commit
+        </button>
       </div>
 
       {/* Files changed */}
@@ -193,18 +209,32 @@ function CommitViewPage() {
         <div className="divide-y divide-border">
           {commit.files?.map((file) => (
             <div key={file.path} className="bg-bg-primary">
-              <button
-                onClick={() => toggleFileExpanded(file.path)}
-                className="w-full flex items-center gap-3 px-4 py-2 hover:bg-bg-tertiary text-left"
-              >
-                {expandedFiles.has(file.path) ? (
-                  <ChevronDown className="w-4 h-4 text-text-secondary" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-text-secondary" />
+              <div className="flex items-center">
+                <button
+                  onClick={() => toggleFileExpanded(file.path)}
+                  className="flex-1 flex items-center gap-3 px-4 py-2 hover:bg-bg-tertiary text-left"
+                >
+                  {expandedFiles.has(file.path) ? (
+                    <ChevronDown className="w-4 h-4 text-text-secondary" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-text-secondary" />
+                  )}
+                  {getStatusIcon(file.status)}
+                  <span className="flex-1 font-mono text-sm truncate">{file.path}</span>
+                </button>
+                {file.status !== "D" && (
+                  <button
+                    className="px-3 py-1 mr-2 text-xs text-text-secondary hover:text-accent-primary flex items-center gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewFileAtCommit(file.path);
+                    }}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View
+                  </button>
                 )}
-                {getStatusIcon(file.status)}
-                <span className="flex-1 font-mono text-sm truncate">{file.path}</span>
-              </button>
+              </div>
               {expandedFiles.has(file.path) && diffSections[file.path] && (
                 <div className="px-4 pb-3">
                   <div className="text-xs font-mono bg-bg-secondary rounded-md overflow-x-auto">

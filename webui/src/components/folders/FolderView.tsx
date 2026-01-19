@@ -17,6 +17,7 @@ import type { DetailedFileEntry } from "@/lib/api/types";
 interface FolderViewProps {
   projectId: string;
   path: string;
+  commit?: string;
 }
 
 type SortField = "name" | "size" | "modified" | "type" | "permissions";
@@ -70,8 +71,8 @@ function getTypeColor(entry: DetailedFileEntry): string {
   return "text-text-secondary";
 }
 
-export function FolderView({ projectId, path }: FolderViewProps) {
-  const { data: folder, isLoading, error } = useFolderDetails(projectId, path);
+export function FolderView({ projectId, path, commit }: FolderViewProps) {
+  const { data: folder, isLoading, error } = useFolderDetails(projectId, path, commit);
   const { data: project } = useProject(projectId);
   const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
@@ -89,6 +90,9 @@ export function FolderView({ projectId, path }: FolderViewProps) {
     }
   };
 
+  // Build search params for navigation (preserve commit context)
+  const searchParams = commit ? { commit } : undefined;
+
   // Single click opens preview tab
   const handleOpenItem = (entry: DetailedFileEntry) => {
     if (entry.type === "directory") {
@@ -97,14 +101,14 @@ export function FolderView({ projectId, path }: FolderViewProps) {
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/folders/${projectId}/${entry.path}` });
+      navigate({ to: `/folders/${projectId}/${entry.path}`, search: searchParams });
     } else {
       openPreviewTab({
         type: "file",
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/files/${projectId}/${entry.path}` });
+      navigate({ to: `/files/${projectId}/${entry.path}`, search: searchParams });
     }
   };
 
@@ -116,14 +120,14 @@ export function FolderView({ projectId, path }: FolderViewProps) {
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/folders/${projectId}/${entry.path}` });
+      navigate({ to: `/folders/${projectId}/${entry.path}`, search: searchParams });
     } else {
       openTab({
         type: "file",
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/files/${projectId}/${entry.path}` });
+      navigate({ to: `/files/${projectId}/${entry.path}`, search: searchParams });
     }
   };
 
@@ -137,7 +141,7 @@ export function FolderView({ projectId, path }: FolderViewProps) {
       projectId,
       path: folderPath,
     });
-    navigate({ to: `/folders/${projectId}/${folderPath}` });
+    navigate({ to: `/folders/${projectId}/${folderPath}`, search: searchParams });
   };
 
   if (isLoading) {
@@ -198,6 +202,15 @@ export function FolderView({ projectId, path }: FolderViewProps) {
 
   return (
     <div className="h-full flex flex-col bg-bg-primary">
+      {/* Commit indicator banner when viewing at a specific commit */}
+      {commit && (
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+          <span className="font-mono">{commit.substring(0, 7)}</span>
+          <span className="text-text-muted">|</span>
+          <span>Browsing at this commit</span>
+        </div>
+      )}
+
       {/* Header with breadcrumb navigation */}
       <div className="border-b border-border px-4 py-3 bg-bg-secondary">
         {/* Project link */}

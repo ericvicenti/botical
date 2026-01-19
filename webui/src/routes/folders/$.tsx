@@ -1,12 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { FolderView } from "@/components/folders/FolderView";
+
+const folderSearchSchema = z.object({
+  commit: z.string().optional(),
+});
 
 export const Route = createFileRoute("/folders/$")({
   component: FolderViewPage,
+  validateSearch: folderSearchSchema,
 });
 
 function FolderViewPage() {
   const params = Route.useParams();
+  const { commit } = Route.useSearch();
   const splatPath = params._splat || "";
 
   // Path format: projectId/path/to/folder (or just projectId for root)
@@ -24,7 +31,7 @@ function FolderViewPage() {
 
   return (
     <div className="h-full">
-      <FolderView projectId={projectId} path={folderPath} />
+      <FolderView projectId={projectId} path={folderPath} commit={commit} />
     </div>
   );
 }

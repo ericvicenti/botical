@@ -371,6 +371,43 @@ projectGit.post("/:projectId/git/discard", async (c) => {
   return c.json({ data: { discarded: true } });
 });
 
+/**
+ * GET /api/projects/:projectId/git/sync/status
+ * Get sync status (ahead/behind, remote info, rebase state)
+ */
+projectGit.get("/:projectId/git/sync/status", async (c) => {
+  const projectId = c.req.param("projectId");
+  const projectPath = await getProjectPath(projectId);
+
+  const syncStatus = await GitService.getSyncStatus(projectPath);
+  return c.json({ data: syncStatus });
+});
+
+/**
+ * POST /api/projects/:projectId/git/sync
+ * Perform a sync: fetch, rebase if clean, push
+ */
+projectGit.post("/:projectId/git/sync", async (c) => {
+  const projectId = c.req.param("projectId");
+  const projectPath = await getProjectPath(projectId);
+
+  const syncResult = await GitService.sync(projectPath);
+  return c.json({ data: syncResult });
+});
+
+/**
+ * POST /api/projects/:projectId/git/sync/abort-rebase
+ * Abort an in-progress rebase
+ */
+projectGit.post("/:projectId/git/sync/abort-rebase", async (c) => {
+  const projectId = c.req.param("projectId");
+  const projectPath = await getProjectPath(projectId);
+
+  await GitService.abortRebase(projectPath);
+  const syncStatus = await GitService.getSyncStatus(projectPath);
+  return c.json({ data: syncStatus });
+});
+
 // ============================================
 // CLONE ROUTE
 // ============================================

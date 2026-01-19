@@ -111,3 +111,32 @@ export interface CloneOptions {
   /** Branch to checkout (optional, uses default) */
   branch?: string;
 }
+
+/** Sync operation status */
+export type SyncState =
+  | "idle"
+  | "fetching"
+  | "pushing"
+  | "rebasing"
+  | "conflict"
+  | "error";
+
+/** Git sync status for a project */
+export interface GitSyncStatus {
+  /** Current sync state */
+  state: SyncState;
+  /** Commits ahead of remote */
+  ahead: number;
+  /** Commits behind remote */
+  behind: number;
+  /** Whether there's a remote configured */
+  hasRemote: boolean;
+  /** Whether tracking a remote branch */
+  hasUpstream: boolean;
+  /** Error message if state is "error" */
+  error?: string;
+  /** Conflicted files if state is "conflict" */
+  conflictedFiles?: string[];
+  /** Last sync time (ms since epoch) */
+  lastSyncTime?: number;
+}

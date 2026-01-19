@@ -11,6 +11,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { ProjectService } from "@/services/projects.ts";
 import { DatabaseManager } from "@/database/index.ts";
+import { GitService } from "@/services/git.ts";
 import { NotFoundError, ValidationError } from "@/utils/errors.ts";
 
 const files = new Hono();
@@ -212,10 +213,14 @@ files.get("/:projectId/files", async (c) => {
 /**
  * GET /api/projects/:projectId/folders
  * Get detailed folder information (ls -al and du -sh style)
+ * Query params:
+ * - path: folder path within project
+ * - commit: optional commit hash to view folder at that version
  */
 files.get("/:projectId/folders", async (c) => {
   const { projectId } = c.req.param();
   const rawQuery = { path: c.req.query("path") };
+  const commit = c.req.query("commit");
   const queryResult = ListQuerySchema.safeParse(rawQuery);
 
   if (!queryResult.success) {
@@ -235,6 +240,38 @@ files.get("/:projectId/folders", async (c) => {
 
   if (!project.path) {
     return c.json({ data: null });
+  }
+
+  // If commit is specified, get folder listing from git history
+  if (commit) {
+    try {
+      const entries = await GitService.listTree(project.path, dirPath, commit);
+
+      // Sort: directories first, then by name
+      entries.sort((a, b) => {
+        if (a.type !== b.type) {
+          if (a.type === "directory") return -1;
+          if (b.type === "directory") return 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      const folderDetails = {
+        path: dirPath || "/",
+        name: dirPath ? path.basename(dirPath) : project.name,
+        commit,
+        entries: entries.map(e => ({
+          name: e.name,
+          path: e.path,
+          type: e.type,
+          isHidden: e.name.startsWith("."),
+        })),
+      };
+
+      return c.json({ data: folderDetails });
+    } catch (err) {
+      throw new NotFoundError("Folder", `${dirPath || "/"} at ${commit}`);
+    }
   }
 
   const fullPath = resolveProjectPath(project.path, dirPath);
@@ -320,10 +357,13 @@ files.get("/:projectId/folders", async (c) => {
 /**
  * GET /api/projects/:projectId/files/:path
  * Read file content
+ * Query params:
+ * - commit: optional commit hash to view file at that version
  */
 files.get("/:projectId/files/*", async (c) => {
   const { projectId } = c.req.param();
   const filePath = c.req.path.replace(`/api/projects/${projectId}/files/`, "");
+  const commit = c.req.query("commit");
 
   if (!filePath) {
     throw new ValidationError("File path required");
@@ -340,7 +380,26 @@ files.get("/:projectId/files/*", async (c) => {
     throw new NotFoundError("File", filePath);
   }
 
-  const fullPath = resolveProjectPath(project.path, decodeURIComponent(filePath));
+  const decodedPath = decodeURIComponent(filePath);
+
+  // If commit is specified, get file from git history
+  if (commit) {
+    try {
+      const content = await GitService.showFile(project.path, decodedPath, commit);
+      return c.json({
+        data: {
+          content,
+          path: decodedPath,
+          commit,
+        },
+      });
+    } catch (err) {
+      throw new NotFoundError("File", `${decodedPath} at ${commit}`);
+    }
+  }
+
+  // Otherwise, read from filesystem
+  const fullPath = resolveProjectPath(project.path, decodedPath);
 
   try {
     const stat = await fs.stat(fullPath);
@@ -358,14 +417,14 @@ files.get("/:projectId/files/*", async (c) => {
     return c.json({
       data: {
         content,
-        path: filePath,
+        path: decodedPath,
         size: stat.size,
         modified: stat.mtimeMs,
       },
     });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new NotFoundError("File", filePath);
+      throw new NotFoundError("File", decodedPath);
     }
     throw err;
   }

@@ -20,6 +20,8 @@ import type {
   DiffOptions,
   CloneResult,
   CloneOptions,
+  GitSyncStatus,
+  SyncState,
 } from "./git-types";
 
 // Default workspace directory for cloned repos
@@ -558,5 +560,298 @@ export class GitService {
     const git = this.getGit(projectPath);
     await git.checkout(["--", "."]);
     await git.clean("fd"); // Remove untracked files and directories
+  }
+
+  /**
+   * Get file content at a specific commit
+   */
+  static async showFile(
+    projectPath: string,
+    filePath: string,
+    commit: string
+  ): Promise<string> {
+    const git = this.getGit(projectPath);
+    // git show <commit>:<path>
+    const content = await git.show([`${commit}:${filePath}`]);
+    return content;
+  }
+
+  /**
+   * List directory contents at a specific commit
+   */
+  static async listTree(
+    projectPath: string,
+    dirPath: string,
+    commit: string
+  ): Promise<Array<{ name: string; path: string; type: "file" | "directory" }>> {
+    const git = this.getGit(projectPath);
+
+    // git ls-tree <commit> <path>
+    // Format: <mode> <type> <hash>\t<name>
+    const treePath = dirPath ? `${dirPath}/` : "";
+    const result = await git.raw([
+      "ls-tree",
+      "--name-only",
+      commit,
+      treePath,
+    ]);
+
+    if (!result.trim()) {
+      return [];
+    }
+
+    const entries: Array<{ name: string; path: string; type: "file" | "directory" }> = [];
+    const lines = result.trim().split("\n");
+
+    for (const line of lines) {
+      if (!line) continue;
+
+      // Get full info to determine type
+      const fullInfo = await git.raw([
+        "ls-tree",
+        commit,
+        line,
+      ]);
+
+      const match = fullInfo.match(/^(\d+)\s+(blob|tree)\s+/);
+      const isDirectory = match?.[2] === "tree";
+      const name = line.split("/").pop() || line;
+
+      entries.push({
+        name,
+        path: line,
+        type: isDirectory ? "directory" : "file",
+      });
+    }
+
+    return entries;
+  }
+
+  /**
+   * Check if currently in a rebase state
+   */
+  static async isRebasing(projectPath: string): Promise<boolean> {
+    const gitDir = path.join(projectPath, ".git");
+    return (
+      fs.existsSync(path.join(gitDir, "rebase-merge")) ||
+      fs.existsSync(path.join(gitDir, "rebase-apply"))
+    );
+  }
+
+  /**
+   * Get list of conflicted files during merge/rebase
+   */
+  static async getConflictedFiles(projectPath: string): Promise<string[]> {
+    const git = this.getGit(projectPath);
+    try {
+      const result = await git.raw(["diff", "--name-only", "--diff-filter=U"]);
+      return result.trim().split("\n").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Rebase current branch onto upstream
+   */
+  static async rebase(
+    projectPath: string,
+    upstream?: string
+  ): Promise<{ success: boolean; conflictedFiles?: string[] }> {
+    const git = this.getGit(projectPath);
+    try {
+      if (upstream) {
+        await git.rebase([upstream]);
+      } else {
+        // Rebase onto tracking branch
+        await git.rebase();
+      }
+      return { success: true };
+    } catch (err) {
+      // Check if it's a conflict
+      const conflicted = await this.getConflictedFiles(projectPath);
+      if (conflicted.length > 0) {
+        return { success: false, conflictedFiles: conflicted };
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Abort an in-progress rebase
+   */
+  static async abortRebase(projectPath: string): Promise<void> {
+    const git = this.getGit(projectPath);
+    await git.rebase(["--abort"]);
+  }
+
+  /**
+   * Check if branch has an upstream tracking branch
+   */
+  static async hasUpstream(projectPath: string, branch?: string): Promise<boolean> {
+    const git = this.getGit(projectPath);
+    const currentBranch = branch || (await this.currentBranch(projectPath));
+    try {
+      const result = await git.raw([
+        "config",
+        "--get",
+        `branch.${currentBranch}.remote`,
+      ]);
+      return !!result.trim();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get comprehensive sync status
+   */
+  static async getSyncStatus(projectPath: string): Promise<GitSyncStatus> {
+    const isRepo = await this.isRepo(projectPath);
+    if (!isRepo) {
+      return {
+        state: "idle",
+        ahead: 0,
+        behind: 0,
+        hasRemote: false,
+        hasUpstream: false,
+      };
+    }
+
+    const git = this.getGit(projectPath);
+
+    // Check if rebasing
+    if (await this.isRebasing(projectPath)) {
+      const conflicted = await this.getConflictedFiles(projectPath);
+      return {
+        state: "conflict",
+        ahead: 0,
+        behind: 0,
+        hasRemote: true,
+        hasUpstream: true,
+        conflictedFiles: conflicted,
+      };
+    }
+
+    // Check for remotes
+    const remotes = await this.remotes(projectPath);
+    const hasRemote = remotes.length > 0;
+
+    // Check for upstream
+    const hasUpstream = await this.hasUpstream(projectPath);
+
+    // Get ahead/behind counts
+    const status = await git.status();
+
+    return {
+      state: "idle",
+      ahead: status.ahead,
+      behind: status.behind,
+      hasRemote,
+      hasUpstream,
+      lastSyncTime: Date.now(),
+    };
+  }
+
+  /**
+   * Perform a sync operation: fetch, rebase if clean, push
+   * Returns the updated sync status
+   */
+  static async sync(projectPath: string): Promise<GitSyncStatus> {
+    const git = this.getGit(projectPath);
+
+    // Get current state
+    const status = await this.status(projectPath);
+    if (!status.isRepo) {
+      return {
+        state: "idle",
+        ahead: 0,
+        behind: 0,
+        hasRemote: false,
+        hasUpstream: false,
+      };
+    }
+
+    const hasUpstream = await this.hasUpstream(projectPath);
+    const remotes = await this.remotes(projectPath);
+    const hasRemote = remotes.length > 0;
+
+    if (!hasRemote) {
+      return {
+        state: "idle",
+        ahead: 0,
+        behind: 0,
+        hasRemote: false,
+        hasUpstream: false,
+      };
+    }
+
+    try {
+      // Fetch from remote
+      await this.fetch(projectPath);
+
+      // Get updated status after fetch
+      const gitStatus = await git.status();
+
+      // If behind and working copy is clean, rebase
+      if (gitStatus.behind > 0 && status.files.length === 0) {
+        const currentBranch = gitStatus.current || "HEAD";
+        const rebaseResult = await this.rebase(projectPath, `origin/${currentBranch}`);
+
+        if (!rebaseResult.success) {
+          return {
+            state: "conflict",
+            ahead: gitStatus.ahead,
+            behind: gitStatus.behind,
+            hasRemote,
+            hasUpstream,
+            conflictedFiles: rebaseResult.conflictedFiles,
+          };
+        }
+      }
+
+      // Get status after rebase
+      const afterRebase = await git.status();
+
+      // Push if we have commits ahead
+      if (afterRebase.ahead > 0 && hasUpstream) {
+        try {
+          await this.push(projectPath);
+        } catch (pushErr) {
+          // Push failed - might need to set upstream or auth issue
+          return {
+            state: "error",
+            ahead: afterRebase.ahead,
+            behind: afterRebase.behind,
+            hasRemote,
+            hasUpstream,
+            error: pushErr instanceof Error ? pushErr.message : "Push failed",
+            lastSyncTime: Date.now(),
+          };
+        }
+      }
+
+      // Get final status
+      const finalStatus = await git.status();
+
+      return {
+        state: "idle",
+        ahead: finalStatus.ahead,
+        behind: finalStatus.behind,
+        hasRemote,
+        hasUpstream,
+        lastSyncTime: Date.now(),
+      };
+    } catch (err) {
+      return {
+        state: "error",
+        ahead: 0,
+        behind: 0,
+        hasRemote,
+        hasUpstream,
+        error: err instanceof Error ? err.message : "Sync failed",
+        lastSyncTime: Date.now(),
+      };
+    }
   }
 }

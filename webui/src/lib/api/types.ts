@@ -234,3 +234,22 @@ export interface CloneResult {
   name: string;
   branch: string;
 }
+
+export type SyncState =
+  | "idle"
+  | "fetching"
+  | "pushing"
+  | "rebasing"
+  | "conflict"
+  | "error";
+
+export interface GitSyncStatus {
+  state: SyncState;
+  ahead: number;
+  behind: number;
+  hasRemote: boolean;
+  hasUpstream: boolean;
+  error?: string;
+  conflictedFiles?: string[];
+  lastSyncTime?: number;
+}

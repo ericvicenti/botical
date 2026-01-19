@@ -429,13 +429,16 @@ export function useFiles(projectId: string, dirPath: string = "") {
   });
 }
 
-export function useFolderDetails(projectId: string, folderPath: string = "") {
+export function useFolderDetails(projectId: string, folderPath: string = "", commit?: string) {
   return useQuery({
-    queryKey: ["projects", projectId, "folders", folderPath],
+    queryKey: ["projects", projectId, "folders", folderPath, commit],
     queryFn: async () => {
-      const params = folderPath ? `?path=${encodeURIComponent(folderPath)}` : "";
+      const searchParams = new URLSearchParams();
+      if (folderPath) searchParams.set("path", folderPath);
+      if (commit) searchParams.set("commit", commit);
+      const queryString = searchParams.toString();
       const response = await apiClientRaw<FolderDetails>(
-        `/api/projects/${projectId}/folders${params}`
+        `/api/projects/${projectId}/folders${queryString ? `?${queryString}` : ""}`
       );
       return response.data;
     },
@@ -443,13 +446,15 @@ export function useFolderDetails(projectId: string, folderPath: string = "") {
   });
 }
 
-export function useFileContent(projectId: string, path: string) {
+export function useFileContent(projectId: string, path: string, commit?: string) {
   return useQuery({
-    queryKey: ["projects", projectId, "files", path, "content"],
-    queryFn: () =>
-      apiClient<FileContent>(
-        `/api/projects/${projectId}/files/${encodeURIComponent(path)}`
-      ),
+    queryKey: ["projects", projectId, "files", path, "content", commit],
+    queryFn: () => {
+      const queryString = commit ? `?commit=${encodeURIComponent(commit)}` : "";
+      return apiClient<FileContent>(
+        `/api/projects/${projectId}/files/${encodeURIComponent(path)}${queryString}`
+      );
+    },
     enabled: !!projectId && !!path,
   });
 }
@@ -940,11 +945,22 @@ export function useCreateCommit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, message }: { projectId: string; message: string }) =>
-      apiClient<CommitResult>(`/api/projects/${projectId}/git/commit`, {
+    mutationFn: async ({ projectId, message }: { projectId: string; message: string }) => {
+      // Create the commit
+      const result = await apiClient<CommitResult>(`/api/projects/${projectId}/git/commit`, {
         method: "POST",
         body: JSON.stringify({ message }),
-      }),
+      });
+
+      // Trigger sync to push the new commit (fire and forget)
+      apiClient<GitSyncStatus>(`/api/projects/${projectId}/git/sync`, {
+        method: "POST",
+      }).catch(() => {
+        // Ignore sync errors - will be shown in UI via status poll
+      });
+
+      return result;
+    },
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "git"],
@@ -1088,6 +1104,59 @@ export function useCloneProject() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
+
+// Git Sync
+
+import type { GitSyncStatus } from "./types";
+
+export function useGitSyncStatus(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "sync", "status"],
+    queryFn: async () => {
+      const response = await apiClientRaw<GitSyncStatus>(
+        `/api/projects/${projectId}/git/sync/status`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+}
+
+export function useGitSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId }: { projectId: string }) =>
+      apiClient<GitSyncStatus>(`/api/projects/${projectId}/git/sync`, {
+        method: "POST",
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git"],
+      });
+    },
+  });
+}
+
+export function useAbortRebase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId }: { projectId: string }) =>
+      apiClient<GitSyncStatus>(`/api/projects/${projectId}/git/sync/abort-rebase`, {
+        method: "POST",
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "files"],
+      });
     },
   });
 }
