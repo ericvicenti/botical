@@ -127,6 +127,10 @@ export function FolderView({ projectId, path }: FolderViewProps) {
     }
   };
 
+  const handleNavigateToProject = () => {
+    navigate({ to: `/projects/${projectId}` });
+  };
+
   const handleNavigateToFolder = (folderPath: string) => {
     openPreviewTab({
       type: "folder",
@@ -194,10 +198,17 @@ export function FolderView({ projectId, path }: FolderViewProps) {
 
   return (
     <div className="h-full flex flex-col bg-bg-primary">
-      {/* Header with folder info */}
-      <div className="border-b border-border px-4 py-3">
-        {/* Breadcrumb navigation */}
-        <div className="flex items-center text-sm mb-2">
+      {/* Header with breadcrumb navigation */}
+      <div className="border-b border-border px-4 py-3 bg-bg-secondary">
+        {/* Project link */}
+        <button
+          onClick={handleNavigateToProject}
+          className="text-xs text-text-muted hover:text-accent-primary mb-1 block"
+        >
+          {project?.name || "Project"}
+        </button>
+        {/* Folder path breadcrumbs */}
+        <div className="flex items-center text-sm">
           <button
             onClick={() => handleNavigateToFolder("")}
             className={cn(
@@ -205,7 +216,7 @@ export function FolderView({ projectId, path }: FolderViewProps) {
               pathParts.length === 0 ? "text-text-primary font-medium" : "text-text-muted"
             )}
           >
-            {project?.name || "Project"}
+            Files
           </button>
           {pathParts.map((part, i) => (
             <span key={i} className="flex items-center">
@@ -222,8 +233,10 @@ export function FolderView({ projectId, path }: FolderViewProps) {
             </span>
           ))}
         </div>
+      </div>
 
-        {/* Folder stats */}
+      {/* Folder stats */}
+      <div className="border-b border-border px-4 py-2 bg-bg-primary">
         <div className="flex items-center gap-4 text-sm text-text-muted">
           <span>
             <strong className="text-text-primary">{formatSize(folder.totalSize)}</strong> total

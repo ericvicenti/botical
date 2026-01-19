@@ -329,6 +329,10 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
   const extension = filename.split(".").pop()?.toUpperCase() || "";
   const pathParts = path.split("/");
 
+  const handleNavigateToProject = () => {
+    navigate({ to: `/projects/${projectId}` });
+  };
+
   const handleNavigateToFolder = (folderPath: string) => {
     openPreviewTab({
       type: "folder",
@@ -342,12 +346,20 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
     <div className="h-full flex flex-col bg-bg-primary">
       {/* Header with breadcrumb navigation */}
       <div className="border-b border-border px-4 py-3 bg-bg-secondary">
+        {/* Project link */}
+        <button
+          onClick={handleNavigateToProject}
+          className="text-xs text-text-muted hover:text-accent-primary mb-1 block"
+        >
+          {project?.name || "Project"}
+        </button>
+        {/* File path breadcrumbs */}
         <div className="flex items-center text-sm">
           <button
             onClick={() => handleNavigateToFolder("")}
             className="text-text-muted hover:text-accent-primary"
           >
-            {project?.name || "Project"}
+            Files
           </button>
           {pathParts.slice(0, -1).map((part, i) => (
             <span key={i} className="flex items-center">
