@@ -182,3 +182,55 @@ export interface ListResponse<T> {
 export interface ItemResponse<T> {
   data: T;
 }
+
+// Git types
+
+export type FileStatus = "M" | "A" | "D" | "R" | "?" | "C";
+
+export interface FileChange {
+  path: string;
+  status: FileStatus;
+  oldPath?: string;
+}
+
+export interface GitStatus {
+  branch: string;
+  ahead: number;
+  behind: number;
+  files: FileChange[];
+  isRepo: boolean;
+}
+
+export interface BranchInfo {
+  name: string;
+  current: boolean;
+  commit: string;
+  remote?: string;
+}
+
+export interface CommitInfo {
+  hash: string;
+  hashShort: string;
+  message: string;
+  body?: string;
+  author: string;
+  email: string;
+  date: number;
+  files?: FileChange[];
+}
+
+export interface CommitResult {
+  hash: string;
+  message: string;
+  summary: {
+    changes: number;
+    insertions: number;
+    deletions: number;
+  };
+}
+
+export interface CloneResult {
+  path: string;
+  name: string;
+  branch: string;
+}

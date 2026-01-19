@@ -35,6 +35,10 @@ export function generateTabId(data: TabData): string {
       return "create-project";
     case "task":
       return `task:${data.sessionId}`;
+    case "commit":
+      return `commit:${data.projectId}:${data.hash}`;
+    case "review-commit":
+      return `review-commit:${data.projectId}`;
   }
 }
 
@@ -65,6 +69,10 @@ export function generateTabLabel(data: TabData): string {
       return "New Project";
     case "task":
       return data.title || "Task";
+    case "commit":
+      return data.hash.substring(0, 7);
+    case "review-commit":
+      return "Review Commit";
   }
 }
 
@@ -93,6 +101,10 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
       return { to: `/settings/${tab.data.page}` };
     case "create-project":
       return { to: "/create-project" };
+    case "commit":
+      return { to: "/projects/$projectId/commits/$hash", params: { projectId: tab.data.projectId, hash: tab.data.hash } };
+    case "review-commit":
+      return { to: "/projects/$projectId/commit", params: { projectId: tab.data.projectId } };
     default:
       return { to: "/" };
   }
@@ -103,6 +115,26 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
  * when navigating to a URL that doesn't have an open tab.
  */
 export function parseUrlToTabData(pathname: string): { data: TabData; label: string; type: TabType } | null {
+  // /projects/:projectId/commits/:hash
+  const commitMatch = pathname.match(/^\/projects\/([^/]+)\/commits\/([^/]+)$/);
+  if (commitMatch) {
+    return {
+      type: "commit",
+      data: { type: "commit", projectId: commitMatch[1], hash: commitMatch[2] },
+      label: commitMatch[2].substring(0, 7),
+    };
+  }
+
+  // /projects/:projectId/commit (review commit)
+  const reviewCommitMatch = pathname.match(/^\/projects\/([^/]+)\/commit$/);
+  if (reviewCommitMatch) {
+    return {
+      type: "review-commit",
+      data: { type: "review-commit", projectId: reviewCommitMatch[1] },
+      label: "Review Commit",
+    };
+  }
+
   // /projects/:projectId/settings
   const projectSettingsMatch = pathname.match(/^\/projects\/([^/]+)\/settings$/);
   if (projectSettingsMatch) {

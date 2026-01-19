@@ -24,6 +24,8 @@ import { Route as FoldersSplatRouteImport } from './routes/folders/$'
 import { Route as FilesSplatRouteImport } from './routes/files/$'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
+import { Route as ProjectsProjectIdCommitRouteImport } from './routes/projects/$projectId/commit'
+import { Route as ProjectsProjectIdCommitsHashRouteImport } from './routes/projects/$projectId/commits.$hash'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -101,6 +103,17 @@ const ProjectsProjectIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
+const ProjectsProjectIdCommitRoute = ProjectsProjectIdCommitRouteImport.update({
+  id: '/commit',
+  path: '/commit',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any)
+const ProjectsProjectIdCommitsHashRoute =
+  ProjectsProjectIdCommitsHashRouteImport.update({
+    id: '/commits/$hash',
+    path: '/commits/$hash',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,8 +129,10 @@ export interface FileRoutesByFullPath {
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -131,8 +146,10 @@ export interface FileRoutesByTo {
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/settings': typeof SettingsIndexRoute
+  '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,8 +166,10 @@ export interface FileRoutesById {
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,8 +187,10 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/tasks/$sessionId'
     | '/settings/'
+    | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
+    | '/projects/$projectId/commits/$hash'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,8 +204,10 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/tasks/$sessionId'
     | '/settings'
+    | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
+    | '/projects/$projectId/commits/$hash'
   id:
     | '__root__'
     | '/'
@@ -200,8 +223,10 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/tasks/$sessionId'
     | '/settings/'
+    | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
+    | '/projects/$projectId/commits/$hash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -322,6 +347,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdSettingsRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/commit': {
+      id: '/projects/$projectId/commit'
+      path: '/commit'
+      fullPath: '/projects/$projectId/commit'
+      preLoaderRoute: typeof ProjectsProjectIdCommitRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/commits/$hash': {
+      id: '/projects/$projectId/commits/$hash'
+      path: '/commits/$hash'
+      fullPath: '/projects/$projectId/commits/$hash'
+      preLoaderRoute: typeof ProjectsProjectIdCommitsHashRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
   }
 }
 
@@ -346,13 +385,17 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 )
 
 interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdCommitRoute: typeof ProjectsProjectIdCommitRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
+  ProjectsProjectIdCommitsHashRoute: typeof ProjectsProjectIdCommitsHashRoute
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdCommitRoute: ProjectsProjectIdCommitRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
+  ProjectsProjectIdCommitsHashRoute: ProjectsProjectIdCommitsHashRoute,
 }
 
 const ProjectsProjectIdRouteWithChildren =

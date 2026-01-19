@@ -1,24 +1,32 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCreateProject } from "@/lib/api/queries";
+import { useCreateProject, useCloneProject, useSettings } from "@/lib/api/queries";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
+import { GitBranch, Folder } from "lucide-react";
 
 export const Route = createFileRoute("/create-project")({
   component: CreateProjectPage,
 });
 
+type CreateMode = "local" | "clone";
+
 function CreateProjectPage() {
+  const [mode, setMode] = useState<CreateMode>("local");
   const [projectName, setProjectName] = useState("");
   const [projectPath, setProjectPath] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [cloneBranch, setCloneBranch] = useState("");
+
   const createProject = useCreateProject();
+  const cloneProject = useCloneProject();
+  const { data: settings } = useSettings();
   const navigate = useNavigate();
   const { openTab, closeTab } = useTabs();
   const { setSelectedProject } = useUI();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateLocal = async () => {
     if (!projectName.trim()) return;
 
     try {
@@ -27,10 +35,7 @@ function CreateProjectPage() {
         path: projectPath.trim() || undefined,
       });
 
-      // Close the create-project tab
       closeTab("create-project");
-
-      // Open the new project tab
       setSelectedProject(result.id);
       openTab({
         type: "project",
@@ -38,7 +43,6 @@ function CreateProjectPage() {
         projectName: result.name,
       });
 
-      // Navigate to the new project
       navigate({
         to: "/projects/$projectId",
         params: { projectId: result.id },
@@ -48,27 +52,152 @@ function CreateProjectPage() {
     }
   };
 
+  const handleClone = async () => {
+    if (!repoUrl.trim()) return;
+
+    try {
+      const result = await cloneProject.mutateAsync({
+        url: repoUrl.trim(),
+        name: projectName.trim() || undefined,
+        branch: cloneBranch.trim() || undefined,
+        ownerId: settings?.userId || "default",
+      });
+
+      closeTab("create-project");
+      setSelectedProject(result.project.id);
+      openTab({
+        type: "project",
+        projectId: result.project.id,
+        projectName: result.project.name,
+      });
+
+      navigate({
+        to: "/projects/$projectId",
+        params: { projectId: result.project.id },
+      });
+    } catch {
+      // Error handling is done by mutation
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "local") {
+      await handleCreateLocal();
+    } else {
+      await handleClone();
+    }
+  };
+
+  const isPending = createProject.isPending || cloneProject.isPending;
+  const error = createProject.error || cloneProject.error;
+
   return (
     <div className="p-6 max-w-lg">
       <h1 className="text-2xl font-bold text-text-primary mb-6">
         Create New Project
       </h1>
 
+      {/* Mode selector */}
+      <div className="flex gap-2 mb-6">
+        <button
+          type="button"
+          onClick={() => setMode("local")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors",
+            mode === "local"
+              ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
+              : "border-border bg-bg-secondary text-text-secondary hover:border-border/80"
+          )}
+        >
+          <Folder className="w-5 h-5" />
+          <span className="font-medium">Local Project</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("clone")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors",
+            mode === "clone"
+              ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
+              : "border-border bg-bg-secondary text-text-secondary hover:border-border/80"
+          )}
+        >
+          <GitBranch className="w-5 h-5" />
+          <span className="font-medium">Clone from URL</span>
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
+        {mode === "clone" && (
+          <>
+            <div>
+              <label
+                htmlFor="repoUrl"
+                className="block text-sm font-medium text-text-secondary mb-1"
+              >
+                Repository URL
+              </label>
+              <input
+                id="repoUrl"
+                type="text"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/user/repo.git"
+                autoFocus
+                className={cn(
+                  "w-full px-3 py-2 rounded-lg",
+                  "bg-bg-secondary border border-border",
+                  "text-text-primary placeholder:text-text-muted",
+                  "focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                )}
+              />
+              <p className="mt-1 text-xs text-text-muted">
+                HTTPS or SSH URL to a Git repository
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="cloneBranch"
+                className="block text-sm font-medium text-text-secondary mb-1"
+              >
+                Branch (optional)
+              </label>
+              <input
+                id="cloneBranch"
+                type="text"
+                value={cloneBranch}
+                onChange={(e) => setCloneBranch(e.target.value)}
+                placeholder="main"
+                className={cn(
+                  "w-full px-3 py-2 rounded-lg",
+                  "bg-bg-secondary border border-border",
+                  "text-text-primary placeholder:text-text-muted",
+                  "focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                )}
+              />
+              <p className="mt-1 text-xs text-text-muted">
+                Leave empty to clone the default branch
+              </p>
+            </div>
+          </>
+        )}
+
         <div>
           <label
             htmlFor="projectName"
             className="block text-sm font-medium text-text-secondary mb-1"
           >
-            Project Name
+            Project Name{mode === "clone" && " (optional)"}
           </label>
           <input
             id="projectName"
             type="text"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
-            placeholder="My Project"
-            autoFocus
+            placeholder={mode === "clone" ? "Auto-detected from URL" : "My Project"}
+            autoFocus={mode === "local"}
             className={cn(
               "w-full px-3 py-2 rounded-lg",
               "bg-bg-secondary border border-border",
@@ -76,43 +205,56 @@ function CreateProjectPage() {
               "focus:outline-none focus:ring-2 focus:ring-accent-primary"
             )}
           />
+          {mode === "clone" && (
+            <p className="mt-1 text-xs text-text-muted">
+              Leave empty to use the repository name
+            </p>
+          )}
         </div>
 
-        <div>
-          <label
-            htmlFor="projectPath"
-            className="block text-sm font-medium text-text-secondary mb-1"
-          >
-            Project Path (optional)
-          </label>
-          <input
-            id="projectPath"
-            type="text"
-            value={projectPath}
-            onChange={(e) => setProjectPath(e.target.value)}
-            placeholder="/path/to/project"
-            className={cn(
-              "w-full px-3 py-2 rounded-lg",
-              "bg-bg-secondary border border-border",
-              "text-text-primary placeholder:text-text-muted",
-              "focus:outline-none focus:ring-2 focus:ring-accent-primary"
-            )}
-          />
-          <p className="mt-1 text-xs text-text-muted">
-            Leave empty to create a project without a local directory
-          </p>
-        </div>
+        {mode === "local" && (
+          <div>
+            <label
+              htmlFor="projectPath"
+              className="block text-sm font-medium text-text-secondary mb-1"
+            >
+              Project Path (optional)
+            </label>
+            <input
+              id="projectPath"
+              type="text"
+              value={projectPath}
+              onChange={(e) => setProjectPath(e.target.value)}
+              placeholder="/path/to/project"
+              className={cn(
+                "w-full px-3 py-2 rounded-lg",
+                "bg-bg-secondary border border-border",
+                "text-text-primary placeholder:text-text-muted",
+                "focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              )}
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Leave empty to create a project without a local directory
+            </p>
+          </div>
+        )}
 
-        {createProject.error && (
+        {error && (
           <div className="text-sm text-accent-error">
-            Failed to create project. Please try again.
+            {mode === "clone"
+              ? "Failed to clone repository. Please check the URL and try again."
+              : "Failed to create project. Please try again."}
           </div>
         )}
 
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={!projectName.trim() || createProject.isPending}
+            disabled={
+              isPending ||
+              (mode === "local" && !projectName.trim()) ||
+              (mode === "clone" && !repoUrl.trim())
+            }
             className={cn(
               "px-4 py-2 rounded-lg font-medium",
               "bg-accent-primary text-white",
@@ -120,7 +262,13 @@ function CreateProjectPage() {
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
-            {createProject.isPending ? "Creating..." : "Create Project"}
+            {isPending
+              ? mode === "clone"
+                ? "Cloning..."
+                : "Creating..."
+              : mode === "clone"
+                ? "Clone Repository"
+                : "Create Project"}
           </button>
         </div>
       </form>

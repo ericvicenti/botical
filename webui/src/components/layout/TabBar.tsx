@@ -9,6 +9,8 @@ import {
   FileText,
   Terminal,
   GitCompare,
+  GitCommit,
+  GitPullRequestCreate,
   Settings,
   Plus,
   MessageSquare,
@@ -29,6 +31,8 @@ const TAB_ICONS = {
   settings: Settings,
   "create-project": Plus,
   task: MessageSquare,
+  commit: GitCommit,
+  "review-commit": GitPullRequestCreate,
 } as const;
 
 export function TabBar() {

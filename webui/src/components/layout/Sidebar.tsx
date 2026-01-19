@@ -9,6 +9,7 @@ import { TasksPanel } from "@/components/tasks/TasksPanel";
 import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
 import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { GitPanel as GitPanelComponent } from "@/components/git/GitPanel";
 import { useProjects } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -393,18 +394,18 @@ function FilesPanel({ selectedProjectId }: { selectedProjectId: string | null })
 }
 
 function GitPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
-  return (
-    <div className="p-2">
-      <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
-        Source Control
-      </div>
-      {selectedProjectId ? (
-        <div className="text-sm text-text-muted">Git integration coming soon</div>
-      ) : (
+  if (!selectedProjectId) {
+    return (
+      <div className="p-2">
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
+          Source Control
+        </div>
         <div className="text-sm text-text-muted">Select a project to view git status</div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return <GitPanelComponent projectId={selectedProjectId} />;
 }
 
 function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {

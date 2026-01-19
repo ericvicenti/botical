@@ -741,3 +741,312 @@ export function useRestartService() {
     },
   });
 }
+
+// Git
+import type { GitStatus, BranchInfo, CommitInfo, CommitResult, CloneResult } from "./types";
+
+export function useGitStatus(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "status"],
+    queryFn: async () => {
+      const response = await apiClientRaw<GitStatus>(
+        `/api/projects/${projectId}/git/status`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+    refetchInterval: 5000, // Poll for changes every 5 seconds
+  });
+}
+
+export function useGitBranches(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "branches"],
+    queryFn: async () => {
+      const response = await apiClientRaw<BranchInfo[]>(
+        `/api/projects/${projectId}/git/branches`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useGitLog(projectId: string, limit: number = 20) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "log", limit],
+    queryFn: async () => {
+      const response = await apiClientRaw<CommitInfo[]>(
+        `/api/projects/${projectId}/git/log?limit=${limit}`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useGitDiff(projectId: string, file?: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "diff", file],
+    queryFn: async () => {
+      const params = file ? `?file=${encodeURIComponent(file)}` : "";
+      const response = await apiClientRaw<{ diff: string }>(
+        `/api/projects/${projectId}/git/diff${params}`
+      );
+      return response.data.diff;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useGitCommit(projectId: string, hash: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "commits", hash],
+    queryFn: () =>
+      apiClient<CommitInfo>(`/api/projects/${projectId}/git/commits/${hash}`),
+    enabled: !!projectId && !!hash,
+  });
+}
+
+export function useGitCommitDiff(projectId: string, hash: string, file?: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "git", "commits", hash, "diff", file],
+    queryFn: async () => {
+      const params = file ? `?file=${encodeURIComponent(file)}` : "";
+      const response = await apiClientRaw<{ diff: string }>(
+        `/api/projects/${projectId}/git/commits/${hash}/diff${params}`
+      );
+      return response.data.diff;
+    },
+    enabled: !!projectId && !!hash,
+  });
+}
+
+export function useCheckoutBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, branch }: { projectId: string; branch: string }) =>
+      apiClient<{ branch: string; status: GitStatus }>(
+        `/api/projects/${projectId}/git/checkout`,
+        {
+          method: "POST",
+          body: JSON.stringify({ branch }),
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git"],
+      });
+    },
+  });
+}
+
+export function useCreateBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      from,
+    }: {
+      projectId: string;
+      name: string;
+      from?: string;
+    }) =>
+      apiClient<BranchInfo>(`/api/projects/${projectId}/git/branches`, {
+        method: "POST",
+        body: JSON.stringify({ name, from }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "branches"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
+    },
+  });
+}
+
+export function useDeleteBranch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      force = false,
+    }: {
+      projectId: string;
+      name: string;
+      force?: boolean;
+    }) =>
+      apiClient<{ deleted: string }>(
+        `/api/projects/${projectId}/git/branches/${encodeURIComponent(name)}${force ? "?force=true" : ""}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "branches"],
+      });
+    },
+  });
+}
+
+export function useCreateCommit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, message }: { projectId: string; message: string }) =>
+      apiClient<CommitResult>(`/api/projects/${projectId}/git/commit`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git"],
+      });
+    },
+  });
+}
+
+export function useGitPush() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      remote = "origin",
+      branch,
+      setUpstream = false,
+    }: {
+      projectId: string;
+      remote?: string;
+      branch?: string;
+      setUpstream?: boolean;
+    }) =>
+      apiClient<{ pushed: boolean }>(`/api/projects/${projectId}/git/push`, {
+        method: "POST",
+        body: JSON.stringify({ remote, branch, setUpstream }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
+    },
+  });
+}
+
+export function useGitPull() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      remote = "origin",
+      branch,
+    }: {
+      projectId: string;
+      remote?: string;
+      branch?: string;
+    }) =>
+      apiClient<{ files: string[]; summary: { changes: number; insertions: number; deletions: number } }>(
+        `/api/projects/${projectId}/git/pull`,
+        {
+          method: "POST",
+          body: JSON.stringify({ remote, branch }),
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "files"],
+      });
+    },
+  });
+}
+
+export function useGitFetch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      remote = "origin",
+    }: {
+      projectId: string;
+      remote?: string;
+    }) =>
+      apiClient<{ fetched: boolean }>(`/api/projects/${projectId}/git/fetch`, {
+        method: "POST",
+        body: JSON.stringify({ remote }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
+    },
+  });
+}
+
+export function useDiscardChanges() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      file,
+      all = false,
+    }: {
+      projectId: string;
+      file?: string;
+      all?: boolean;
+    }) =>
+      apiClient<{ discarded: boolean }>(`/api/projects/${projectId}/git/discard`, {
+        method: "POST",
+        body: JSON.stringify({ file, all }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "diff"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "files"],
+      });
+    },
+  });
+}
+
+export function useCloneProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      url,
+      name,
+      path,
+      branch,
+      ownerId,
+    }: {
+      url: string;
+      name?: string;
+      path?: string;
+      branch?: string;
+      ownerId: string;
+    }) =>
+      apiClient<{ project: Project; clone: CloneResult }>("/api/projects/clone", {
+        method: "POST",
+        body: JSON.stringify({ url, name, path, branch, ownerId }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}

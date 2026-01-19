@@ -9,7 +9,9 @@ export type TabType =
   | "diff"
   | "settings"
   | "create-project"
-  | "task";
+  | "task"
+  | "commit"
+  | "review-commit";
 
 export type SettingsPage = "api-keys" | "theme" | "shortcuts" | "about";
 
@@ -35,4 +37,6 @@ export type TabData =
   | { type: "diff"; path: string; projectId: string; base?: string }
   | { type: "settings"; page: SettingsPage }
   | { type: "create-project" }
-  | { type: "task"; sessionId: string; projectId: string; title: string };
+  | { type: "task"; sessionId: string; projectId: string; title: string }
+  | { type: "commit"; hash: string; projectId: string }
+  | { type: "review-commit"; projectId: string };
