@@ -62,8 +62,17 @@ export const viewCommands: Command[] = [
     },
   },
   {
+    id: "view.setThemeSystem",
+    label: "Appearance: System Theme",
+    description: "Match your operating system theme",
+    category: "view",
+    execute: (ctx) => {
+      ctx.ui.setTheme("system");
+    },
+  },
+  {
     id: "view.setThemeDark",
-    label: "Set Dark Theme",
+    label: "Appearance: Dark Theme",
     description: "Switch to dark theme",
     category: "view",
     execute: (ctx) => {
@@ -72,7 +81,7 @@ export const viewCommands: Command[] = [
   },
   {
     id: "view.setThemeLight",
-    label: "Set Light Theme",
+    label: "Appearance: Light Theme",
     description: "Switch to light theme",
     category: "view",
     execute: (ctx) => {

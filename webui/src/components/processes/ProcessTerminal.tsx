@@ -1,10 +1,59 @@
 import { useEffect, useRef } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { useProcessOutput } from "@/hooks/useProcessOutput";
+import { useUI } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
+
+const darkTheme: ITheme = {
+  background: "#1a1a1a",
+  foreground: "#e0e0e0",
+  cursor: "#e0e0e0",
+  cursorAccent: "#1a1a1a",
+  selectionBackground: "#3a3a3a",
+  black: "#1a1a1a",
+  red: "#e06c75",
+  green: "#98c379",
+  yellow: "#e5c07b",
+  blue: "#61afef",
+  magenta: "#c678dd",
+  cyan: "#56b6c2",
+  white: "#abb2bf",
+  brightBlack: "#545862",
+  brightRed: "#e06c75",
+  brightGreen: "#98c379",
+  brightYellow: "#e5c07b",
+  brightBlue: "#61afef",
+  brightMagenta: "#c678dd",
+  brightCyan: "#56b6c2",
+  brightWhite: "#c8ccd4",
+};
+
+const lightTheme: ITheme = {
+  background: "#eff1f5",
+  foreground: "#4c4f69",
+  cursor: "#4c4f69",
+  cursorAccent: "#eff1f5",
+  selectionBackground: "#ccd0da",
+  black: "#5c5f77",
+  red: "#d20f39",
+  green: "#40a02b",
+  yellow: "#df8e1d",
+  blue: "#1e66f5",
+  magenta: "#8839ef",
+  cyan: "#179299",
+  white: "#acb0be",
+  brightBlack: "#6c6f85",
+  brightRed: "#d20f39",
+  brightGreen: "#40a02b",
+  brightYellow: "#df8e1d",
+  brightBlue: "#1e66f5",
+  brightMagenta: "#8839ef",
+  brightCyan: "#179299",
+  brightWhite: "#bcc0cc",
+};
 
 interface ProcessTerminalProps {
   processId: string;
@@ -22,10 +71,13 @@ export function ProcessTerminal({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const lastOutputLengthRef = useRef(0);
 
+  const { resolvedTheme } = useUI();
   const { output, isRunning, status, write, resize } = useProcessOutput({
     processId,
     projectId,
   });
+
+  const terminalTheme = resolvedTheme === "light" ? lightTheme : darkTheme;
 
   // Initialize xterm.js
   useEffect(() => {
@@ -36,29 +88,7 @@ export function ProcessTerminal({
       fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       fontSize: 13,
       lineHeight: 1.2,
-      theme: {
-        background: "#1a1a1a",
-        foreground: "#e0e0e0",
-        cursor: "#e0e0e0",
-        cursorAccent: "#1a1a1a",
-        selectionBackground: "#3a3a3a",
-        black: "#1a1a1a",
-        red: "#e06c75",
-        green: "#98c379",
-        yellow: "#e5c07b",
-        blue: "#61afef",
-        magenta: "#c678dd",
-        cyan: "#56b6c2",
-        white: "#abb2bf",
-        brightBlack: "#545862",
-        brightRed: "#e06c75",
-        brightGreen: "#98c379",
-        brightYellow: "#e5c07b",
-        brightBlue: "#61afef",
-        brightMagenta: "#c678dd",
-        brightCyan: "#56b6c2",
-        brightWhite: "#c8ccd4",
-      },
+      theme: terminalTheme,
     });
 
     const fitAddon = new FitAddon();
@@ -115,6 +145,13 @@ export function ProcessTerminal({
     }
   }, [isRunning]);
 
+  // Update terminal theme when it changes
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.options.theme = terminalTheme;
+    }
+  }, [terminalTheme]);
+
   // Write new output to terminal
   useEffect(() => {
     if (!xtermRef.current) return;
@@ -145,7 +182,7 @@ export function ProcessTerminal({
       <div
         ref={terminalRef}
         className="h-full w-full"
-        style={{ backgroundColor: "#1a1a1a" }}
+        style={{ backgroundColor: terminalTheme.background }}
       />
       {!isRunning && status && (
         <div

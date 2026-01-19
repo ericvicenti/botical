@@ -8,6 +8,8 @@ import {
   highlightActiveLineGutter,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
@@ -16,8 +18,133 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { useFileContent, useSaveFile, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
+import { useUI } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
 import { ContentHeader } from "@/components/layout/ContentHeader";
+
+// Light theme for CodeMirror
+const lightTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: "#eff1f5",
+      color: "#4c4f69",
+    },
+    ".cm-content": {
+      caretColor: "#4c4f69",
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftColor: "#4c4f69",
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
+      {
+        backgroundColor: "#ccd0da",
+      },
+    ".cm-panels": {
+      backgroundColor: "#e6e9ef",
+      color: "#4c4f69",
+    },
+    ".cm-panels.cm-panels-top": {
+      borderBottom: "1px solid #ccd0da",
+    },
+    ".cm-panels.cm-panels-bottom": {
+      borderTop: "1px solid #ccd0da",
+    },
+    ".cm-searchMatch": {
+      backgroundColor: "#df8e1d40",
+      outline: "1px solid #df8e1d80",
+    },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "#40a02b40",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "#e6e9ef80",
+    },
+    ".cm-selectionMatch": {
+      backgroundColor: "#ccd0da",
+    },
+    "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {
+      backgroundColor: "#ccd0da",
+    },
+    ".cm-gutters": {
+      backgroundColor: "#e6e9ef",
+      color: "#8c8fa1",
+      border: "none",
+      borderRight: "1px solid #ccd0da",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "#ccd0da80",
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "transparent",
+      border: "none",
+      color: "#8c8fa1",
+    },
+    ".cm-tooltip": {
+      border: "1px solid #ccd0da",
+      backgroundColor: "#e6e9ef",
+    },
+    ".cm-tooltip .cm-tooltip-arrow:before": {
+      borderTopColor: "transparent",
+      borderBottomColor: "transparent",
+    },
+    ".cm-tooltip .cm-tooltip-arrow:after": {
+      borderTopColor: "#e6e9ef",
+      borderBottomColor: "#e6e9ef",
+    },
+    ".cm-tooltip-autocomplete": {
+      "& > ul > li[aria-selected]": {
+        backgroundColor: "#ccd0da",
+        color: "#4c4f69",
+      },
+    },
+  },
+  { dark: false }
+);
+
+// Light syntax highlighting (Catppuccin Latte)
+const lightHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: "#8839ef" },
+  { tag: tags.controlKeyword, color: "#8839ef" },
+  { tag: tags.operatorKeyword, color: "#8839ef" },
+  { tag: tags.definitionKeyword, color: "#8839ef" },
+  { tag: tags.moduleKeyword, color: "#8839ef" },
+  { tag: tags.comment, color: "#9ca0b0", fontStyle: "italic" },
+  { tag: tags.lineComment, color: "#9ca0b0", fontStyle: "italic" },
+  { tag: tags.blockComment, color: "#9ca0b0", fontStyle: "italic" },
+  { tag: tags.docComment, color: "#9ca0b0", fontStyle: "italic" },
+  { tag: tags.string, color: "#40a02b" },
+  { tag: tags.special(tags.string), color: "#40a02b" },
+  { tag: tags.number, color: "#fe640b" },
+  { tag: tags.integer, color: "#fe640b" },
+  { tag: tags.float, color: "#fe640b" },
+  { tag: tags.bool, color: "#fe640b" },
+  { tag: tags.null, color: "#fe640b" },
+  { tag: tags.variableName, color: "#4c4f69" },
+  { tag: tags.definition(tags.variableName), color: "#1e66f5" },
+  { tag: tags.function(tags.variableName), color: "#1e66f5" },
+  { tag: tags.typeName, color: "#df8e1d" },
+  { tag: tags.className, color: "#df8e1d" },
+  { tag: tags.namespace, color: "#df8e1d" },
+  { tag: tags.tagName, color: "#8839ef" },
+  { tag: tags.attributeName, color: "#179299" },
+  { tag: tags.attributeValue, color: "#40a02b" },
+  { tag: tags.propertyName, color: "#1e66f5" },
+  { tag: tags.definition(tags.propertyName), color: "#1e66f5" },
+  { tag: tags.operator, color: "#179299" },
+  { tag: tags.punctuation, color: "#5c5f77" },
+  { tag: tags.bracket, color: "#5c5f77" },
+  { tag: tags.angleBracket, color: "#5c5f77" },
+  { tag: tags.squareBracket, color: "#5c5f77" },
+  { tag: tags.paren, color: "#5c5f77" },
+  { tag: tags.brace, color: "#5c5f77" },
+  { tag: tags.separator, color: "#5c5f77" },
+  { tag: tags.regexp, color: "#d20f39" },
+  { tag: tags.escape, color: "#ea76cb" },
+  { tag: tags.self, color: "#d20f39" },
+  { tag: tags.atom, color: "#179299" },
+  { tag: tags.meta, color: "#e64553" },
+  { tag: tags.processingInstruction, color: "#8839ef" },
+]);
 
 interface CodeEditorProps {
   projectId: string;
@@ -60,6 +187,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
   const { data: project } = useProject(projectId);
   const saveFile = useSaveFile();
   const { markDirty, getDirtyContent, setDirtyContent } = useTabs();
+  const { resolvedTheme } = useUI();
 
   // Generate tab ID for this file
   const tabId = `file:${projectId}:${path}`;
@@ -123,6 +251,11 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       }
     });
 
+    // Choose theme based on current UI preference
+    const editorTheme = resolvedTheme === "light"
+      ? [lightTheme, syntaxHighlighting(lightHighlightStyle)]
+      : [oneDark];
+
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
@@ -132,7 +265,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
         history(),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         getLanguageExtension(path),
-        oneDark,
+        ...editorTheme,
         updateListener,
         EditorView.theme({
           "&": {
@@ -142,10 +275,6 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
           ".cm-scroller": {
             fontFamily:
               'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-          },
-          ".cm-gutters": {
-            backgroundColor: "var(--bg-secondary)",
-            borderRight: "1px solid var(--border)",
           },
         }),
       ],
@@ -164,7 +293,7 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
     };
     // Note: getDirtyContent is intentionally read once when fileData changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileData, path, tabId]);
+  }, [fileData, path, tabId, resolvedTheme]);
 
   // Keyboard shortcut for save
   useEffect(() => {
