@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
 import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
+import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { useProjects } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
@@ -16,6 +17,7 @@ const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label:
   { id: "files", icon: Files, label: "Files" },
   { id: "git", icon: GitBranch, label: "Git" },
   { id: "run", icon: Play, label: "Run" },
+  { id: "services", icon: Radio, label: "Services" },
 ];
 
 export function Sidebar() {
@@ -341,6 +343,8 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       return <GitPanel selectedProjectId={selectedProjectId} />;
     case "run":
       return <RunPanel selectedProjectId={selectedProjectId} />;
+    case "services":
+      return <ServicesPanelWrapper selectedProjectId={selectedProjectId} />;
     case "settings":
       return <SettingsPanel />;
     default:
@@ -464,13 +468,28 @@ function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
     return (
       <div className="p-2">
         <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
-          Commands & Services
+          Commands
         </div>
-        <div className="text-sm text-text-muted">Select a project to manage processes</div>
+        <div className="text-sm text-text-muted">Select a project to run commands</div>
       </div>
     );
   }
 
   return <ProcessesPanel projectId={selectedProjectId} />;
+}
+
+function ServicesPanelWrapper({ selectedProjectId }: { selectedProjectId: string | null }) {
+  if (!selectedProjectId) {
+    return (
+      <div className="p-2">
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
+          Services
+        </div>
+        <div className="text-sm text-text-muted">Select a project to manage services</div>
+      </div>
+    );
+  }
+
+  return <ServicesPanel projectId={selectedProjectId} />;
 }
 

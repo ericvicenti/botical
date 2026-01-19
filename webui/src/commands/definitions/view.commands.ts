@@ -52,6 +52,16 @@ export const viewCommands: Command[] = [
     },
   },
   {
+    id: "view.showServicesPanel",
+    label: "Show Services Panel",
+    description: "Switch to the Services panel in the sidebar",
+    category: "view",
+    shortcut: { key: "5", alt: true },
+    execute: (ctx) => {
+      ctx.ui.setSidebarPanel("services");
+    },
+  },
+  {
     id: "view.showSettingsPanel",
     label: "Show Settings Panel",
     description: "Switch to the Settings panel in the sidebar",
