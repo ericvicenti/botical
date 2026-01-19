@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { generateId, IdPrefixes } from "@/utils/id.ts";
 import { NotFoundError, ValidationError } from "@/utils/errors.ts";
-import { ptyManager } from "./pty-manager.ts";
+import { bunProcessManager } from "./bun-process-manager.ts";
 import { EventBus } from "@/bus/index.ts";
 import type { Database } from "bun:sqlite";
 
@@ -229,8 +229,8 @@ export class ProcessService {
 
     const projectId = data.projectId;
 
-    // Start PTY
-    ptyManager.create(id, data.command, {
+    // Start process
+    bunProcessManager.create(id, data.command, {
       cwd,
       env: data.env,
       cols: data.cols,
@@ -254,7 +254,7 @@ export class ProcessService {
       },
       onExit: (exitCode) => {
         this.markExited(db, id, projectId, exitCode);
-        ptyManager.cleanup(id);
+        bunProcessManager.cleanup(id);
       },
     });
 
@@ -280,7 +280,7 @@ export class ProcessService {
       throw new ValidationError("Can only kill running or starting processes");
     }
 
-    ptyManager.kill(processId);
+    bunProcessManager.kill(processId);
 
     const now = Date.now();
     db.prepare(
@@ -303,8 +303,8 @@ export class ProcessService {
       throw new ValidationError("Can only write to running processes");
     }
 
-    if (!ptyManager.write(processId, data)) {
-      throw new ValidationError("PTY not found for process");
+    if (!bunProcessManager.write(processId, data)) {
+      throw new ValidationError("Process not found");
     }
   }
 
@@ -323,8 +323,8 @@ export class ProcessService {
       throw new ValidationError("Can only resize running processes");
     }
 
-    if (!ptyManager.resize(processId, cols, rows)) {
-      throw new ValidationError("PTY not found for process");
+    if (!bunProcessManager.resize(processId, cols, rows)) {
+      throw new ValidationError("Process not found");
     }
 
     // Update stored dimensions
@@ -479,7 +479,7 @@ export class ProcessService {
       .all(scope, scopeId) as ProcessRow[];
 
     for (const row of processes) {
-      ptyManager.kill(row.id);
+      bunProcessManager.kill(row.id);
     }
 
     const now = Date.now();
