@@ -1,0 +1,27 @@
+{
+  "name": "@iris/app-sdk",
+  "version": "0.1.0",
+  "description": "SDK for building Iris Apps with Server-Defined Rendering",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "keywords": [
+    "iris",
+    "app",
+    "sdk",
+    "sdr",
+    "server-defined-rendering"
+  ],
+  "peerDependencies": {
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

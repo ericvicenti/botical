@@ -1,0 +1,27 @@
+{
+  "name": "counter",
+  "displayName": "Counter",
+  "version": "0.1.0",
+  "description": "A simple counter app demonstrating Iris Apps with SDR",
+  "icon": "🔢",
+  "server": "server.ts",
+  "tools": [
+    {
+      "name": "increment",
+      "description": "Increment the counter by a specified amount"
+    },
+    {
+      "name": "decrement",
+      "description": "Decrement the counter by a specified amount"
+    },
+    {
+      "name": "reset",
+      "description": "Reset the counter to zero"
+    },
+    {
+      "name": "set",
+      "description": "Set the counter to a specific value"
+    }
+  ],
+  "permissions": []
+}
