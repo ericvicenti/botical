@@ -21,6 +21,8 @@ export function generateTabId(data: TabData): string {
       return `mission:${data.missionId}`;
     case "file":
       return `file:${data.projectId}:${data.path}`;
+    case "folder":
+      return `folder:${data.projectId}:${data.path}`;
     case "process":
       return `process:${data.processId}`;
     case "diff":
@@ -47,6 +49,8 @@ export function generateTabLabel(data: TabData): string {
       return data.missionTitle;
     case "file":
       return data.path.split("/").pop() || "File";
+    case "folder":
+      return data.path.split("/").pop() || "Folder";
     case "process":
       return data.label || "Process";
     case "diff":
@@ -73,6 +77,8 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "file":
       return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
+    case "folder":
+      return { to: `/folders/${tab.data.projectId}/${tab.data.path}` };
     case "process":
       return { to: "/processes/$processId", params: { processId: tab.data.processId } };
     case "task":
@@ -129,6 +135,17 @@ export function parseUrlToTabData(pathname: string): { data: TabData; label: str
       type: "file",
       data: { type: "file", projectId: fileMatch[1], path },
       label: path.split("/").pop() || "File",
+    };
+  }
+
+  // /folders/:projectId/:path
+  const folderMatch = pathname.match(/^\/folders\/([^/]+)\/(.*)$/);
+  if (folderMatch) {
+    const path = folderMatch[2] || "";
+    return {
+      type: "folder",
+      data: { type: "folder", projectId: folderMatch[1], path },
+      label: path.split("/").pop() || "Folder",
     };
   }
 

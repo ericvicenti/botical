@@ -241,6 +241,13 @@ function FileTreeNode({
   const handleClick = useCallback(() => {
     if (isRenaming) return;
     if (file.type === "directory") {
+      // Open folder tab and toggle expansion
+      openTab({
+        type: "folder",
+        projectId,
+        path: file.path,
+      });
+      navigate({ to: `/folders/${projectId}/${file.path}` });
       setExpanded(!expanded);
     } else {
       openTab({

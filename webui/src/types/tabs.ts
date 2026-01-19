@@ -3,6 +3,7 @@ export type TabType =
   | "project"
   | "mission"
   | "file"
+  | "folder"
   | "process"
   | "diff"
   | "settings"
@@ -25,6 +26,7 @@ export type TabData =
   | { type: "project"; projectId: string; projectName: string }
   | { type: "mission"; missionId: string; projectId: string; missionTitle: string }
   | { type: "file"; path: string; projectId: string }
+  | { type: "folder"; path: string; projectId: string }
   | { type: "process"; processId: string; projectId: string; label?: string }
   | { type: "diff"; path: string; projectId: string; base?: string }
   | { type: "settings"; page: SettingsPage }

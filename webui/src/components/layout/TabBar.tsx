@@ -22,6 +22,7 @@ const TAB_ICONS = {
   project: Folder,
   mission: Target,
   file: FileText,
+  folder: Folder,
   process: Terminal,
   diff: GitCompare,
   settings: Settings,

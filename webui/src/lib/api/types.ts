@@ -147,6 +147,28 @@ export interface Service {
   runningProcessId: string | null;
 }
 
+export interface DetailedFileEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory" | "symlink";
+  size: number;
+  modified: number;
+  created: number;
+  accessed: number;
+  mode: number;
+  permissions: string;
+  isHidden: boolean;
+}
+
+export interface FolderDetails {
+  path: string;
+  name: string;
+  totalSize: number;
+  fileCount: number;
+  folderCount: number;
+  entries: DetailedFileEntry[];
+}
+
 export interface ListResponse<T> {
   data: T[];
   meta: {

@@ -55,6 +55,79 @@ const MoveBodySchema = z.object({
 });
 
 /**
+ * Detailed file entry with ls -al style info
+ */
+interface DetailedFileEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory" | "symlink";
+  size: number;
+  modified: number;
+  created: number;
+  accessed: number;
+  mode: number;
+  permissions: string;
+  isHidden: boolean;
+}
+
+/**
+ * Folder details response
+ */
+interface FolderDetails {
+  path: string;
+  name: string;
+  totalSize: number;
+  fileCount: number;
+  folderCount: number;
+  entries: DetailedFileEntry[];
+}
+
+/**
+ * Convert mode to permission string like -rwxr-xr-x
+ */
+function modeToPermissions(mode: number, isDirectory: boolean): string {
+  const types = isDirectory ? "d" : "-";
+  const perms = [
+    (mode & 0o400) ? "r" : "-",
+    (mode & 0o200) ? "w" : "-",
+    (mode & 0o100) ? "x" : "-",
+    (mode & 0o040) ? "r" : "-",
+    (mode & 0o020) ? "w" : "-",
+    (mode & 0o010) ? "x" : "-",
+    (mode & 0o004) ? "r" : "-",
+    (mode & 0o002) ? "w" : "-",
+    (mode & 0o001) ? "x" : "-",
+  ];
+  return types + perms.join("");
+}
+
+/**
+ * Calculate directory size recursively
+ */
+async function calculateDirSize(dirPath: string): Promise<number> {
+  let totalSize = 0;
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name);
+      try {
+        if (entry.isDirectory()) {
+          totalSize += await calculateDirSize(entryPath);
+        } else if (entry.isFile()) {
+          const stat = await fs.stat(entryPath);
+          totalSize += stat.size;
+        }
+      } catch {
+        // Skip entries we can't access
+      }
+    }
+  } catch {
+    // Return 0 if we can't read the directory
+  }
+  return totalSize;
+}
+
+/**
  * GET /api/projects/:projectId/files
  * List files in a directory
  */
@@ -131,6 +204,114 @@ files.get("/:projectId/files", async (c) => {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return c.json({ data: [] });
+    }
+    throw err;
+  }
+});
+
+/**
+ * GET /api/projects/:projectId/folders
+ * Get detailed folder information (ls -al and du -sh style)
+ */
+files.get("/:projectId/folders", async (c) => {
+  const { projectId } = c.req.param();
+  const rawQuery = { path: c.req.query("path") };
+  const queryResult = ListQuerySchema.safeParse(rawQuery);
+
+  if (!queryResult.success) {
+    throw new ValidationError(
+      queryResult.error.errors[0]?.message || "Invalid query parameters"
+    );
+  }
+
+  const { path: dirPath } = queryResult.data;
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    return c.json({ data: null });
+  }
+
+  const fullPath = resolveProjectPath(project.path, dirPath);
+
+  try {
+    const stat = await fs.stat(fullPath);
+    if (!stat.isDirectory()) {
+      throw new ValidationError("Path is not a directory");
+    }
+
+    // Read all entries including hidden files
+    const entries = await fs.readdir(fullPath, { withFileTypes: true });
+    const detailedEntries: DetailedFileEntry[] = [];
+    let fileCount = 0;
+    let folderCount = 0;
+    let totalSize = 0;
+
+    for (const entry of entries) {
+      const entryPath = dirPath ? path.join(dirPath, entry.name) : entry.name;
+      const fullEntryPath = path.join(fullPath, entry.name);
+
+      try {
+        const entryStat = await fs.lstat(fullEntryPath);
+        const isDirectory = entry.isDirectory();
+        const isSymlink = entryStat.isSymbolicLink();
+
+        let size = entryStat.size;
+        if (isDirectory) {
+          // Calculate directory size (can be slow for large dirs)
+          size = await calculateDirSize(fullEntryPath);
+          folderCount++;
+        } else {
+          fileCount++;
+          totalSize += size;
+        }
+
+        detailedEntries.push({
+          name: entry.name,
+          path: entryPath,
+          type: isSymlink ? "symlink" : (isDirectory ? "directory" : "file"),
+          size,
+          modified: entryStat.mtimeMs,
+          created: entryStat.birthtimeMs,
+          accessed: entryStat.atimeMs,
+          mode: entryStat.mode,
+          permissions: modeToPermissions(entryStat.mode, isDirectory),
+          isHidden: entry.name.startsWith("."),
+        });
+      } catch {
+        // Skip entries we can't stat
+      }
+    }
+
+    // Sort: directories first, then by name
+    detailedEntries.sort((a, b) => {
+      if (a.type !== b.type) {
+        if (a.type === "directory") return -1;
+        if (b.type === "directory") return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    const folderDetails: FolderDetails = {
+      path: dirPath || "/",
+      name: dirPath ? path.basename(dirPath) : project.name,
+      totalSize: totalSize + detailedEntries
+        .filter(e => e.type === "directory")
+        .reduce((sum, e) => sum + e.size, 0),
+      fileCount,
+      folderCount,
+      entries: detailedEntries,
+    };
+
+    return c.json({ data: folderDetails });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new NotFoundError("Folder", dirPath);
     }
     throw err;
   }

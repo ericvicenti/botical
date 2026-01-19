@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientRaw } from "./client";
-import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart } from "./types";
+import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails } from "./types";
 
 // Projects
 export function useProjects() {
@@ -406,6 +406,20 @@ export function useFiles(projectId: string, dirPath: string = "") {
       const params = dirPath ? `?path=${encodeURIComponent(dirPath)}` : "";
       const response = await apiClientRaw<FileEntry[]>(
         `/api/projects/${projectId}/files${params}`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useFolderDetails(projectId: string, folderPath: string = "") {
+  return useQuery({
+    queryKey: ["projects", projectId, "folders", folderPath],
+    queryFn: async () => {
+      const params = folderPath ? `?path=${encodeURIComponent(folderPath)}` : "";
+      const response = await apiClientRaw<FolderDetails>(
+        `/api/projects/${projectId}/folders${params}`
       );
       return response.data;
     },
