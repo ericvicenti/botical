@@ -755,7 +755,7 @@ export function useGitStatus(projectId: string) {
       return response.data;
     },
     enabled: !!projectId,
-    refetchInterval: 5000, // Poll for changes every 5 seconds
+    refetchInterval: 2000, // Poll for changes every 2 seconds
   });
 }
 

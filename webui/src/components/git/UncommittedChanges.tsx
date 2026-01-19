@@ -1,4 +1,5 @@
 import { FileIcon, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, RotateCcw } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import type { FileChange, FileStatus } from "@/lib/api/types";
 import { useDiscardChanges } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
@@ -49,6 +50,7 @@ function getStatusLabel(status: FileStatus): string {
 
 export function UncommittedChanges({ projectId, files, onCommitClick }: UncommittedChangesProps) {
   const { openPreviewTab } = useTabs();
+  const navigate = useNavigate();
   const discardMutation = useDiscardChanges();
 
   const handleFileClick = (file: FileChange) => {
@@ -58,6 +60,7 @@ export function UncommittedChanges({ projectId, files, onCommitClick }: Uncommit
       projectId,
       path: file.path,
     });
+    navigate({ to: `/files/${projectId}/${file.path}` });
   };
 
   const handleDiscardFile = (e: React.MouseEvent, file: FileChange) => {

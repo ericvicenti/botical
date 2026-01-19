@@ -266,7 +266,7 @@ export class GitService {
     const git = this.getGit(projectPath);
     const limit = options.limit || 50;
 
-    const logOptions: string[] = [`-n ${limit}`, "--date=unix"];
+    const logOptions: string[] = [`-n ${limit}`];
 
     if (options.file) {
       logOptions.push("--", options.file);
@@ -281,7 +281,7 @@ export class GitService {
       body: commit.body || undefined,
       author: commit.author_name,
       email: commit.author_email,
-      date: parseInt(commit.date) * 1000, // Convert to milliseconds
+      date: new Date(commit.date).getTime(), // Parse date string to milliseconds
     }));
   }
 
@@ -295,7 +295,7 @@ export class GitService {
     const git = this.getGit(projectPath);
 
     try {
-      const log = await git.log(["-1", "--date=unix", hash]);
+      const log = await git.log(["-1", hash]);
       if (!log.latest) return null;
 
       // Get files changed in this commit
@@ -329,7 +329,7 @@ export class GitService {
         body: log.latest.body || undefined,
         author: log.latest.author_name,
         email: log.latest.author_email,
-        date: parseInt(log.latest.date) * 1000,
+        date: new Date(log.latest.date).getTime(), // Parse date string to milliseconds
         files,
       };
     } catch {
