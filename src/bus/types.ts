@@ -182,6 +182,7 @@ export const ProcessExitedEvent = z.object({
   type: z.literal("process.exited"),
   payload: z.object({
     id: z.string(),
+    projectId: z.string(),
     exitCode: z.number(),
     status: z.string(),
   }),
@@ -191,6 +192,7 @@ export const ProcessKilledEvent = z.object({
   type: z.literal("process.killed"),
   payload: z.object({
     id: z.string(),
+    projectId: z.string(),
   }),
 });
 

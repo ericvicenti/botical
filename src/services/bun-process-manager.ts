@@ -162,6 +162,7 @@ class BunProcessManager {
       // Bun's stdin is a FileSink when using stdin: "pipe"
       const stdin = instance.proc.stdin as FileSink;
       stdin.write(new TextEncoder().encode(data));
+      stdin.flush(); // Flush immediately to send data to process
       return true;
     }
     return false;

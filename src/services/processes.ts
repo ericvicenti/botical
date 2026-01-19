@@ -313,7 +313,7 @@ export class ProcessService {
 
     EventBus.publish(process.projectId, {
       type: "process.killed",
-      payload: { id: processId },
+      payload: { id: processId, projectId: process.projectId },
     });
   }
 
@@ -562,6 +562,7 @@ export class ProcessService {
       type: "process.exited",
       payload: {
         id: processId,
+        projectId,
         exitCode,
         status,
       },
