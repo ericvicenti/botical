@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy } from "lucide-react";
+import { useState, useMemo } from "react";
+import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, ChevronDown, ChevronRight } from "lucide-react";
 import { useGitStatus, useGitDiff, useCreateCommit } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import type { FileStatus } from "@/lib/api/types";
@@ -47,17 +47,50 @@ function getStatusLabel(status: FileStatus): string {
   }
 }
 
+// Parse diff into sections per file
+function parseDiffSections(diffText: string): Record<string, string> {
+  const sections: Record<string, string> = {};
+  if (!diffText) return sections;
+
+  const lines = diffText.split("\n");
+  let currentFile = "";
+  let currentSection: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git")) {
+      if (currentFile && currentSection.length > 0) {
+        sections[currentFile] = currentSection.join("\n");
+      }
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match) {
+        currentFile = match[2];
+      }
+      currentSection = [line];
+    } else {
+      currentSection.push(line);
+    }
+  }
+
+  if (currentFile && currentSection.length > 0) {
+    sections[currentFile] = currentSection.join("\n");
+  }
+
+  return sections;
+}
+
 function ReviewCommitPage() {
   const { projectId } = Route.useParams();
   const navigate = useNavigate();
   const { openTab, pinTab, tabs, activeTabId } = useTabs();
 
   const [commitMessage, setCommitMessage] = useState("");
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
 
   const { data: status, isLoading: statusLoading, error: statusError } = useGitStatus(projectId);
   const { data: diff } = useGitDiff(projectId);
   const commitMutation = useCreateCommit();
+
+  const diffSections = useMemo(() => parseDiffSections(diff || ""), [diff]);
 
   // Pin the tab when user starts typing
   const handleMessageChange = (value: string) => {
@@ -78,7 +111,6 @@ function ReviewCommitPage() {
       { projectId, message: commitMessage.trim() },
       {
         onSuccess: (result) => {
-          // Navigate to the new commit's view
           openTab({
             type: "commit",
             projectId,
@@ -90,8 +122,8 @@ function ReviewCommitPage() {
     );
   };
 
-  const toggleFileExpanded = (path: string) => {
-    setExpandedFiles((prev) => {
+  const toggleFileCollapsed = (path: string) => {
+    setCollapsedFiles((prev) => {
       const next = new Set(prev);
       if (next.has(path)) {
         next.delete(path);
@@ -138,55 +170,22 @@ function ReviewCommitPage() {
     );
   }
 
-  // Parse diff into sections per file
-  const parseDiffSections = (diffText: string) => {
-    const sections: Record<string, string> = {};
-    if (!diffText) return sections;
-
-    const lines = diffText.split("\n");
-    let currentFile = "";
-    let currentSection: string[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith("diff --git")) {
-        if (currentFile && currentSection.length > 0) {
-          sections[currentFile] = currentSection.join("\n");
-        }
-        // Extract filename from diff --git a/path b/path
-        const match = line.match(/diff --git a\/(.+) b\/(.+)/);
-        if (match) {
-          currentFile = match[2];
-        }
-        currentSection = [line];
-      } else {
-        currentSection.push(line);
-      }
-    }
-
-    if (currentFile && currentSection.length > 0) {
-      sections[currentFile] = currentSection.join("\n");
-    }
-
-    return sections;
-  };
-
-  const diffSections = parseDiffSections(diff || "");
-
   return (
     <div className="h-full flex flex-col">
       {/* Header with commit message */}
-      <div className="p-4 border-b border-border bg-bg-secondary">
+      <div className="p-4 border-b border-border bg-bg-secondary flex-shrink-0">
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Commit Message</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Commit Message</label>
               <textarea
                 value={commitMessage}
                 onChange={(e) => handleMessageChange(e.target.value)}
                 placeholder="Describe your changes..."
-                className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md resize-none focus:outline-none focus:border-accent"
+                className="w-full px-3 py-2 bg-bg-primary border border-border rounded-md resize-none focus:outline-none focus:border-accent-primary text-text-primary"
                 rows={3}
                 disabled={commitMutation.isPending}
+                autoFocus
               />
             </div>
             <div className="flex items-center justify-between">
@@ -197,7 +196,7 @@ function ReviewCommitPage() {
                 <button
                   type="button"
                   onClick={() => navigate({ to: "/projects/$projectId", params: { projectId } })}
-                  className="px-4 py-2 text-sm rounded-md hover:bg-bg-tertiary transition-colors"
+                  className="px-4 py-2 text-sm text-text-primary rounded-md hover:bg-bg-tertiary transition-colors"
                   disabled={commitMutation.isPending}
                 >
                   Cancel
@@ -205,7 +204,7 @@ function ReviewCommitPage() {
                 <button
                   type="submit"
                   disabled={!commitMessage.trim() || commitMutation.isPending}
-                  className="px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-accent-primary text-white text-sm font-medium rounded-md hover:bg-accent-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {commitMutation.isPending ? "Committing..." : "Commit"}
                 </button>
@@ -215,46 +214,56 @@ function ReviewCommitPage() {
         </form>
       </div>
 
-      {/* Changes list */}
+      {/* Changes list with diffs shown by default */}
       <div className="flex-1 overflow-auto">
         <div className="px-4 py-2 text-xs font-medium text-text-secondary uppercase tracking-wide bg-bg-secondary sticky top-0 border-b border-border">
           Changes
         </div>
         <div className="divide-y divide-border">
-          {status.files.map((file) => (
-            <div key={file.path} className="bg-bg-primary">
-              <button
-                onClick={() => toggleFileExpanded(file.path)}
-                className="w-full flex items-center gap-3 px-4 py-2 hover:bg-bg-tertiary text-left"
-              >
-                {getStatusIcon(file.status)}
-                <span className="flex-1 font-mono text-sm truncate">{file.path}</span>
-                <span className="text-xs text-text-secondary">{getStatusLabel(file.status)}</span>
-              </button>
-              {expandedFiles.has(file.path) && diffSections[file.path] && (
-                <div className="px-4 pb-3">
-                  <pre className="text-xs font-mono bg-bg-secondary p-3 rounded-md overflow-x-auto">
-                    {diffSections[file.path].split("\n").map((line, i) => (
-                      <div
-                        key={i}
-                        className={
-                          line.startsWith("+") && !line.startsWith("+++")
-                            ? "text-green-500"
-                            : line.startsWith("-") && !line.startsWith("---")
-                              ? "text-red-500"
-                              : line.startsWith("@@")
-                                ? "text-blue-500"
-                                : ""
-                        }
-                      >
-                        {line}
-                      </div>
-                    ))}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ))}
+          {status.files.map((file) => {
+            const isCollapsed = collapsedFiles.has(file.path);
+            const hasDiff = !!diffSections[file.path];
+
+            return (
+              <div key={file.path} className="bg-bg-primary">
+                <button
+                  onClick={() => toggleFileCollapsed(file.path)}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-bg-tertiary text-left"
+                >
+                  {hasDiff && (
+                    isCollapsed
+                      ? <ChevronRight className="w-4 h-4 text-text-secondary" />
+                      : <ChevronDown className="w-4 h-4 text-text-secondary" />
+                  )}
+                  {getStatusIcon(file.status)}
+                  <span className="flex-1 font-mono text-sm text-text-primary truncate">{file.path}</span>
+                  <span className="text-xs text-text-secondary">{getStatusLabel(file.status)}</span>
+                </button>
+                {!isCollapsed && diffSections[file.path] && (
+                  <div className="px-4 pb-3">
+                    <pre className="text-xs font-mono bg-bg-secondary p-3 rounded-md overflow-x-auto">
+                      {diffSections[file.path].split("\n").map((line, i) => (
+                        <div
+                          key={i}
+                          className={
+                            line.startsWith("+") && !line.startsWith("+++")
+                              ? "text-green-600 dark:text-green-400"
+                              : line.startsWith("-") && !line.startsWith("---")
+                                ? "text-red-600 dark:text-red-400"
+                                : line.startsWith("@@")
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : "text-text-primary"
+                          }
+                        >
+                          {line || " "}
+                        </div>
+                      ))}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

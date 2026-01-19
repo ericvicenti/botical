@@ -84,7 +84,7 @@ export function UncommittedChanges({ projectId, files, onCommitClick }: Uncommit
         </span>
         <button
           onClick={onCommitClick}
-          className="px-2 py-1 bg-accent text-white text-xs rounded hover:bg-accent/90 transition-colors"
+          className="px-2 py-1 bg-accent-primary text-white text-xs font-medium rounded hover:bg-accent-primary/90 transition-colors"
         >
           Commit All
         </button>

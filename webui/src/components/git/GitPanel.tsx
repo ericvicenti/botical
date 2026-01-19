@@ -1,4 +1,5 @@
 import { GitBranch, AlertCircle } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useGitStatus } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { BranchPicker } from "./BranchPicker";
@@ -12,12 +13,14 @@ interface GitPanelProps {
 export function GitPanel({ projectId }: GitPanelProps) {
   const { data: status, isLoading, error } = useGitStatus(projectId);
   const { openPreviewTab } = useTabs();
+  const navigate = useNavigate();
 
   const handleCommitClick = () => {
     openPreviewTab({
       type: "review-commit",
       projectId,
     });
+    navigate({ to: "/projects/$projectId/commit", params: { projectId } });
   };
 
   if (isLoading) {

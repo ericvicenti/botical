@@ -1,4 +1,5 @@
 import { GitCommit } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useGitLog } from "@/lib/api/queries";
 import type { CommitInfo } from "@/lib/api/types";
 import { useTabs } from "@/contexts/tabs";
@@ -36,6 +37,7 @@ function CommitItem({
   isSelected: boolean;
 }) {
   const { openPreviewTab, openTab } = useTabs();
+  const navigate = useNavigate();
 
   const handleClick = () => {
     openPreviewTab({
@@ -43,6 +45,7 @@ function CommitItem({
       projectId,
       hash: commit.hash,
     });
+    navigate({ to: "/projects/$projectId/commits/$hash", params: { projectId, hash: commit.hash } });
   };
 
   const handleDoubleClick = () => {
@@ -51,6 +54,7 @@ function CommitItem({
       projectId,
       hash: commit.hash,
     });
+    navigate({ to: "/projects/$projectId/commits/$hash", params: { projectId, hash: commit.hash } });
   };
 
   return (
@@ -64,7 +68,7 @@ function CommitItem({
       <GitCommit className="w-4 h-4 text-text-secondary mt-0.5 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-accent">{commit.hashShort}</span>
+          <span className="text-xs font-mono text-accent-primary">{commit.hashShort}</span>
           <span className="text-xs text-text-secondary">
             {formatRelativeTime(commit.date)}
           </span>

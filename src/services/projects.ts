@@ -57,7 +57,7 @@ function generateUniqueWorkspacePath(name: string): string {
 }
 
 /**
- * Initialize a workspace directory with git and a README
+ * Initialize a workspace directory with git, README, and gitignore
  */
 function initializeWorkspace(workspacePath: string, projectName: string): void {
   // Create the directory
@@ -80,8 +80,15 @@ A project managed by Iris.
       const readmePath = path.join(workspacePath, "README.md");
       fs.writeFileSync(readmePath, readmeContent, "utf-8");
 
-      // Add and commit the README
-      execSync("git add README.md", { cwd: workspacePath, stdio: "ignore" });
+      // Create .gitignore with .iris directory
+      const gitignoreContent = `# Iris project data
+.iris/
+`;
+      const gitignorePath = path.join(workspacePath, ".gitignore");
+      fs.writeFileSync(gitignorePath, gitignoreContent, "utf-8");
+
+      // Add and commit the initial files
+      execSync("git add README.md .gitignore", { cwd: workspacePath, stdio: "ignore" });
       execSync('git commit -m "Initial commit"', { cwd: workspacePath, stdio: "ignore" });
     } catch (error) {
       // Git init failed, but we still have a valid directory
@@ -244,8 +251,8 @@ export class ProjectService {
     if (projectPath && validated.type === "local" && !validated.path) {
       // Only initialize if we generated the path (not user-provided)
       initializeWorkspace(projectPath, validated.name);
-    } else if (projectPath && !fs.existsSync(projectPath)) {
-      // For user-provided paths, just create the directory
+    } else if (projectPath && validated.type === "local" && !fs.existsSync(projectPath)) {
+      // For user-provided local paths, just create the directory if it doesn't exist
       fs.mkdirSync(projectPath, { recursive: true });
     }
 
