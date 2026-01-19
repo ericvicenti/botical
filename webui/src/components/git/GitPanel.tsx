@@ -175,19 +175,21 @@ export function GitPanel({ projectId }: GitPanelProps) {
         )}
       </div>
 
-      {/* Uncommitted Changes */}
-      <div className="border-b border-border">
-        <div className="px-2 py-1">
-          <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-            Uncommitted Changes
+      {/* Uncommitted Changes - only show if there are changes */}
+      {status.files.length > 0 && (
+        <div className="border-b border-border">
+          <div className="px-2 py-1">
+            <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+              Uncommitted Changes
+            </div>
           </div>
+          <UncommittedChanges
+            projectId={projectId}
+            files={status.files}
+            onCommitClick={handleCommitClick}
+          />
         </div>
-        <UncommittedChanges
-          projectId={projectId}
-          files={status.files}
-          onCommitClick={handleCommitClick}
-        />
-      </div>
+      )}
 
       {/* Recent Commits */}
       <div className="flex-1 overflow-auto">

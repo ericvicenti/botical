@@ -71,11 +71,7 @@ export function UncommittedChanges({ projectId, files, onCommitClick }: Uncommit
   };
 
   if (files.length === 0) {
-    return (
-      <div className="px-3 py-4 text-sm text-text-secondary text-center">
-        No uncommitted changes
-      </div>
-    );
+    return null;
   }
 
   return (
