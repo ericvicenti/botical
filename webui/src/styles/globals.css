@@ -3,6 +3,38 @@
 @tailwind utilities;
 
 @layer base {
+  /* Dark theme (default) */
+  :root {
+    --color-bg-primary: #1e1e2e;
+    --color-bg-secondary: #181825;
+    --color-bg-elevated: #313244;
+    --color-bg-surface: #45475a;
+    --color-text-primary: #cdd6f4;
+    --color-text-secondary: #a6adc8;
+    --color-text-muted: #6c7086;
+    --color-accent-primary: #89b4fa;
+    --color-accent-success: #a6e3a1;
+    --color-accent-warning: #f9e2af;
+    --color-accent-error: #f38ba8;
+    --color-border: #45475a;
+  }
+
+  /* Light theme */
+  .light {
+    --color-bg-primary: #eff1f5;
+    --color-bg-secondary: #e6e9ef;
+    --color-bg-elevated: #dce0e8;
+    --color-bg-surface: #ccd0da;
+    --color-text-primary: #4c4f69;
+    --color-text-secondary: #5c5f77;
+    --color-text-muted: #8c8fa1;
+    --color-accent-primary: #1e66f5;
+    --color-accent-success: #40a02b;
+    --color-accent-warning: #df8e1d;
+    --color-accent-error: #d20f39;
+    --color-border: #ccd0da;
+  }
+
   html {
     @apply bg-bg-primary text-text-primary;
   }

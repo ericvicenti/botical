@@ -7,22 +7,23 @@ export default {
     extend: {
       colors: {
         bg: {
-          primary: "#1e1e2e",
-          secondary: "#181825",
-          elevated: "#313244",
+          primary: "var(--color-bg-primary)",
+          secondary: "var(--color-bg-secondary)",
+          elevated: "var(--color-bg-elevated)",
+          surface: "var(--color-bg-surface)",
         },
         text: {
-          primary: "#cdd6f4",
-          secondary: "#a6adc8",
-          muted: "#6c7086",
+          primary: "var(--color-text-primary)",
+          secondary: "var(--color-text-secondary)",
+          muted: "var(--color-text-muted)",
         },
         accent: {
-          primary: "#89b4fa",
-          success: "#a6e3a1",
-          warning: "#f9e2af",
-          error: "#f38ba8",
+          primary: "var(--color-accent-primary)",
+          success: "var(--color-accent-success)",
+          warning: "var(--color-accent-warning)",
+          error: "var(--color-accent-error)",
         },
-        border: "#45475a",
+        border: "var(--color-border)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

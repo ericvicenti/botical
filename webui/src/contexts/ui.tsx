@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 const STORAGE_KEY = "iris:ui";
 
@@ -7,12 +7,15 @@ const MIN_SIDEBAR_WIDTH = 180;
 const MAX_SIDEBAR_WIDTH = 480;
 
 export type SidebarPanel = "tasks" | "files" | "git" | "run" | "settings";
+export type ThemePreference = "dark" | "light" | "system";
+export type ResolvedTheme = "dark" | "light";
 
 interface StoredUIState {
   selectedProjectId: string | null;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   sidebarPanel: SidebarPanel;
+  theme: ThemePreference;
 }
 
 function loadUIFromStorage(): StoredUIState {
@@ -25,6 +28,7 @@ function loadUIFromStorage(): StoredUIState {
         sidebarWidth: parsed.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
         sidebarCollapsed: parsed.sidebarCollapsed ?? false,
         sidebarPanel: parsed.sidebarPanel ?? "files",
+        theme: parsed.theme ?? "system",
       };
     }
   } catch (e) {
@@ -35,7 +39,22 @@ function loadUIFromStorage(): StoredUIState {
     sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
     sidebarCollapsed: false,
     sidebarPanel: "files",
+    theme: "system",
   };
+}
+
+function getSystemTheme(): ResolvedTheme {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyTheme(theme: ResolvedTheme) {
+  const root = document.documentElement;
+  if (theme === "light") {
+    root.classList.add("light");
+  } else {
+    root.classList.remove("light");
+  }
 }
 
 function saveUIToStorage(state: StoredUIState) {
@@ -50,7 +69,8 @@ interface UIState {
   sidebarCollapsed: boolean;
   sidebarPanel: SidebarPanel;
   sidebarWidth: number;
-  theme: "dark" | "light";
+  theme: ThemePreference;
+  resolvedTheme: ResolvedTheme;
   selectedProjectId: string | null;
   revealPath: string | null; // Path to reveal in file tree
 }
@@ -59,7 +79,7 @@ interface UIContextValue extends UIState {
   toggleSidebar: () => void;
   setSidebarPanel: (panel: UIState["sidebarPanel"]) => void;
   setSidebarWidth: (width: number) => void;
-  setTheme: (theme: UIState["theme"]) => void;
+  setTheme: (theme: ThemePreference) => void;
   setSelectedProject: (projectId: string | null) => void;
   revealInTree: (path: string) => void;
 }
@@ -69,15 +89,36 @@ const UIContext = createContext<UIContextValue | null>(null);
 export function UIProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<UIState>(() => {
     const stored = loadUIFromStorage();
+    const resolvedTheme = stored.theme === "system" ? getSystemTheme() : stored.theme;
     return {
       sidebarCollapsed: stored.sidebarCollapsed,
       sidebarPanel: stored.sidebarPanel,
       sidebarWidth: stored.sidebarWidth,
-      theme: "dark",
+      theme: stored.theme,
+      resolvedTheme,
       selectedProjectId: stored.selectedProjectId,
       revealPath: null,
     };
   });
+
+  // Apply theme to document on mount and when it changes
+  useEffect(() => {
+    applyTheme(state.resolvedTheme);
+  }, [state.resolvedTheme]);
+
+  // Listen for system theme changes when using "system" preference
+  useEffect(() => {
+    if (state.theme !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      const newResolvedTheme = e.matches ? "dark" : "light";
+      setState((s) => ({ ...s, resolvedTheme: newResolvedTheme }));
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [state.theme]);
 
   // Persist to localStorage
   useEffect(() => {
@@ -86,8 +127,14 @@ export function UIProvider({ children }: { children: ReactNode }) {
       sidebarWidth: state.sidebarWidth,
       sidebarCollapsed: state.sidebarCollapsed,
       sidebarPanel: state.sidebarPanel,
+      theme: state.theme,
     });
-  }, [state.selectedProjectId, state.sidebarWidth, state.sidebarCollapsed, state.sidebarPanel]);
+  }, [state.selectedProjectId, state.sidebarWidth, state.sidebarCollapsed, state.sidebarPanel, state.theme]);
+
+  const setTheme = useCallback((theme: ThemePreference) => {
+    const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+    setState((s) => ({ ...s, theme, resolvedTheme }));
+  }, []);
 
   const value: UIContextValue = {
     ...state,
@@ -98,7 +145,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
       const clampedWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
       setState((s) => ({ ...s, sidebarWidth: clampedWidth }));
     },
-    setTheme: (theme) => setState((s) => ({ ...s, theme })),
+    setTheme,
     setSelectedProject: (projectId) =>
       setState((s) => ({ ...s, selectedProjectId: projectId })),
     revealInTree: (path) =>

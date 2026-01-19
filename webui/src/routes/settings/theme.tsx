@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useUI } from "@/contexts/ui";
+import { useUI, type ThemePreference } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
 
 export const Route = createFileRoute("/settings/theme")({
   component: ThemePage,
 });
 
 function ThemePage() {
-  const { theme, setTheme } = useUI();
+  const { theme, resolvedTheme, setTheme } = useUI();
 
-  const themes = [
+  const themes: { id: ThemePreference; label: string; icon: typeof Moon; description: string }[] = [
+    { id: "system", label: "System", icon: Monitor, description: "Automatically match your operating system" },
     { id: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes, perfect for night coding" },
     { id: "light", label: "Light", icon: Sun, description: "Bright and clean for daytime use" },
-  ] as const;
+  ];
 
   return (
     <div className="max-w-2xl mx-auto p-8">
@@ -53,18 +54,26 @@ function ThemePage() {
               <div className="text-sm text-text-muted">{t.description}</div>
             </div>
             {theme === t.id && (
-              <div className="w-2 h-2 rounded-full bg-accent-primary" />
+              <Check className="w-5 h-5 text-accent-primary" />
             )}
           </button>
         ))}
       </div>
 
-      <div className="mt-8 p-4 bg-bg-secondary rounded-lg border border-border">
-        <div className="flex items-center gap-2 text-sm text-text-muted">
-          <Monitor className="w-4 h-4" />
-          <span>System theme preference support coming soon</span>
+      {theme === "system" && (
+        <div className="mt-6 p-4 bg-bg-secondary rounded-lg border border-border">
+          <div className="flex items-center gap-2 text-sm text-text-secondary">
+            {resolvedTheme === "dark" ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
+            )}
+            <span>
+              Currently using <strong>{resolvedTheme}</strong> theme based on your system settings
+            </span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

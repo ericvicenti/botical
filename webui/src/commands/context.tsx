@@ -57,6 +57,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         setSelectedProject: ui.setSelectedProject,
         sidebarCollapsed: ui.sidebarCollapsed,
         theme: ui.theme,
+        resolvedTheme: ui.resolvedTheme,
       },
       tabActions: {
         openTab: tabContext.openTab,

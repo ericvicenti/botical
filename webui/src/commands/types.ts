@@ -42,10 +42,11 @@ export interface ExecutionContext {
 export interface UIActions {
   toggleSidebar: () => void;
   setSidebarPanel: (panel: "files" | "git" | "run" | "tasks" | "settings") => void;
-  setTheme: (theme: "dark" | "light") => void;
+  setTheme: (theme: "dark" | "light" | "system") => void;
   setSelectedProject: (projectId: string | null) => void;
   sidebarCollapsed: boolean;
-  theme: "dark" | "light";
+  theme: "dark" | "light" | "system";
+  resolvedTheme: "dark" | "light";
 }
 
 export interface TabActions {
