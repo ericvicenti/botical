@@ -6,11 +6,13 @@ const DEFAULT_SIDEBAR_WIDTH = 240;
 const MIN_SIDEBAR_WIDTH = 180;
 const MAX_SIDEBAR_WIDTH = 480;
 
+export type SidebarPanel = "tasks" | "files" | "git" | "run" | "settings";
+
 interface StoredUIState {
   selectedProjectId: string | null;
   sidebarWidth: number;
   sidebarCollapsed: boolean;
-  sidebarPanel: "tasks" | "files" | "git" | "run";
+  sidebarPanel: SidebarPanel;
 }
 
 function loadUIFromStorage(): StoredUIState {
@@ -46,7 +48,7 @@ function saveUIToStorage(state: StoredUIState) {
 
 interface UIState {
   sidebarCollapsed: boolean;
-  sidebarPanel: "tasks" | "files" | "git" | "run";
+  sidebarPanel: SidebarPanel;
   sidebarWidth: number;
   theme: "dark" | "light";
   selectedProjectId: string | null;

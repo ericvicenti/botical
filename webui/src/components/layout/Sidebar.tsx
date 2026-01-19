@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useUI } from "@/contexts/ui";
+import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus } from "lucide-react";
@@ -7,15 +7,16 @@ import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
 import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { useProjects } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
-const PANELS = [
+const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
   { id: "tasks", icon: MessageSquare, label: "Tasks" },
   { id: "files", icon: Files, label: "Files" },
   { id: "git", icon: GitBranch, label: "Git" },
   { id: "run", icon: Play, label: "Run" },
-] as const;
+];
 
 export function Sidebar() {
   const {
@@ -70,7 +71,7 @@ export function Sidebar() {
     return (
       <div className="w-12 bg-bg-secondary border-r border-border flex flex-col">
         {selectedProjectId ? (
-          PANELS.map((panel) => (
+          PROJECT_PANELS.map((panel) => (
             <button
               key={panel.id}
               onClick={() => {
@@ -105,12 +106,27 @@ export function Sidebar() {
 
         {/* Spacer and Settings at bottom */}
         <div className="flex-1" />
-        <SettingsButton />
+        <button
+          onClick={() => {
+            setSidebarPanel("settings");
+            toggleSidebar();
+          }}
+          className={cn(
+            "w-12 h-12 flex items-center justify-center",
+            "hover:bg-bg-elevated transition-colors",
+            sidebarPanel === "settings"
+              ? "text-accent-primary border-l-2 border-accent-primary"
+              : "text-text-secondary"
+          )}
+          title="Settings"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
       </div>
     );
   }
 
-  // When no project is selected, show project list instead of panels
+  // When no project is selected, show project list or settings
   if (!selectedProjectId) {
     return (
       <div
@@ -118,16 +134,52 @@ export function Sidebar() {
         className="bg-bg-secondary border-r border-border flex flex-col relative"
         style={{ width: sidebarWidth }}
       >
-        <div className="px-3 py-2 border-b border-border">
-          <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-            Projects
+        <div className="flex flex-1 min-h-0">
+          <div className="w-12 border-r border-border flex flex-col shrink-0">
+            <button
+              onClick={() => setSidebarPanel("files")}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center",
+                "hover:bg-bg-elevated transition-colors",
+                sidebarPanel !== "settings"
+                  ? "text-accent-primary border-l-2 border-accent-primary"
+                  : "text-text-secondary"
+              )}
+              title="Projects"
+            >
+              <FolderTree className="w-5 h-5" />
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => setSidebarPanel("settings")}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center",
+                "hover:bg-bg-elevated transition-colors",
+                sidebarPanel === "settings"
+                  ? "text-accent-primary border-l-2 border-accent-primary"
+                  : "text-text-secondary"
+              )}
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-        <div className="flex-1 overflow-auto">
-          <ProjectList />
-        </div>
-        <div className="border-t border-border">
-          <SettingsButton />
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {sidebarPanel === "settings" ? (
+              <SettingsPanel />
+            ) : (
+              <>
+                <div className="px-3 py-2 border-b border-border">
+                  <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+                    Projects
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <ProjectList />
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
       </div>
@@ -143,7 +195,7 @@ export function Sidebar() {
       <ProjectSelector />
       <div className="flex flex-1 min-h-0">
         <div className="w-12 border-r border-border flex flex-col shrink-0">
-          {PANELS.map((panel) => (
+          {PROJECT_PANELS.map((panel) => (
             <button
               key={panel.id}
               onClick={() => setSidebarPanel(panel.id)}
@@ -164,11 +216,23 @@ export function Sidebar() {
           <div className="flex-1" />
 
           {/* Settings button at bottom */}
-          <SettingsButton />
+          <button
+            onClick={() => setSidebarPanel("settings")}
+            className={cn(
+              "w-12 h-12 flex items-center justify-center",
+              "hover:bg-bg-elevated transition-colors",
+              sidebarPanel === "settings"
+                ? "text-accent-primary border-l-2 border-accent-primary"
+                : "text-text-secondary"
+            )}
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-hidden">
-          <SidebarPanel panel={sidebarPanel} />
+          <SidebarPanelContent panel={sidebarPanel} />
         </div>
       </div>
       <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
@@ -259,7 +323,7 @@ function ProjectList() {
   );
 }
 
-function SidebarPanel({ panel }: { panel: string }) {
+function SidebarPanelContent({ panel }: { panel: string }) {
   const { selectedProjectId } = useUI();
 
   switch (panel) {
@@ -277,6 +341,8 @@ function SidebarPanel({ panel }: { panel: string }) {
       return <GitPanel selectedProjectId={selectedProjectId} />;
     case "run":
       return <RunPanel selectedProjectId={selectedProjectId} />;
+    case "settings":
+      return <SettingsPanel />;
     default:
       return null;
   }
@@ -408,27 +474,3 @@ function RunPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
   return <ProcessesPanel projectId={selectedProjectId} />;
 }
 
-function SettingsButton() {
-  const { openTab } = useTabs();
-  const navigate = useNavigate();
-
-  const handleClick = () => {
-    openTab({ type: "settings" });
-    navigate({ to: "/settings" });
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className={cn(
-        "w-12 h-12 flex items-center justify-center",
-        "hover:bg-bg-elevated transition-colors",
-        "text-text-secondary hover:text-text-primary"
-      )}
-      title="Settings"
-      data-testid="settings-button"
-    >
-      <Settings className="w-5 h-5" />
-    </button>
-  );
-}

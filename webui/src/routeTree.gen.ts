@@ -12,7 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CreateProjectRouteImport } from './routes/create-project'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
+import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
+import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
+import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
+import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProcessesProcessIdRouteImport } from './routes/processes/$processId'
 import { Route as FilesSplatRouteImport } from './routes/files/$'
@@ -32,10 +37,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const TasksSessionIdRoute = TasksSessionIdRouteImport.update({
   id: '/tasks/$sessionId',
   path: '/tasks/$sessionId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsThemeRoute = SettingsThemeRouteImport.update({
+  id: '/theme',
+  path: '/theme',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsShortcutsRoute = SettingsShortcutsRouteImport.update({
+  id: '/shortcuts',
+  path: '/shortcuts',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAboutRoute = SettingsAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/projects/$projectId',
@@ -56,30 +86,44 @@ const FilesSplatRoute = FilesSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/files/$': typeof FilesSplatRoute
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/settings/about': typeof SettingsAboutRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/shortcuts': typeof SettingsShortcutsRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
-  '/settings': typeof SettingsRoute
   '/files/$': typeof FilesSplatRoute
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/settings/about': typeof SettingsAboutRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/shortcuts': typeof SettingsShortcutsRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/files/$': typeof FilesSplatRoute
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/settings/about': typeof SettingsAboutRoute
+  '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/shortcuts': typeof SettingsShortcutsRoute
+  '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,16 +134,25 @@ export interface FileRouteTypes {
     | '/files/$'
     | '/processes/$processId'
     | '/projects/$projectId'
+    | '/settings/about'
+    | '/settings/api-keys'
+    | '/settings/shortcuts'
+    | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/create-project'
-    | '/settings'
     | '/files/$'
     | '/processes/$processId'
     | '/projects/$projectId'
+    | '/settings/about'
+    | '/settings/api-keys'
+    | '/settings/shortcuts'
+    | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -108,13 +161,18 @@ export interface FileRouteTypes {
     | '/files/$'
     | '/processes/$processId'
     | '/projects/$projectId'
+    | '/settings/about'
+    | '/settings/api-keys'
+    | '/settings/shortcuts'
+    | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateProjectRoute: typeof CreateProjectRoute
-  SettingsRoute: typeof SettingsRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   FilesSplatRoute: typeof FilesSplatRoute
   ProcessesProcessIdRoute: typeof ProcessesProcessIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -144,12 +202,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/tasks/$sessionId': {
       id: '/tasks/$sessionId'
       path: '/tasks/$sessionId'
       fullPath: '/tasks/$sessionId'
       preLoaderRoute: typeof TasksSessionIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/theme': {
+      id: '/settings/theme'
+      path: '/theme'
+      fullPath: '/settings/theme'
+      preLoaderRoute: typeof SettingsThemeRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/shortcuts': {
+      id: '/settings/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/settings/shortcuts'
+      preLoaderRoute: typeof SettingsShortcutsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/api-keys': {
+      id: '/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof SettingsApiKeysRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/about': {
+      id: '/settings/about'
+      path: '/about'
+      fullPath: '/settings/about'
+      preLoaderRoute: typeof SettingsAboutRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/projects/$projectId': {
       id: '/projects/$projectId'
@@ -175,10 +268,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SettingsRouteChildren {
+  SettingsAboutRoute: typeof SettingsAboutRoute
+  SettingsApiKeysRoute: typeof SettingsApiKeysRoute
+  SettingsShortcutsRoute: typeof SettingsShortcutsRoute
+  SettingsThemeRoute: typeof SettingsThemeRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAboutRoute: SettingsAboutRoute,
+  SettingsApiKeysRoute: SettingsApiKeysRoute,
+  SettingsShortcutsRoute: SettingsShortcutsRoute,
+  SettingsThemeRoute: SettingsThemeRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateProjectRoute: CreateProjectRoute,
-  SettingsRoute: SettingsRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   FilesSplatRoute: FilesSplatRoute,
   ProcessesProcessIdRoute: ProcessesProcessIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,

@@ -41,7 +41,7 @@ export interface ExecutionContext {
 
 export interface UIActions {
   toggleSidebar: () => void;
-  setSidebarPanel: (panel: "files" | "git" | "run" | "tasks") => void;
+  setSidebarPanel: (panel: "files" | "git" | "run" | "tasks" | "settings") => void;
   setTheme: (theme: "dark" | "light") => void;
   setSelectedProject: (projectId: string | null) => void;
   sidebarCollapsed: boolean;

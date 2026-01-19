@@ -52,6 +52,16 @@ export const viewCommands: Command[] = [
     },
   },
   {
+    id: "view.showSettingsPanel",
+    label: "Show Settings Panel",
+    description: "Switch to the Settings panel in the sidebar",
+    category: "view",
+    shortcut: { key: "0", alt: true },
+    execute: (ctx) => {
+      ctx.ui.setSidebarPanel("settings");
+    },
+  },
+  {
     id: "view.setThemeDark",
     label: "Set Dark Theme",
     description: "Switch to dark theme",

@@ -1,10 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { SettingsPage } from "@/components/settings/SettingsPage";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/settings")({
-  component: SettingsView,
+  component: SettingsLayout,
 });
 
-function SettingsView() {
-  return <SettingsPage />;
+function SettingsLayout() {
+  return (
+    <div className="h-full overflow-auto">
+      <Outlet />
+    </div>
+  );
 }
