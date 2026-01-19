@@ -179,11 +179,12 @@ export class AgentOrchestrator {
     });
 
     // Get tools with task tool interception
+    // Enable code execution if agent has bash or service tools
     const tools = ToolRegistry.toAITools(toolContext, {
       toolNames: availableToolNames,
       canExecuteCode:
         canExecuteCode &&
-        agentConfig.tools.some((t) => ["bash"].includes(t)),
+        agentConfig.tools.some((t) => ["bash", "service"].includes(t)),
     });
 
     // Override task tool execute if it exists
