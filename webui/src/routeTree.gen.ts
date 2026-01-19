@@ -14,6 +14,7 @@ import { Route as CreateProjectRouteImport } from './routes/create-project'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as ProcessesProcessIdRouteImport } from './routes/processes/$processId'
 import { Route as FilesSplatRouteImport } from './routes/files/$'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -41,6 +42,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProcessesProcessIdRoute = ProcessesProcessIdRouteImport.update({
+  id: '/processes/$processId',
+  path: '/processes/$processId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesSplatRoute = FilesSplatRouteImport.update({
   id: '/files/$',
   path: '/files/$',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/create-project': typeof CreateProjectRoute
   '/settings': typeof SettingsRoute
   '/files/$': typeof FilesSplatRoute
+  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/create-project': typeof CreateProjectRoute
   '/settings': typeof SettingsRoute
   '/files/$': typeof FilesSplatRoute
+  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/create-project': typeof CreateProjectRoute
   '/settings': typeof SettingsRoute
   '/files/$': typeof FilesSplatRoute
+  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/create-project'
     | '/settings'
     | '/files/$'
+    | '/processes/$processId'
     | '/projects/$projectId'
     | '/tasks/$sessionId'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/create-project'
     | '/settings'
     | '/files/$'
+    | '/processes/$processId'
     | '/projects/$projectId'
     | '/tasks/$sessionId'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/create-project'
     | '/settings'
     | '/files/$'
+    | '/processes/$processId'
     | '/projects/$projectId'
     | '/tasks/$sessionId'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   CreateProjectRoute: typeof CreateProjectRoute
   SettingsRoute: typeof SettingsRoute
   FilesSplatRoute: typeof FilesSplatRoute
+  ProcessesProcessIdRoute: typeof ProcessesProcessIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   TasksSessionIdRoute: typeof TasksSessionIdRoute
 }
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/processes/$processId': {
+      id: '/processes/$processId'
+      path: '/processes/$processId'
+      fullPath: '/processes/$processId'
+      preLoaderRoute: typeof ProcessesProcessIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files/$': {
       id: '/files/$'
       path: '/files/$'
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateProjectRoute: CreateProjectRoute,
   SettingsRoute: SettingsRoute,
   FilesSplatRoute: FilesSplatRoute,
+  ProcessesProcessIdRoute: ProcessesProcessIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   TasksSessionIdRoute: TasksSessionIdRoute,
 }

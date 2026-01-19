@@ -123,10 +123,28 @@ export interface Process {
   status: "starting" | "running" | "completed" | "failed" | "killed";
   exitCode: number | null;
   label: string | null;
+  serviceId: string | null;
+  logPath: string | null;
   createdBy: string;
   createdAt: number;
   startedAt: number;
   endedAt: number | null;
+}
+
+export interface Service {
+  id: string;
+  projectId: string;
+  name: string;
+  command: string;
+  cwd: string | null;
+  env: Record<string, string> | null;
+  autoStart: boolean;
+  enabled: boolean;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+  isRunning?: boolean;
+  runningProcessId?: string | null;
 }
 
 export interface ListResponse<T> {

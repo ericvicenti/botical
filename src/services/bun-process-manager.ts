@@ -8,7 +8,9 @@
  * no raw mode), but works for basic command execution.
  */
 
-import type { Subprocess, FileSink } from "bun";
+import type { Subprocess, FileSink, BunFile } from "bun";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Process instance interface
@@ -20,6 +22,8 @@ interface ProcessInstance {
   onExit: (code: number) => void;
   stdout: ReadableStream<Uint8Array> | null;
   stderr: ReadableStream<Uint8Array> | null;
+  logPath?: string;
+  logFile?: number; // File descriptor for log file
 }
 
 /**
@@ -30,6 +34,7 @@ export interface ProcessOptions {
   env?: Record<string, string>;
   cols?: number;
   rows?: number;
+  logPath?: string;
   onData: (data: string) => void;
   onExit: (code: number) => void;
 }
@@ -52,6 +57,25 @@ class BunProcessManager {
       stdin: "pipe",
     });
 
+    // Set up log file if path is provided
+    let logFile: number | undefined;
+    if (options.logPath) {
+      try {
+        // Ensure log directory exists
+        const logDir = path.dirname(options.logPath);
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+        }
+        // Open file for appending
+        logFile = fs.openSync(options.logPath, "a");
+        // Write header
+        const header = `[${new Date().toISOString()}] Process started: ${command}\n`;
+        fs.writeSync(logFile, header);
+      } catch (error) {
+        console.error(`Failed to open log file ${options.logPath}:`, error);
+      }
+    }
+
     const instance: ProcessInstance = {
       proc,
       processId,
@@ -59,22 +83,50 @@ class BunProcessManager {
       onExit: options.onExit,
       stdout: proc.stdout,
       stderr: proc.stderr,
+      logPath: options.logPath,
+      logFile,
     };
 
     this.instances.set(processId, instance);
 
+    // Create a wrapper that handles both callback and log writing
+    const handleOutput = (data: string, stream: "stdout" | "stderr") => {
+      options.onData(data);
+
+      // Write to log file if available
+      if (logFile) {
+        try {
+          const timestamp = new Date().toISOString();
+          const logLine = `[${timestamp}] ${stream}: ${data}`;
+          fs.writeSync(logFile, logLine);
+        } catch (error) {
+          // Ignore write errors
+        }
+      }
+    };
+
     // Stream stdout
     if (proc.stdout) {
-      this.streamOutput(proc.stdout, options.onData);
+      this.streamOutput(proc.stdout, (data) => handleOutput(data, "stdout"));
     }
 
     // Stream stderr
     if (proc.stderr) {
-      this.streamOutput(proc.stderr, options.onData);
+      this.streamOutput(proc.stderr, (data) => handleOutput(data, "stderr"));
     }
 
     // Handle exit
     proc.exited.then((code) => {
+      // Write exit log
+      if (logFile) {
+        try {
+          const footer = `[${new Date().toISOString()}] Process exited with code ${code}\n`;
+          fs.writeSync(logFile, footer);
+          fs.closeSync(logFile);
+        } catch (error) {
+          // Ignore close errors
+        }
+      }
       options.onExit(code);
       this.instances.delete(processId);
     });
@@ -129,6 +181,16 @@ class BunProcessManager {
   kill(processId: string): boolean {
     const instance = this.instances.get(processId);
     if (instance) {
+      // Close log file if open
+      if (instance.logFile) {
+        try {
+          const footer = `[${new Date().toISOString()}] Process killed\n`;
+          fs.writeSync(instance.logFile, footer);
+          fs.closeSync(instance.logFile);
+        } catch (error) {
+          // Ignore close errors
+        }
+      }
       instance.proc.kill();
       this.instances.delete(processId);
       return true;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
@@ -22,9 +22,49 @@ export function Sidebar() {
     sidebarCollapsed,
     sidebarPanel,
     setSidebarPanel,
+    sidebarWidth,
+    setSidebarWidth,
     toggleSidebar,
     selectedProjectId,
   } = useUI();
+
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback(
+    (e: MouseEvent) => {
+      if (isResizing && sidebarRef.current) {
+        const newWidth = e.clientX - sidebarRef.current.getBoundingClientRect().left;
+        setSidebarWidth(newWidth);
+      }
+    },
+    [isResizing, setSidebarWidth]
+  );
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, resize, stopResizing]);
 
   if (sidebarCollapsed) {
     return (
@@ -73,7 +113,11 @@ export function Sidebar() {
   // When no project is selected, show project list instead of panels
   if (!selectedProjectId) {
     return (
-      <div className="w-60 bg-bg-secondary border-r border-border flex flex-col">
+      <div
+        ref={sidebarRef}
+        className="bg-bg-secondary border-r border-border flex flex-col relative"
+        style={{ width: sidebarWidth }}
+      >
         <div className="px-3 py-2 border-b border-border">
           <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
             Projects
@@ -85,12 +129,17 @@ export function Sidebar() {
         <div className="border-t border-border">
           <SettingsButton />
         </div>
+        <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
       </div>
     );
   }
 
   return (
-    <div className="w-60 bg-bg-secondary border-r border-border flex flex-col">
+    <div
+      ref={sidebarRef}
+      className="bg-bg-secondary border-r border-border flex flex-col relative"
+      style={{ width: sidebarWidth }}
+    >
       <ProjectSelector />
       <div className="flex flex-1 min-h-0">
         <div className="w-12 border-r border-border flex flex-col shrink-0">
@@ -122,7 +171,27 @@ export function Sidebar() {
           <SidebarPanel panel={sidebarPanel} />
         </div>
       </div>
+      <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
     </div>
+  );
+}
+
+function ResizeHandle({
+  onMouseDown,
+  isResizing,
+}: {
+  onMouseDown: (e: React.MouseEvent) => void;
+  isResizing: boolean;
+}) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className={cn(
+        "absolute top-0 right-0 w-1 h-full cursor-col-resize",
+        "hover:bg-accent-primary/50 transition-colors",
+        isResizing && "bg-accent-primary"
+      )}
+    />
   );
 }
 

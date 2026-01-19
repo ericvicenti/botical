@@ -12,6 +12,7 @@ import { ContentHeader } from "@/components/layout/ContentHeader";
 interface TaskChatProps {
   sessionId: string;
   projectId: string;
+  isActive?: boolean;
 }
 
 // Model definitions matching the backend providers.ts
@@ -36,7 +37,7 @@ const AVAILABLE_MODELS: ModelOption[] = [
   { id: "gemini-2.0-flash-thinking-exp", name: "Gemini 2.0 Flash Thinking", providerId: "google", providerName: "Google" },
 ];
 
-export function TaskChat({ sessionId, projectId }: TaskChatProps) {
+export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProps) {
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
   const { data: project } = useProject(projectId);
   const { data: settings } = useSettings();
@@ -125,10 +126,16 @@ You have access to tools for reading, writing, and editing files, as well as exe
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingMessage]);
 
-  // Focus input on mount
+  // Focus input when tab becomes active
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [sessionId]);
+    if (isActive) {
+      // Small delay to ensure DOM is ready after tab switch
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionId, isActive]);
 
   // Close model dropdown when clicking outside
   useEffect(() => {

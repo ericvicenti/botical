@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
-    "dev:all": "bun run dev & cd webui && bun run dev",
+    "dev": "bun run dev:server & cd webui && bun run dev",
+    "dev:server": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test tests",

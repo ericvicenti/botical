@@ -4,6 +4,7 @@ import { DatabaseManager } from "../database/index.ts";
 import { setupBusBridge, teardownBusBridge } from "../websocket/index.ts";
 import { websocket } from "hono/bun";
 import { registerCoreTools } from "../tools/index.ts";
+import { ServiceRunner } from "../services/service-runner.ts";
 
 export interface ServerOptions {
   port?: number;
@@ -52,10 +53,17 @@ export async function createServer(
   console.log(`🚀 Iris server running at http://${hostname}:${port}`);
   console.log(`🔌 WebSocket available at ws://${hostname}:${port}/ws`);
 
+  // Start auto-start services (don't await - let it run in background)
+  ServiceRunner.startAutoServices().catch((error) => {
+    console.error("Failed to start auto-start services:", error);
+  });
+
   return {
     port,
     hostname,
     close: async () => {
+      // Stop all running services
+      await ServiceRunner.stopAllServices();
       teardownBusBridge();
       server.stop();
       DatabaseManager.closeAll();

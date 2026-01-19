@@ -13,6 +13,7 @@ import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { ProcessService } from "@/services/processes.ts";
 import { ProjectService } from "@/services/projects.ts";
+import { ServiceConfigService } from "@/services/service-config.ts";
 
 export const serviceTool = defineTool("service", {
   description: `Start a long-running service process (non-blocking).
@@ -24,11 +25,14 @@ Usage:
 - Use for: npm run dev, bun run --watch, pytest --watch, etc.
 - The process continues running after this tool returns
 - Use bash tool instead for quick commands that need output immediately
+- Use saveAsService=true to save the service configuration for future use
+- Use autoStart=true to automatically restart the service when Iris starts
 
 Examples:
 - Start dev server: command="npm run dev", label="Dev Server"
 - Start watch mode: command="bun test --watch", label="Test Watcher"
-- Start build watcher: command="vite build --watch", label="Build"`,
+- Start build watcher: command="vite build --watch", label="Build"
+- Save as auto-start service: command="npm run dev", label="Dev Server", saveAsService=true, autoStart=true`,
 
   parameters: z.object({
     command: z.string().describe("The shell command to execute as a service"),
@@ -43,10 +47,18 @@ Examples:
       .max(30000)
       .optional()
       .describe("Optional milliseconds to wait for initial output before returning"),
+    saveAsService: z
+      .boolean()
+      .optional()
+      .describe("Save this as a persistent service configuration that can be managed and restarted"),
+    autoStart: z
+      .boolean()
+      .optional()
+      .describe("If saveAsService is true, automatically start this service when Iris starts"),
   }),
 
   async execute(args, context) {
-    const { command, label, waitForReady = 0 } = args;
+    const { command, label, waitForReady = 0, saveAsService = false, autoStart = false } = args;
 
     // Update metadata to show process is starting
     context.updateMetadata({
@@ -61,6 +73,36 @@ Examples:
     const project = ProjectService.getByIdOrThrow(rootDb, context.projectId);
     const projectPath = project.path || Config.getProjectDir(context.projectId);
 
+    // Save as service configuration if requested
+    let serviceId: string | undefined;
+    if (saveAsService) {
+      const serviceName = label || `Service: ${command.slice(0, 50)}`;
+
+      // Check if service with this name already exists
+      const existingService = ServiceConfigService.getByName(db, context.projectId, serviceName);
+
+      if (existingService) {
+        // Update existing service
+        ServiceConfigService.update(db, existingService.id, {
+          command,
+          autoStart,
+        });
+        serviceId = existingService.id;
+      } else {
+        // Create new service configuration
+        const service = ServiceConfigService.create(db, {
+          projectId: context.projectId,
+          name: serviceName,
+          command,
+          cwd: projectPath,
+          autoStart,
+          enabled: true,
+          createdBy: context.userId,
+        });
+        serviceId = service.id;
+      }
+    }
+
     // Spawn the process
     const process = ProcessService.spawn(db, {
       projectId: context.projectId,
@@ -70,6 +112,7 @@ Examples:
       scope: "task",
       scopeId: context.sessionId,
       label: label || undefined,
+      serviceId,
       createdBy: context.userId,
       cols: 120,
       rows: 30,
@@ -103,6 +146,13 @@ Command: ${command}
 Status: ${currentProcess?.status || process.status}
 Label: ${label || "(none)"}`;
 
+    if (saveAsService) {
+      responseText += `\nSaved as service: ${serviceId}`;
+      if (autoStart) {
+        responseText += " (auto-start enabled)";
+      }
+    }
+
     if (output) {
       responseText += `\n\nInitial output:\n${output.slice(0, 2000)}`;
       if (output.length > 2000) {
@@ -119,9 +169,11 @@ Label: ${label || "(none)"}`;
       output: responseText,
       metadata: {
         processId: process.id,
+        serviceId,
         command,
         status: currentProcess?.status || process.status,
         label,
+        autoStart: saveAsService ? autoStart : undefined,
       },
       success: true,
     };

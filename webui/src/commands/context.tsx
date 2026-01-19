@@ -53,12 +53,9 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       ui: {
         toggleSidebar: ui.toggleSidebar,
         setSidebarPanel: ui.setSidebarPanel,
-        toggleBottomPanel: ui.toggleBottomPanel,
-        setBottomPanelTab: ui.setBottomPanelTab,
         setTheme: ui.setTheme,
         setSelectedProject: ui.setSelectedProject,
         sidebarCollapsed: ui.sidebarCollapsed,
-        bottomPanelVisible: ui.bottomPanelVisible,
         theme: ui.theme,
       },
       tabActions: {

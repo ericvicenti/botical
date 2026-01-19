@@ -77,6 +77,8 @@ function saveDirtyContentToStorage(dirtyContent: Record<string, string>) {
 
 function generateTabId(data: TabData): string {
   switch (data.type) {
+    case "projects":
+      return "projects";
     case "project":
       return `project:${data.projectId}`;
     case "mission":
@@ -98,6 +100,8 @@ function generateTabId(data: TabData): string {
 
 function generateTabLabel(data: TabData): string {
   switch (data.type) {
+    case "projects":
+      return "Projects";
     case "project":
       return data.projectName;
     case "mission":
@@ -105,7 +109,7 @@ function generateTabLabel(data: TabData): string {
     case "file":
       return data.path.split("/").pop() || "File";
     case "process":
-      return "Process";
+      return data.label || "Process";
     case "diff":
       return `Diff: ${data.path.split("/").pop()}`;
     case "settings":

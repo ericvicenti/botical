@@ -56,6 +56,8 @@ export interface Process {
   status: ProcessStatus;
   exitCode: number | null;
   label: string | null;
+  serviceId: string | null;
+  logPath: string | null;
   createdBy: string;
   createdAt: number;
   startedAt: number;
@@ -90,6 +92,8 @@ interface ProcessRow {
   status: string;
   exit_code: number | null;
   label: string | null;
+  service_id: string | null;
+  log_path: string | null;
   created_by: string;
   created_at: number;
   started_at: number;
@@ -121,6 +125,8 @@ export const SpawnProcessSchema = z.object({
   scope: z.enum(["task", "mission", "project"]),
   scopeId: z.string().min(1),
   label: z.string().max(200).optional(),
+  serviceId: z.string().optional(),
+  logPath: z.string().optional(),
   createdBy: z.string().min(1),
 });
 
@@ -165,6 +171,8 @@ function rowToProcess(row: ProcessRow): Process {
     status: row.status as ProcessStatus,
     exitCode: row.exit_code,
     label: row.label,
+    serviceId: row.service_id,
+    logPath: row.log_path,
     createdBy: row.created_by,
     createdAt: row.created_at,
     startedAt: row.started_at,
@@ -202,12 +210,18 @@ export class ProcessService {
     const id = generateId(IdPrefixes.process);
     const cwd = data.cwd || projectPath;
 
+    // Calculate log path if not provided (for services)
+    let logPath = data.logPath;
+    if (!logPath && data.type === "service") {
+      logPath = this.getLogPath(projectPath, id);
+    }
+
     // Create process record
     db.prepare(
       `INSERT INTO processes (
         id, project_id, type, command, cwd, env, cols, rows,
-        scope, scope_id, status, label, created_by, created_at, started_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'starting', ?, ?, ?, ?)`
+        scope, scope_id, status, label, service_id, log_path, created_by, created_at, started_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'starting', ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       data.projectId,
@@ -220,6 +234,8 @@ export class ProcessService {
       data.scope,
       data.scopeId,
       data.label || null,
+      data.serviceId || null,
+      logPath || null,
       data.createdBy,
       now,
       now
@@ -235,6 +251,7 @@ export class ProcessService {
       env: data.env,
       cols: data.cols,
       rows: data.rows,
+      logPath,
       onData: (output) => {
         // Store output
         db.prepare(
@@ -268,6 +285,13 @@ export class ProcessService {
     });
 
     return this.getByIdOrThrow(db, id);
+  }
+
+  /**
+   * Get log path for a process
+   */
+  static getLogPath(projectPath: string, processId: string): string {
+    return `${projectPath}/.iris/logs/${processId}.log`;
   }
 
   /**

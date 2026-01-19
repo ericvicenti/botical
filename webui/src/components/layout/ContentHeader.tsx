@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 interface ContentHeaderProps {
   project?: { id: string; name: string } | null;
-  title: string;
+  title: React.ReactNode;
   subtitle?: React.ReactNode;
   children?: React.ReactNode; // For action buttons on the right
 }

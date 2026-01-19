@@ -552,3 +552,162 @@ export function useAgents(projectId?: string) {
     },
   });
 }
+
+// Services
+import type { Service } from "./types";
+
+export function useServices(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "services"],
+    queryFn: async () => {
+      const response = await apiClientRaw<Service[]>(
+        `/api/projects/${projectId}/services`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useService(serviceId: string) {
+  return useQuery({
+    queryKey: ["services", serviceId],
+    queryFn: () => apiClient<Service>(`/api/services/${serviceId}`),
+    enabled: !!serviceId,
+  });
+}
+
+export function useCreateService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      command,
+      cwd,
+      autoStart,
+      enabled,
+      createdBy,
+    }: {
+      projectId: string;
+      name: string;
+      command: string;
+      cwd?: string;
+      autoStart?: boolean;
+      enabled?: boolean;
+      createdBy: string;
+    }) =>
+      apiClient<Service>(`/api/projects/${projectId}/services`, {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          command,
+          cwd,
+          autoStart,
+          enabled,
+          createdBy,
+        }),
+      }),
+    onSuccess: (service) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", service.projectId, "services"],
+      });
+    },
+  });
+}
+
+export function useUpdateService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      serviceId,
+      name,
+      command,
+      cwd,
+      autoStart,
+      enabled,
+    }: {
+      serviceId: string;
+      name?: string;
+      command?: string;
+      cwd?: string | null;
+      autoStart?: boolean;
+      enabled?: boolean;
+    }) =>
+      apiClient<Service>(`/api/services/${serviceId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name, command, cwd, autoStart, enabled }),
+      }),
+    onSuccess: (service) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", service.projectId, "services"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["services", service.id],
+      });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serviceId }: { serviceId: string }) =>
+      apiClient<{ success: boolean }>(`/api/services/${serviceId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+    },
+  });
+}
+
+export function useStartService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serviceId }: { serviceId: string }) =>
+      apiClient<{ processId: string; status: string }>(
+        `/api/services/${serviceId}/start`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["processes"] });
+    },
+  });
+}
+
+export function useStopService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serviceId }: { serviceId: string }) =>
+      apiClient<{ status: string }>(`/api/services/${serviceId}/stop`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["processes"] });
+    },
+  });
+}
+
+export function useRestartService() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serviceId }: { serviceId: string }) =>
+      apiClient<{ processId: string; status: string }>(
+        `/api/services/${serviceId}/restart`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["processes"] });
+    },
+  });
+}

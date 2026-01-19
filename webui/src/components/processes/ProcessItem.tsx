@@ -1,17 +1,29 @@
 import { cn } from "@/lib/utils/cn";
 import { useKillProcess } from "@/lib/api/queries";
+import { useTabs } from "@/contexts/tabs";
+import { useNavigate } from "@tanstack/react-router";
 import type { Process } from "@/lib/api/types";
 import { Square, Terminal, Radio, Clock, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 
 interface ProcessItemProps {
   process: Process;
-  isSelected: boolean;
-  onSelect: () => void;
 }
 
-export function ProcessItem({ process, isSelected, onSelect }: ProcessItemProps) {
+export function ProcessItem({ process }: ProcessItemProps) {
   const killProcess = useKillProcess();
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
   const isRunning = process.status === "running" || process.status === "starting";
+
+  const handleClick = () => {
+    openTab({
+      type: "process",
+      processId: process.id,
+      projectId: process.projectId,
+      label: process.label || process.command.slice(0, 30),
+    });
+    navigate({ to: "/processes/$processId", params: { processId: process.id } });
+  };
 
   const handleKill = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,12 +75,11 @@ export function ProcessItem({ process, isSelected, onSelect }: ProcessItemProps)
 
   return (
     <button
-      onClick={onSelect}
+      onClick={handleClick}
       className={cn(
         "w-full flex items-center gap-2 px-2 py-1.5 text-left",
         "hover:bg-bg-elevated transition-colors rounded",
-        "text-sm",
-        isSelected && "bg-bg-elevated"
+        "text-sm"
       )}
     >
       {getTypeIcon()}

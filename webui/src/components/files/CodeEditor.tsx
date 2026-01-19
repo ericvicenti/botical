@@ -18,7 +18,6 @@ import { useFileContent, useSaveFile, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 import { ContentHeader } from "@/components/layout/ContentHeader";
-import { FileText } from "lucide-react";
 
 interface CodeEditorProps {
   projectId: string;
@@ -204,25 +203,13 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
       {/* Header */}
       <ContentHeader
         project={project ? { id: project.id, name: project.name } : null}
-        title={path}
-        subtitle={
-          <span className="flex items-center gap-1">
-            <FileText className="w-3.5 h-3.5" />
-            {extension} file
-            {isDirty && <span className="text-accent-warning ml-1">· Modified</span>}
+        title={
+          <span className="flex items-center gap-2">
+            {path}
+            {isDirty && <span className="w-2 h-2 rounded-full bg-accent-warning" />}
           </span>
         }
-      >
-        {isDirty && (
-          <button
-            onClick={handleSave}
-            disabled={saveFile.isPending}
-            className="px-3 py-1.5 text-sm rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50"
-          >
-            {saveFile.isPending ? "Saving..." : "Save"}
-          </button>
-        )}
-      </ContentHeader>
+      />
 
       {/* Editor */}
       <div ref={containerRef} className="flex-1 overflow-hidden" />

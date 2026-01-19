@@ -14,7 +14,8 @@ export type CommandCategory =
 
 export interface CommandShortcut {
   key: string;
-  mod?: boolean;
+  mod?: boolean;    // Cmd on Mac, Ctrl on Windows
+  ctrl?: boolean;   // Ctrl key specifically (on all platforms)
   shift?: boolean;
   alt?: boolean;
 }
@@ -40,13 +41,10 @@ export interface ExecutionContext {
 
 export interface UIActions {
   toggleSidebar: () => void;
-  setSidebarPanel: (panel: "files" | "git" | "run") => void;
-  toggleBottomPanel: () => void;
-  setBottomPanelTab: (tab: "output" | "problems" | "services") => void;
+  setSidebarPanel: (panel: "files" | "git" | "run" | "tasks") => void;
   setTheme: (theme: "dark" | "light") => void;
   setSelectedProject: (projectId: string | null) => void;
   sidebarCollapsed: boolean;
-  bottomPanelVisible: boolean;
   theme: "dark" | "light";
 }
 

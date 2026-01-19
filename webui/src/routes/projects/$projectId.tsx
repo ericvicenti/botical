@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   useProject,
   useSessions,
@@ -6,8 +6,9 @@ import {
   useProcesses,
   useFiles,
 } from "@/lib/api/queries";
+import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { FolderTree, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { FolderTree, AlertTriangle, Info } from "lucide-react";
 
 export const Route = createFileRoute("/projects/$projectId")({
   component: ProjectPage,
@@ -20,6 +21,40 @@ function ProjectPage() {
   const { data: missions } = useMissions(projectId);
   const { data: processes } = useProcesses(projectId);
   const { data: files, isLoading: filesLoading, error: filesError } = useFiles(projectId);
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
+
+  const handleSessionClick = (session: { id: string; title: string }) => {
+    openTab({
+      type: "task",
+      sessionId: session.id,
+      projectId,
+      title: session.title,
+    });
+    navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
+  };
+
+  const handleProcessClick = (process: { id: string; command: string }) => {
+    openTab({
+      type: "process",
+      processId: process.id,
+      projectId,
+      label: process.command,
+    });
+    navigate({ to: "/processes/$processId", params: { processId: process.id } });
+  };
+
+  const handleFileClick = (file: { path: string; type: string }) => {
+    if (file.type === "file") {
+      openTab({
+        type: "file",
+        path: file.path,
+        projectId,
+      });
+      navigate({ to: `/files/${projectId}/${file.path}` });
+    }
+    // For directories, we could expand in sidebar or navigate - for now just files
+  };
 
   if (projectLoading) {
     return (
@@ -95,66 +130,75 @@ function ProjectPage() {
               </div>
             )}
           </div>
-
-          {/* Files Status */}
-          <div>
-            <label className="text-xs text-text-muted uppercase tracking-wide">Files Status</label>
-            {filesLoading ? (
-              <p className="text-sm text-text-muted">Loading files...</p>
-            ) : filesError ? (
-              <div className="flex items-center gap-2 text-accent-error">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-sm">Error loading files: {filesError instanceof Error ? filesError.message : "Unknown error"}</span>
-              </div>
-            ) : files && files.length > 0 ? (
-              <div className="flex items-center gap-2 text-accent-success">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm">{files.length} items in root directory</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-accent-warning">
-                <FolderTree className="w-4 h-4" />
-                <span className="text-sm">No files found (directory may be empty or path may be invalid)</span>
-              </div>
-            )}
-          </div>
-
-          {/* File list preview */}
-          {files && files.length > 0 && (
-            <div>
-              <label className="text-xs text-text-muted uppercase tracking-wide">Root Files Preview</label>
-              <div className="mt-1 bg-bg-primary rounded border border-border p-2 max-h-32 overflow-auto">
-                <ul className="text-sm font-mono space-y-0.5">
-                  {files.slice(0, 10).map((file) => (
-                    <li key={file.path} className="flex items-center gap-2 text-text-secondary">
-                      <span className={file.type === "directory" ? "text-accent-warning" : "text-text-muted"}>
-                        {file.type === "directory" ? "📁" : "📄"}
-                      </span>
-                      {file.name}
-                    </li>
-                  ))}
-                  {files.length > 10 && (
-                    <li className="text-text-muted">... and {files.length - 10} more</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
+      {/* Files Section */}
+      <div className="bg-bg-elevated rounded-lg border border-border p-4 mb-6">
+        <h2 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <FolderTree className="w-4 h-4" />
+          Files
+          {files && files.length > 0 && (
+            <span className="text-sm text-text-muted font-normal">
+              ({files.length} items)
+            </span>
+          )}
+        </h2>
+        {filesLoading ? (
+          <p className="text-sm text-text-muted">Loading files...</p>
+        ) : filesError ? (
+          <div className="flex items-center gap-2 text-accent-error">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm">Error loading files: {filesError instanceof Error ? filesError.message : "Unknown error"}</span>
+          </div>
+        ) : files && files.length > 0 ? (
+          <div className="space-y-1">
+            {files.slice(0, 15).map((file) => (
+              <button
+                key={file.path}
+                onClick={() => handleFileClick(file)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded border border-transparent",
+                  "flex items-center gap-2 text-sm font-mono",
+                  file.type === "file"
+                    ? "hover:bg-bg-primary hover:border-border cursor-pointer"
+                    : "text-text-muted cursor-default"
+                )}
+              >
+                <span className={file.type === "directory" ? "text-accent-warning" : "text-text-muted"}>
+                  {file.type === "directory" ? "📁" : "📄"}
+                </span>
+                <span className={file.type === "file" ? "text-text-primary" : "text-text-secondary"}>
+                  {file.name}
+                </span>
+              </button>
+            ))}
+            {files.length > 15 && (
+              <p className="text-text-muted text-sm px-3 py-1">
+                ... and {files.length - 15} more items
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-text-muted">
+            <span className="text-sm">No files found (directory may be empty or path may be invalid)</span>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sessions */}
+        {/* Tasks */}
         <div className="bg-bg-elevated rounded-lg border border-border p-4">
-          <h2 className="font-semibold text-text-primary mb-4">Sessions</h2>
+          <h2 className="font-semibold text-text-primary mb-4">Tasks</h2>
           {!sessions?.length ? (
-            <p className="text-text-muted text-sm">No sessions yet</p>
+            <p className="text-text-muted text-sm">No tasks yet</p>
           ) : (
             <div className="space-y-2">
               {sessions.slice(0, 5).map((session) => (
-                <div
+                <button
                   key={session.id}
-                  className="p-3 bg-bg-primary rounded border border-border"
+                  onClick={() => handleSessionClick(session)}
+                  className="w-full text-left p-3 bg-bg-primary rounded border border-border hover:border-accent-primary/50 hover:bg-bg-elevated transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-text-primary">
@@ -165,7 +209,7 @@ function ProjectPage() {
                   <div className="text-xs text-text-muted mt-1">
                     {session.messageCount} messages
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -214,9 +258,10 @@ function ProjectPage() {
           ) : (
             <div className="space-y-2">
               {runningProcesses.map((process) => (
-                <div
+                <button
                   key={process.id}
-                  className="p-3 bg-bg-primary rounded border border-border font-mono text-sm"
+                  onClick={() => handleProcessClick(process)}
+                  className="w-full text-left p-3 bg-bg-primary rounded border border-border font-mono text-sm hover:border-accent-primary/50 hover:bg-bg-elevated transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-text-primary truncate">
@@ -227,7 +272,7 @@ function ProjectPage() {
                   <div className="text-xs text-text-muted mt-1">
                     {process.cwd}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

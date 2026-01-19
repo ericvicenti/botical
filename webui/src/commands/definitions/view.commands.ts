@@ -12,13 +12,13 @@ export const viewCommands: Command[] = [
     },
   },
   {
-    id: "view.toggleBottomPanel",
-    label: "Toggle Bottom Panel",
-    description: "Show or hide the bottom panel",
+    id: "view.showTasksPanel",
+    label: "Show Tasks Panel",
+    description: "Switch to the Tasks panel in the sidebar",
     category: "view",
-    shortcut: { key: "j", mod: true },
+    shortcut: { key: "1", alt: true },
     execute: (ctx) => {
-      ctx.ui.toggleBottomPanel();
+      ctx.ui.setSidebarPanel("tasks");
     },
   },
   {
@@ -26,7 +26,7 @@ export const viewCommands: Command[] = [
     label: "Show Files Panel",
     description: "Switch to the Files panel in the sidebar",
     category: "view",
-    shortcut: { key: "1", alt: true },
+    shortcut: { key: "2", alt: true },
     execute: (ctx) => {
       ctx.ui.setSidebarPanel("files");
     },
@@ -36,7 +36,7 @@ export const viewCommands: Command[] = [
     label: "Show Git Panel",
     description: "Switch to the Git panel in the sidebar",
     category: "view",
-    shortcut: { key: "2", alt: true },
+    shortcut: { key: "3", alt: true },
     execute: (ctx) => {
       ctx.ui.setSidebarPanel("git");
     },
@@ -46,7 +46,7 @@ export const viewCommands: Command[] = [
     label: "Show Run Panel",
     description: "Switch to the Run panel in the sidebar",
     category: "view",
-    shortcut: { key: "3", alt: true },
+    shortcut: { key: "4", alt: true },
     execute: (ctx) => {
       ctx.ui.setSidebarPanel("run");
     },

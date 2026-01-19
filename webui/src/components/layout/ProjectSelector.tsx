@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, FolderTree, Plus } from "lucide-react";
+import { ChevronDown, FolderTree, LayoutList, Plus } from "lucide-react";
 import { useProjects } from "@/lib/api/queries";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
@@ -47,12 +47,18 @@ export function ProjectSelector() {
     setIsOpen(false);
   };
 
+  const handleViewAllProjects = () => {
+    openTab({ type: "projects" });
+    navigate({ to: "/" });
+    setIsOpen(false);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full flex items-center justify-between gap-2 px-3 py-2",
+          "w-full h-9 flex items-center justify-between gap-2 px-3",
           "bg-bg-elevated hover:bg-bg-elevated/80 transition-colors",
           "text-sm text-text-primary border-b border-border"
         )}
@@ -99,6 +105,17 @@ export function ProjectSelector() {
               {projects && projects.length > 0 && (
                 <div className="border-t border-border my-1" />
               )}
+              <button
+                onClick={handleViewAllProjects}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 text-left",
+                  "hover:bg-bg-secondary transition-colors",
+                  "text-sm text-text-secondary"
+                )}
+              >
+                <LayoutList className="w-4 h-4 shrink-0" />
+                <span>View All Projects</span>
+              </button>
               <button
                 onClick={handleCreateProject}
                 className={cn(

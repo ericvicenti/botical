@@ -3,12 +3,16 @@ import type { Tab } from "@/types/tabs";
 
 function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } {
   switch (tab.data.type) {
+    case "projects":
+      return { to: "/" };
     case "project":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "mission":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "file":
       return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
+    case "process":
+      return { to: "/processes/$processId", params: { processId: tab.data.processId } };
     case "task":
       return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
     case "settings":
@@ -32,11 +36,22 @@ export const tabCommands: Command[] = [
     label: "Close Tab",
     description: "Close the current tab",
     category: "tab",
-    shortcut: { key: "w", mod: true },
+    shortcut: { key: "w", ctrl: true },
     when: (ctx) => ctx.activeTabId !== null,
     execute: (ctx) => {
       if (ctx.activeTabId) {
+        const currentIndex = ctx.tabs.findIndex((t) => t.id === ctx.activeTabId);
         ctx.tabActions.closeTab(ctx.activeTabId);
+
+        // Navigate to the next tab or home if no tabs left
+        const remainingTabs = ctx.tabs.filter((t) => t.id !== ctx.activeTabId);
+        if (remainingTabs.length > 0) {
+          const newIndex = Math.min(currentIndex, remainingTabs.length - 1);
+          const newTab = remainingTabs[newIndex];
+          navigateToTab(ctx, newTab);
+        } else {
+          ctx.navigate({ to: "/" });
+        }
       }
     },
   },
@@ -67,7 +82,7 @@ export const tabCommands: Command[] = [
     label: "Next Tab",
     description: "Switch to the next tab",
     category: "tab",
-    shortcut: { key: "]", mod: true, shift: true },
+    shortcut: { key: "]", alt: true },
     when: (ctx) => ctx.tabs.length > 1,
     execute: (ctx) => {
       const currentIndex = ctx.tabs.findIndex((t) => t.id === ctx.activeTabId);
@@ -82,7 +97,7 @@ export const tabCommands: Command[] = [
     label: "Previous Tab",
     description: "Switch to the previous tab",
     category: "tab",
-    shortcut: { key: "[", mod: true, shift: true },
+    shortcut: { key: "[", alt: true },
     when: (ctx) => ctx.tabs.length > 1,
     execute: (ctx) => {
       const currentIndex = ctx.tabs.findIndex((t) => t.id === ctx.activeTabId);

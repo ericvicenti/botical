@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TaskChat } from "@/components/tasks/TaskChat";
 import { useUI } from "@/contexts/ui";
+import { useTabs } from "@/contexts/tabs";
 
 export const Route = createFileRoute("/tasks/$sessionId")({
   component: TaskView,
@@ -9,6 +10,10 @@ export const Route = createFileRoute("/tasks/$sessionId")({
 function TaskView() {
   const { sessionId } = Route.useParams();
   const { selectedProjectId } = useUI();
+  const { activeTabId } = useTabs();
+
+  // Check if this task's tab is active
+  const isActive = activeTabId === `task:${sessionId}`;
 
   if (!selectedProjectId) {
     return (
@@ -18,5 +23,5 @@ function TaskView() {
     );
   }
 
-  return <TaskChat sessionId={sessionId} projectId={selectedProjectId} />;
+  return <TaskChat sessionId={sessionId} projectId={selectedProjectId} isActive={isActive} />;
 }

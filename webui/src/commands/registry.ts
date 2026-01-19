@@ -37,6 +37,7 @@ class CommandRegistry {
   private shortcutToKey(shortcut: CommandShortcut): string {
     const parts: string[] = [];
     if (shortcut.mod) parts.push("mod");
+    if (shortcut.ctrl) parts.push("ctrl");
     if (shortcut.shift) parts.push("shift");
     if (shortcut.alt) parts.push("alt");
     parts.push(shortcut.key.toLowerCase());
@@ -44,9 +45,27 @@ class CommandRegistry {
   }
 
   eventToShortcut(e: KeyboardEvent): CommandShortcut {
+    // Use e.code for physical key when modifiers are pressed
+    // because modifier+letter can produce special characters on Mac
+    let key = e.key.toLowerCase();
+    if ((e.altKey || e.ctrlKey) && e.code) {
+      // Convert "KeyW" -> "w", "ArrowLeft" -> "arrowleft", etc.
+      if (e.code.startsWith("Key")) {
+        key = e.code.slice(3).toLowerCase();
+      } else if (e.code.startsWith("Digit")) {
+        key = e.code.slice(5);
+      } else if (e.code === "BracketLeft") {
+        key = "[";
+      } else if (e.code === "BracketRight") {
+        key = "]";
+      } else {
+        key = e.code.toLowerCase();
+      }
+    }
     return {
-      key: e.key.toLowerCase(),
-      mod: e.metaKey || e.ctrlKey,
+      key,
+      mod: e.metaKey,
+      ctrl: e.ctrlKey,
       shift: e.shiftKey,
       alt: e.altKey,
     };
@@ -59,12 +78,20 @@ class CommandRegistry {
     const parts: string[] = [];
 
     if (shortcut.mod) parts.push(isMac ? "⌘" : "Ctrl");
+    if (shortcut.ctrl) parts.push(isMac ? "⌃" : "Ctrl");
     if (shortcut.shift) parts.push(isMac ? "⇧" : "Shift");
     if (shortcut.alt) parts.push(isMac ? "⌥" : "Alt");
 
-    const keyDisplay = shortcut.key.length === 1
+    let keyDisplay = shortcut.key.length === 1
       ? shortcut.key.toUpperCase()
       : shortcut.key;
+
+    // Format arrow keys nicely
+    if (keyDisplay.toLowerCase() === "arrowleft") keyDisplay = "←";
+    else if (keyDisplay.toLowerCase() === "arrowright") keyDisplay = "→";
+    else if (keyDisplay.toLowerCase() === "arrowup") keyDisplay = "↑";
+    else if (keyDisplay.toLowerCase() === "arrowdown") keyDisplay = "↓";
+
     parts.push(keyDisplay);
 
     return parts.join(isMac ? "" : "+");

@@ -392,4 +392,40 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 5,
+    name: "services",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- SERVICES
+        -- Persistent service configurations for auto-start
+        -- ============================================
+
+        CREATE TABLE services (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          command TEXT NOT NULL,
+          cwd TEXT,
+          env TEXT,
+          auto_start INTEGER DEFAULT 0,
+          enabled INTEGER DEFAULT 1,
+          created_by TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          UNIQUE(project_id, name)
+        );
+
+        CREATE INDEX idx_services_project ON services(project_id);
+        CREATE INDEX idx_services_auto_start ON services(auto_start) WHERE auto_start = 1;
+
+        -- Add service_id and log_path columns to processes
+        ALTER TABLE processes ADD COLUMN service_id TEXT REFERENCES services(id);
+        ALTER TABLE processes ADD COLUMN log_path TEXT;
+
+        CREATE INDEX idx_processes_service ON processes(service_id) WHERE service_id IS NOT NULL;
+      `);
+    },
+  },
 ];

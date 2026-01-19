@@ -1,5 +1,4 @@
 import { useProcesses } from "@/lib/api/queries";
-import { useUI } from "@/contexts/ui";
 import { ProcessItem } from "./ProcessItem";
 import { Terminal } from "lucide-react";
 
@@ -9,7 +8,6 @@ interface ProcessListProps {
 
 export function ProcessList({ projectId }: ProcessListProps) {
   const { data: processes, isLoading } = useProcesses(projectId);
-  const { selectedProcessId, setSelectedProcess } = useUI();
 
   if (isLoading) {
     return (
@@ -51,8 +49,6 @@ export function ProcessList({ projectId }: ProcessListProps) {
               <ProcessItem
                 key={process.id}
                 process={process}
-                isSelected={selectedProcessId === process.id}
-                onSelect={() => setSelectedProcess(process.id)}
               />
             ))}
           </div>
@@ -68,8 +64,6 @@ export function ProcessList({ projectId }: ProcessListProps) {
               <ProcessItem
                 key={process.id}
                 process={process}
-                isSelected={selectedProcessId === process.id}
-                onSelect={() => setSelectedProcess(process.id)}
               />
             ))}
           </div>

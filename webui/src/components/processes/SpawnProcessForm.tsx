@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useSpawnProcess, useSettings } from "@/lib/api/queries";
-import { useUI } from "@/contexts/ui";
+import { useTabs } from "@/contexts/tabs";
+import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
-import { Play, Terminal, Radio, ChevronDown } from "lucide-react";
+import { Play, ChevronDown } from "lucide-react";
 
 interface SpawnProcessFormProps {
   projectId: string;
@@ -10,13 +11,13 @@ interface SpawnProcessFormProps {
 
 export function SpawnProcessForm({ projectId }: SpawnProcessFormProps) {
   const [command, setCommand] = useState("");
-  const [type, setType] = useState<"command" | "service">("command");
   const [label, setLabel] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const spawnProcess = useSpawnProcess();
   const { data: settings } = useSettings();
-  const { setSelectedProcess } = useUI();
+  const { openTab } = useTabs();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +26,7 @@ export function SpawnProcessForm({ projectId }: SpawnProcessFormProps) {
     try {
       const process = await spawnProcess.mutateAsync({
         projectId,
-        type,
+        type: "command",
         command: command.trim(),
         scope: "project",
         scopeId: projectId,
@@ -33,8 +34,14 @@ export function SpawnProcessForm({ projectId }: SpawnProcessFormProps) {
         createdBy: settings?.userId || "user",
       });
 
-      // Select the new process to show its output
-      setSelectedProcess(process.id);
+      // Open the new process in a tab
+      openTab({
+        type: "process",
+        processId: process.id,
+        projectId,
+        label: label.trim() || command.slice(0, 30),
+      });
+      navigate({ to: "/processes/$processId", params: { processId: process.id } });
 
       // Clear form
       setCommand("");
@@ -77,41 +84,12 @@ export function SpawnProcessForm({ projectId }: SpawnProcessFormProps) {
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setType("command")}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded text-xs",
-            "transition-colors",
-            type === "command"
-              ? "bg-bg-elevated text-text-primary"
-              : "text-text-muted hover:text-text-secondary"
-          )}
-        >
-          <Terminal className="w-3 h-3" />
-          Command
-        </button>
-        <button
-          type="button"
-          onClick={() => setType("service")}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded text-xs",
-            "transition-colors",
-            type === "service"
-              ? "bg-bg-elevated text-text-primary"
-              : "text-text-muted hover:text-text-secondary"
-          )}
-        >
-          <Radio className="w-3 h-3" />
-          Service
-        </button>
-
+      <div className="flex items-center">
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className={cn(
-            "ml-auto flex items-center gap-0.5 text-xs text-text-muted",
+            "flex items-center gap-0.5 text-xs text-text-muted",
             "hover:text-text-secondary transition-colors"
           )}
         >

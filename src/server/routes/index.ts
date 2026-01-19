@@ -9,4 +9,5 @@ export { tools } from "./tools.ts";
 export { projectMissions, missions } from "./missions.ts";
 export { sessionTasks as sessionTodos, tasks as todos, projectTasks, tasks } from "./tasks.ts";
 export { projectProcesses, processes } from "./processes.ts";
+export { projectServices, services } from "./services.ts";
 export { default as files } from "./files.ts";

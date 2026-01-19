@@ -3,6 +3,7 @@ import { useProjects } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
 import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -13,6 +14,11 @@ function HomePage() {
   const { openTab } = useTabs();
   const navigate = useNavigate();
   const { setSelectedProject } = useUI();
+
+  // Open the projects tab when this page loads
+  useEffect(() => {
+    openTab({ type: "projects" });
+  }, [openTab]);
 
   const handleProjectClick = (project: { id: string; name: string }) => {
     setSelectedProject(project.id);
