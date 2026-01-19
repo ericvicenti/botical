@@ -35,6 +35,9 @@ import { getIdentityInfo } from "@/services/identity.ts";
 import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 import { Config } from "@/config/index.ts";
 import { EventBus } from "@/bus/index.ts";
+import { LLM } from "@/agents/llm.ts";
+import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
+import type { ProviderId } from "@/agents/types.ts";
 
 // ============================================
 // PROJECT-SCOPED GIT ROUTES
@@ -215,6 +218,62 @@ projectGit.post("/:projectId/git/commit", async (c) => {
   });
 
   return c.json({ data: commitResult }, 201);
+});
+
+/**
+ * POST /api/projects/:projectId/git/generate-message
+ * Generate a commit message using AI based on the diff
+ */
+const GenerateMessageSchema = z.object({
+  diff: z.string().min(1),
+  userId: z.string().min(1),
+  providerId: z.enum(["anthropic", "openai", "google"]).default("anthropic"),
+  apiKey: z.string().optional(),
+});
+
+projectGit.post("/:projectId/git/generate-message", async (c) => {
+  const projectId = c.req.param("projectId");
+  const body = await c.req.json();
+
+  const result = GenerateMessageSchema.safeParse(body);
+  if (!result.success) {
+    throw new ValidationError(
+      result.error.errors[0]?.message || "Invalid input"
+    );
+  }
+
+  const { diff, userId, providerId, apiKey: requestApiKey } = result.data;
+
+  // Get API key
+  const apiKey = requestApiKey || ProviderCredentialsService.getApiKey(userId, providerId);
+  if (!apiKey) {
+    throw new ValidationError(`No API key found for provider "${providerId}"`);
+  }
+
+  // Truncate diff if too long (keep first ~4000 chars for context)
+  const truncatedDiff = diff.length > 4000 ? diff.slice(0, 4000) + "\n...(truncated)" : diff;
+
+  // Generate commit message using a simple prompt
+  const llmResult = await LLM.generateCompletion({
+    providerId: providerId as ProviderId,
+    apiKey,
+    messages: [
+      {
+        role: "user",
+        content: `Write a concise git commit message for the following changes. Use conventional commit format (e.g., "feat:", "fix:", "refactor:", "docs:", "chore:"). Be specific but brief (1-2 lines max). Do not include any explanation, just the commit message itself.
+
+\`\`\`diff
+${truncatedDiff}
+\`\`\``,
+      },
+    ],
+    temperature: 0.3,
+  });
+
+  // Clean up the message and add the sparkle emoji
+  const message = llmResult.text.trim().replace(/^["']|["']$/g, "") + "\n\n✨";
+
+  return c.json({ data: { message } });
 });
 
 /**

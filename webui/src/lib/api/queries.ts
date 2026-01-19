@@ -1301,3 +1301,25 @@ export function useDeleteWorkflow() {
     },
   });
 }
+
+export function useGenerateCommitMessage() {
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      diff,
+      userId,
+      providerId = "anthropic",
+      apiKey,
+    }: {
+      projectId: string;
+      diff: string;
+      userId: string;
+      providerId?: "anthropic" | "openai" | "google";
+      apiKey?: string;
+    }) =>
+      apiClient<{ message: string }>(`/api/projects/${projectId}/git/generate-message`, {
+        method: "POST",
+        body: JSON.stringify({ diff, userId, providerId, apiKey }),
+      }),
+  });
+}
