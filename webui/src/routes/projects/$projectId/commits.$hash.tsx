@@ -73,32 +73,79 @@ function CommitViewPage() {
     );
   }
 
-  // Parse diff into sections per file
-  const parseDiffSections = (diffText: string) => {
-    const sections: Record<string, string> = {};
+  // Parse diff into clean hunks per file
+  interface DiffHunk {
+    oldStart: number;
+    oldCount: number;
+    newStart: number;
+    newCount: number;
+    lines: Array<{ type: "add" | "remove" | "context"; content: string }>;
+  }
+
+  interface FileDiff {
+    hunks: DiffHunk[];
+  }
+
+  const parseDiffSections = (diffText: string): Record<string, FileDiff> => {
+    const sections: Record<string, FileDiff> = {};
     if (!diffText) return sections;
 
     const lines = diffText.split("\n");
     let currentFile = "";
-    let currentSection: string[] = [];
+    let currentHunk: DiffHunk | null = null;
+    let currentHunks: DiffHunk[] = [];
 
     for (const line of lines) {
       if (line.startsWith("diff --git")) {
-        if (currentFile && currentSection.length > 0) {
-          sections[currentFile] = currentSection.join("\n");
+        if (currentFile && currentHunks.length > 0) {
+          sections[currentFile] = { hunks: currentHunks };
         }
         const match = line.match(/diff --git a\/(.+) b\/(.+)/);
         if (match) {
           currentFile = match[2];
         }
-        currentSection = [line];
-      } else {
-        currentSection.push(line);
+        currentHunks = [];
+        currentHunk = null;
+        continue;
+      }
+
+      if (line.startsWith("index ") || line.startsWith("--- ") || line.startsWith("+++ ") ||
+          line.startsWith("new file") || line.startsWith("deleted file") ||
+          line.startsWith("similarity") || line.startsWith("rename")) {
+        continue;
+      }
+
+      const hunkMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+      if (hunkMatch) {
+        if (currentHunk) {
+          currentHunks.push(currentHunk);
+        }
+        currentHunk = {
+          oldStart: parseInt(hunkMatch[1], 10),
+          oldCount: parseInt(hunkMatch[2] || "1", 10),
+          newStart: parseInt(hunkMatch[3], 10),
+          newCount: parseInt(hunkMatch[4] || "1", 10),
+          lines: [],
+        };
+        continue;
+      }
+
+      if (currentHunk) {
+        if (line.startsWith("+")) {
+          currentHunk.lines.push({ type: "add", content: line.slice(1) });
+        } else if (line.startsWith("-")) {
+          currentHunk.lines.push({ type: "remove", content: line.slice(1) });
+        } else if (line.startsWith(" ") || line === "") {
+          currentHunk.lines.push({ type: "context", content: line.slice(1) || "" });
+        }
       }
     }
 
-    if (currentFile && currentSection.length > 0) {
-      sections[currentFile] = currentSection.join("\n");
+    if (currentHunk) {
+      currentHunks.push(currentHunk);
+    }
+    if (currentFile && currentHunks.length > 0) {
+      sections[currentFile] = { hunks: currentHunks };
     }
 
     return sections;
@@ -160,24 +207,32 @@ function CommitViewPage() {
               </button>
               {expandedFiles.has(file.path) && diffSections[file.path] && (
                 <div className="px-4 pb-3">
-                  <pre className="text-xs font-mono bg-bg-secondary p-3 rounded-md overflow-x-auto">
-                    {diffSections[file.path].split("\n").map((line, i) => (
-                      <div
-                        key={i}
-                        className={
-                          line.startsWith("+") && !line.startsWith("+++")
-                            ? "text-green-500"
-                            : line.startsWith("-") && !line.startsWith("---")
-                              ? "text-red-500"
-                              : line.startsWith("@@")
-                                ? "text-blue-500"
-                                : ""
-                        }
-                      >
-                        {line}
+                  <div className="text-xs font-mono bg-bg-secondary rounded-md overflow-x-auto">
+                    {diffSections[file.path].hunks.map((hunk, hunkIndex) => (
+                      <div key={hunkIndex}>
+                        <div className="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-b border-border/50">
+                          Lines {hunk.newStart}-{hunk.newStart + hunk.newCount - 1}
+                        </div>
+                        {hunk.lines.map((line, lineIndex) => (
+                          <div
+                            key={lineIndex}
+                            className={`px-3 py-0.5 ${
+                              line.type === "add"
+                                ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                                : line.type === "remove"
+                                  ? "bg-red-500/20 text-red-700 dark:text-red-300"
+                                  : "text-text-primary"
+                            }`}
+                          >
+                            <span className="select-none opacity-50 mr-2">
+                              {line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
+                            </span>
+                            {line.content || " "}
+                          </div>
+                        ))}
                       </div>
                     ))}
-                  </pre>
+                  </div>
                 </div>
               )}
             </div>
