@@ -78,6 +78,7 @@ export const SessionDeletePayload = z.object({
 });
 
 export const MessageSendPayload = z.object({
+  projectId: z.string().optional(), // Can override connection's projectId
   sessionId: z.string(),
   content: z.string(),
 });

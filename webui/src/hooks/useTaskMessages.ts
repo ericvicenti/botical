@@ -355,6 +355,7 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           apiKey,
           modelId: options?.modelId,
           agentName: options?.agentName,
+          canExecuteCode: true, // Enable bash and other execution tools
         }),
       });
 

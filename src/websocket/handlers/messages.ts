@@ -44,7 +44,9 @@ export const MessageHandlers = {
    */
   async send(payload: unknown, ctx: WSData) {
     const input = MessageSendPayload.parse(payload);
-    const db = DatabaseManager.getProjectDb(ctx.projectId);
+    // Use projectId from payload if provided, otherwise fall back to context
+    const projectId = input.projectId ?? ctx.projectId;
+    const db = DatabaseManager.getProjectDb(projectId);
 
     // Get session to determine provider
     const session = SessionService.getByIdOrThrow(db, input.sessionId);
@@ -62,7 +64,7 @@ export const MessageHandlers = {
     }
 
     // Get project path
-    const projectPath = getProjectPath(ctx.projectId);
+    const projectPath = getProjectPath(projectId);
 
     // Create abort controller for cancellation
     const abortController = new AbortController();
@@ -72,7 +74,7 @@ export const MessageHandlers = {
       // Run the orchestrator
       const result = await AgentOrchestrator.run({
         db,
-        projectId: ctx.projectId,
+        projectId,
         projectPath,
         sessionId: input.sessionId,
         userId: ctx.userId,
