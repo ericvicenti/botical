@@ -1,0 +1,12 @@
+{
+  "name": "pty-sidecar",
+  "version": "1.0.0",
+  "description": "Node.js sidecar for PTY operations using node-pty",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0"
+  }
+}

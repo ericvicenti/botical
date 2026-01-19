@@ -12,7 +12,7 @@ import { ProjectService } from "@/services/projects.ts";
 import { ServiceConfigService } from "@/services/service-config.ts";
 import { ProcessService } from "@/services/processes.ts";
 import { Config } from "@/config/index.ts";
-import { bunProcessManager } from "@/services/bun-process-manager.ts";
+import { ptyProcessManager } from "@/services/pty-process-manager.ts";
 
 /**
  * Service Runner - manages auto-start services
@@ -225,10 +225,10 @@ export class ServiceRunner {
 
     try {
       // Kill all processes managed by the process manager
-      const activeCount = bunProcessManager.getActiveCount();
+      const activeCount = ptyProcessManager.getActiveCount();
       if (activeCount > 0) {
         console.log(`  Killing ${activeCount} active process(es)...`);
-        bunProcessManager.killAll();
+        ptyProcessManager.killAll();
       }
 
       console.log("✅ All services stopped");

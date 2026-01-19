@@ -72,7 +72,7 @@ export function ProcessTerminal({
   const lastOutputLengthRef = useRef(0);
 
   const { resolvedTheme } = useUI();
-  const { output, isRunning, status, write, resize } = useProcessOutput({
+  const { output, isRunning, write, resize } = useProcessOutput({
     processId,
     projectId,
   });
@@ -184,20 +184,6 @@ export function ProcessTerminal({
         className="h-full w-full"
         style={{ backgroundColor: terminalTheme.background }}
       />
-      {!isRunning && status && (
-        <div
-          className={cn(
-            "absolute top-2 right-2 px-2 py-1 text-xs rounded",
-            status === "completed"
-              ? "bg-accent-success/20 text-accent-success"
-              : status === "failed"
-                ? "bg-accent-error/20 text-accent-error"
-                : "bg-bg-elevated text-text-secondary"
-          )}
-        >
-          {status === "completed" ? "Completed" : status === "failed" ? "Failed" : status}
-        </div>
-      )}
     </div>
   );
 }
