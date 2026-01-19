@@ -573,6 +573,31 @@ export function useRenameFile() {
   });
 }
 
+export function useCreateFolder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      path,
+    }: {
+      projectId: string;
+      path: string;
+    }) =>
+      apiClient<{ path: string }>(
+        `/api/projects/${projectId}/folders/${encodeURIComponent(path)}`,
+        {
+          method: "POST",
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "files"],
+      });
+    },
+  });
+}
+
 // Agents
 export interface AgentConfig {
   id: string;

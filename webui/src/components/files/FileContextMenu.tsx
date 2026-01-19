@@ -21,7 +21,7 @@
  */
 import { useRef, useEffect, useState } from "react";
 import { FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
-import { useCreateFile, useDeleteFile } from "@/lib/api/queries";
+import { useCreateFile, useCreateFolder, useDeleteFile } from "@/lib/api/queries";
 
 /** Position coordinates for the context menu */
 export interface ContextMenuPosition {
@@ -175,8 +175,6 @@ interface CreateInputProps {
  * Inline input component for creating new files or folders.
  * Auto-focuses on mount and handles Enter (submit) and Escape (cancel).
  *
- * For folders, creates a .gitkeep file inside to ensure the folder is tracked by git.
- *
  * @example
  * <CreateInput
  *   type="file"
@@ -196,6 +194,7 @@ export function CreateInput({
   const [name, setName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const createFile = useCreateFile();
+  const createFolder = useCreateFolder();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -208,10 +207,13 @@ export function CreateInput({
     }
 
     const fullPath = parentPath ? `${parentPath}/${name.trim()}` : name.trim();
-    const path = type === "folder" ? `${fullPath}/.gitkeep` : fullPath;
 
     try {
-      await createFile.mutateAsync({ projectId, path, content: "" });
+      if (type === "folder") {
+        await createFolder.mutateAsync({ projectId, path: fullPath });
+      } else {
+        await createFile.mutateAsync({ projectId, path: fullPath, content: "" });
+      }
       onComplete();
     } catch (err) {
       console.error("Failed to create:", err);

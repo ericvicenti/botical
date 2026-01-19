@@ -516,4 +516,34 @@ files.post("/:projectId/files/*/move", async (c) => {
   });
 });
 
+/**
+ * POST /api/projects/:projectId/folders/:path
+ * Create a new folder
+ */
+files.post("/:projectId/folders/*", async (c) => {
+  const { projectId } = c.req.param();
+  const folderPath = c.req.param("*") || "";
+
+  if (!folderPath) {
+    throw new ValidationError("Folder path is required");
+  }
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  if (!project.path) {
+    throw new ValidationError("Project has no filesystem path");
+  }
+
+  const fullPath = resolveProjectPath(project.path, folderPath);
+
+  await fs.mkdir(fullPath, { recursive: true });
+
+  return c.json({
+    data: {
+      path: folderPath,
+    },
+  }, 201);
+});
+
 export default files;
