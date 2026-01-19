@@ -69,11 +69,18 @@ export interface FileTreeRef {
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree({ projectId }, ref) {
   const { data: rootFiles, isLoading } = useFiles(projectId);
   const { revealPath } = useUI();
+  const { tabs, activeTabId } = useTabs();
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
     target: ContextMenuTarget;
   } | null>(null);
   const [createState, setCreateState] = useState<CreateState | null>(null);
+
+  // Get the active file/folder path from the current tab
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activePath = activeTab?.data.type === "file" || activeTab?.data.type === "folder"
+    ? (activeTab.data as { path: string }).path
+    : null;
 
   const handleStartCreate = useCallback((type: "file" | "folder", parentPath: string) => {
     setCreateState({ type, parentPath });
@@ -142,6 +149,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
           projectId={projectId}
           depth={0}
           revealPath={revealPath}
+          activePath={activePath}
           createState={createState}
           onStartCreate={handleStartCreate}
           onCreateComplete={() => setCreateState(null)}
@@ -170,6 +178,8 @@ interface FileTreeNodeProps {
   depth: number;
   /** Path to reveal/highlight in the tree (for "reveal in tree" feature) */
   revealPath: string | null;
+  /** Currently active/open file path (for highlighting) */
+  activePath: string | null;
   /** Current inline creation state (if any) */
   createState: CreateState | null;
   /** Callback to initiate file/folder creation */
@@ -187,6 +197,7 @@ function FileTreeNode({
   projectId,
   depth,
   revealPath,
+  activePath,
   createState,
   onStartCreate,
   onCreateComplete,
@@ -209,6 +220,9 @@ function FileTreeNode({
     revealPath.startsWith(file.path + "/")
   );
   const isTarget = revealPath === file.path;
+
+  // Check if this is the currently active/open file
+  const isActive = activePath === file.path;
 
   // Check if we're creating inside this folder
   const isCreatingHere = createState && createState.parentPath === file.path;
@@ -331,10 +345,11 @@ function FileTreeNode({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         className={cn(
-          "flex items-center gap-1 py-0.5 px-2 cursor-pointer",
+          "flex items-center gap-1 py-0.5 px-2 cursor-pointer select-none",
           "hover:bg-bg-elevated rounded",
           "text-text-primary",
-          isTarget && "bg-accent-primary/20 ring-1 ring-accent-primary/50"
+          isTarget && "bg-accent-primary/20 ring-1 ring-accent-primary/50",
+          isActive && !isTarget && "bg-bg-elevated"
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -412,6 +427,7 @@ function FileTreeNode({
                 projectId={projectId}
                 depth={depth + 1}
                 revealPath={revealPath}
+                activePath={activePath}
                 createState={createState}
                 onStartCreate={onStartCreate}
                 onCreateComplete={onCreateComplete}
