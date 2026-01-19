@@ -42,6 +42,13 @@ alt/ctrl modifiers are pressed to get the physical key:
 - Preview tabs: When URL doesn't match any open tab, shows italic preview tab
 - URL parsing in TabBar syncs browser navigation with tab state
 
+**Shared utilities in `lib/tabs.ts`:**
+- `generateTabId(data)` - Create unique tab ID from TabData
+- `generateTabLabel(data)` - Create display label from TabData
+- `getTabRoute(tab)` - Get router path and params for a tab
+- `parseUrlToTabData(pathname)` - Parse URL to TabData for preview tabs
+- `truncateCommand(command, maxLength)` - Truncate command strings for display
+
 ### UI State Persistence (webui)
 Stored in localStorage under `iris:ui`:
 - `selectedProjectId`: Current project
@@ -53,6 +60,18 @@ Stored in localStorage under `iris:ui`:
 - Services are persistent process configurations stored in database
 - Support auto-start on server startup
 - Logs persisted to filesystem at `{project.path}/.iris/logs/{processId}.log`
+
+### API Mutation Error Handling (webui)
+Always add `onError` handlers to mutations that perform user-initiated actions:
+```typescript
+mutation.mutate(params, {
+  onSuccess: (data) => { /* handle success */ },
+  onError: (error) => {
+    console.error(`Failed to ${action}:`, error);
+    alert(`Failed to ${action}: ${error.message}`);
+  },
+});
+```
 
 ## Running the Project
 
