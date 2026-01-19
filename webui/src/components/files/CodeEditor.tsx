@@ -19,8 +19,8 @@ import { html } from "@codemirror/lang-html";
 import { useFileContent, useSaveFile, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
-import { ContentHeader } from "@/components/layout/ContentHeader";
 
 // Light theme for CodeMirror
 const lightTheme = EditorView.theme(
@@ -186,8 +186,9 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
   const { data: fileData, isLoading, error } = useFileContent(projectId, path);
   const { data: project } = useProject(projectId);
   const saveFile = useSaveFile();
-  const { markDirty, getDirtyContent, setDirtyContent } = useTabs();
+  const { markDirty, getDirtyContent, setDirtyContent, openPreviewTab } = useTabs();
   const { resolvedTheme } = useUI();
+  const navigate = useNavigate();
 
   // Generate tab ID for this file
   const tabId = `file:${projectId}:${path}`;
@@ -326,19 +327,46 @@ export function CodeEditor({ projectId, path }: CodeEditorProps) {
 
   const filename = path.split("/").pop() || path;
   const extension = filename.split(".").pop()?.toUpperCase() || "";
+  const pathParts = path.split("/");
+
+  const handleNavigateToFolder = (folderPath: string) => {
+    openPreviewTab({
+      type: "folder",
+      projectId,
+      path: folderPath,
+    });
+    navigate({ to: `/folders/${projectId}/${folderPath}` });
+  };
 
   return (
     <div className="h-full flex flex-col bg-bg-primary">
-      {/* Header */}
-      <ContentHeader
-        project={project ? { id: project.id, name: project.name } : null}
-        title={
-          <span className="flex items-center gap-2">
-            {path}
+      {/* Header with breadcrumb navigation */}
+      <div className="border-b border-border px-4 py-3 bg-bg-secondary">
+        <div className="flex items-center text-sm">
+          <button
+            onClick={() => handleNavigateToFolder("")}
+            className="text-text-muted hover:text-accent-primary"
+          >
+            {project?.name || "Project"}
+          </button>
+          {pathParts.slice(0, -1).map((part, i) => (
+            <span key={i} className="flex items-center">
+              <span className="text-text-muted mx-1">/</span>
+              <button
+                onClick={() => handleNavigateToFolder(pathParts.slice(0, i + 1).join("/"))}
+                className="text-text-muted hover:text-accent-primary"
+              >
+                {part}
+              </button>
+            </span>
+          ))}
+          <span className="text-text-muted mx-1">/</span>
+          <span className="text-text-primary font-medium flex items-center gap-2">
+            {filename}
             {isDirty && <span className="w-2 h-2 rounded-full bg-accent-warning" />}
           </span>
-        }
-      />
+        </div>
+      </div>
 
       {/* Editor */}
       <div ref={containerRef} className="flex-1 overflow-hidden" />

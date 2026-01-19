@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useFolderDetails } from "@/lib/api/queries";
+import { useFolderDetails, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
@@ -11,8 +11,6 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  ArrowLeft,
-  Home,
 } from "lucide-react";
 import type { DetailedFileEntry } from "@/lib/api/types";
 
@@ -74,6 +72,7 @@ function getTypeColor(entry: DetailedFileEntry): string {
 
 export function FolderView({ projectId, path }: FolderViewProps) {
   const { data: folder, isLoading, error } = useFolderDetails(projectId, path);
+  const { data: project } = useProject(projectId);
   const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
@@ -128,24 +127,13 @@ export function FolderView({ projectId, path }: FolderViewProps) {
     }
   };
 
-  const handleNavigateUp = () => {
-    if (!path) return;
-    const parentPath = path.split("/").slice(0, -1).join("/");
+  const handleNavigateToFolder = (folderPath: string) => {
     openPreviewTab({
       type: "folder",
       projectId,
-      path: parentPath,
+      path: folderPath,
     });
-    navigate({ to: `/folders/${projectId}/${parentPath}` });
-  };
-
-  const handleNavigateRoot = () => {
-    openPreviewTab({
-      type: "folder",
-      projectId,
-      path: "",
-    });
-    navigate({ to: `/folders/${projectId}/` });
+    navigate({ to: `/folders/${projectId}/${folderPath}` });
   };
 
   if (isLoading) {
@@ -209,49 +197,30 @@ export function FolderView({ projectId, path }: FolderViewProps) {
       {/* Header with folder info */}
       <div className="border-b border-border px-4 py-3">
         {/* Breadcrumb navigation */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center text-sm mb-2">
           <button
-            onClick={handleNavigateRoot}
-            className="p-1 hover:bg-bg-elevated rounded transition-colors"
-            title="Go to root"
+            onClick={() => handleNavigateToFolder("")}
+            className={cn(
+              "hover:text-accent-primary",
+              pathParts.length === 0 ? "text-text-primary font-medium" : "text-text-muted"
+            )}
           >
-            <Home className="w-4 h-4 text-text-muted" />
+            {project?.name || "Project"}
           </button>
-          {path && (
-            <button
-              onClick={handleNavigateUp}
-              className="p-1 hover:bg-bg-elevated rounded transition-colors"
-              title="Go up"
-            >
-              <ArrowLeft className="w-4 h-4 text-text-muted" />
-            </button>
-          )}
-          <div className="flex items-center text-sm">
-            <button
-              onClick={handleNavigateRoot}
-              className="text-text-muted hover:text-text-primary"
-            >
-              /
-            </button>
-            {pathParts.map((part, i) => (
-              <span key={i} className="flex items-center">
-                <span className="text-text-muted mx-1">/</span>
-                <button
-                  onClick={() => {
-                    const subPath = pathParts.slice(0, i + 1).join("/");
-                    openTab({ type: "folder", projectId, path: subPath });
-                    navigate({ to: `/folders/${projectId}/${subPath}` });
-                  }}
-                  className={cn(
-                    "hover:text-accent-primary",
-                    i === pathParts.length - 1 ? "text-text-primary font-medium" : "text-text-muted"
-                  )}
-                >
-                  {part}
-                </button>
-              </span>
-            ))}
-          </div>
+          {pathParts.map((part, i) => (
+            <span key={i} className="flex items-center">
+              <span className="text-text-muted mx-1">/</span>
+              <button
+                onClick={() => handleNavigateToFolder(pathParts.slice(0, i + 1).join("/"))}
+                className={cn(
+                  "hover:text-accent-primary",
+                  i === pathParts.length - 1 ? "text-text-primary font-medium" : "text-text-muted"
+                )}
+              >
+                {part}
+              </button>
+            </span>
+          ))}
         </div>
 
         {/* Folder stats */}
