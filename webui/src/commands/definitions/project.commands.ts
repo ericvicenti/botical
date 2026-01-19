@@ -19,7 +19,8 @@ export const projectCommands: Command[] = [
     category: "project",
     shortcut: { key: ",", mod: true },
     execute: (ctx) => {
-      ctx.tabActions.openTab({ type: "settings" });
+      // Navigate to settings - preview tab will show, user can pin it
+      ctx.navigate({ to: "/settings/api-keys" });
     },
   },
 ];

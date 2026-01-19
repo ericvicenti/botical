@@ -9,6 +9,8 @@ export type TabType =
   | "create-project"
   | "task";
 
+export type SettingsPage = "api-keys" | "theme" | "shortcuts" | "about";
+
 export interface Tab {
   id: string;
   type: TabType;
@@ -25,6 +27,6 @@ export type TabData =
   | { type: "file"; path: string; projectId: string }
   | { type: "process"; processId: string; projectId: string; label?: string }
   | { type: "diff"; path: string; projectId: string; base?: string }
-  | { type: "settings" }
+  | { type: "settings"; page: SettingsPage }
   | { type: "create-project" }
   | { type: "task"; sessionId: string; projectId: string; title: string };

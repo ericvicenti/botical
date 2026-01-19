@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils/cn";
-import { useTabs } from "@/contexts/tabs";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { Key, Palette, Keyboard, Info } from "lucide-react";
+import type { SettingsPage } from "@/types/tabs";
 
 interface SettingsItem {
-  id: string;
+  id: SettingsPage;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
@@ -18,12 +18,12 @@ const SETTINGS_ITEMS: SettingsItem[] = [
 ];
 
 export function SettingsPanel() {
-  const { openTab } = useTabs();
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleItemClick = (item: SettingsItem) => {
-    openTab({ type: "settings" });
+    // Just navigate - the TabBar will show a preview tab
+    // User can click the preview tab to make it permanent
     navigate({ to: item.path });
   };
 

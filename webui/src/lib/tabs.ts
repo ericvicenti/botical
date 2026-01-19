@@ -1,4 +1,11 @@
-import type { Tab, TabData, TabType } from "@/types/tabs";
+import type { Tab, TabData, TabType, SettingsPage } from "@/types/tabs";
+
+const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
+  "api-keys": "API Keys",
+  "theme": "Theme",
+  "shortcuts": "Keyboard Shortcuts",
+  "about": "About",
+};
 
 /**
  * Generate a unique ID for a tab based on its data.
@@ -19,7 +26,7 @@ export function generateTabId(data: TabData): string {
     case "diff":
       return `diff:${data.projectId}:${data.path}:${data.base || "working"}`;
     case "settings":
-      return "settings";
+      return `settings:${data.page}`;
     case "create-project":
       return "create-project";
     case "task":
@@ -45,7 +52,7 @@ export function generateTabLabel(data: TabData): string {
     case "diff":
       return `Diff: ${data.path.split("/").pop()}`;
     case "settings":
-      return "Settings";
+      return SETTINGS_PAGE_LABELS[data.page] || "Settings";
     case "create-project":
       return "New Project";
     case "task":
@@ -71,7 +78,7 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
     case "task":
       return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
     case "settings":
-      return { to: "/settings" };
+      return { to: `/settings/${tab.data.page}` };
     case "create-project":
       return { to: "/create-project" };
     default:
@@ -125,12 +132,25 @@ export function parseUrlToTabData(pathname: string): { data: TabData; label: str
     };
   }
 
-  // /settings
+  // /settings/:page
+  const settingsMatch = pathname.match(/^\/settings\/([^/]+)$/);
+  if (settingsMatch) {
+    const page = settingsMatch[1] as SettingsPage;
+    if (["api-keys", "theme", "shortcuts", "about"].includes(page)) {
+      return {
+        type: "settings",
+        data: { type: "settings", page },
+        label: SETTINGS_PAGE_LABELS[page] || "Settings",
+      };
+    }
+  }
+
+  // /settings (redirect to api-keys)
   if (pathname === "/settings") {
     return {
       type: "settings",
-      data: { type: "settings" },
-      label: "Settings",
+      data: { type: "settings", page: "api-keys" },
+      label: "API Keys",
     };
   }
 
