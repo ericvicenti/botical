@@ -50,7 +50,8 @@ Examples:
     saveAsService: z
       .boolean()
       .optional()
-      .describe("Save this as a persistent service configuration that can be managed and restarted"),
+      .default(true)
+      .describe("Save this as a persistent service configuration that can be managed and restarted (default: true)"),
     autoStart: z
       .boolean()
       .optional()
@@ -58,7 +59,7 @@ Examples:
   }),
 
   async execute(args, context) {
-    const { command, label, waitForReady = 0, saveAsService = false, autoStart = false } = args;
+    const { command, label, waitForReady = 0, saveAsService = true, autoStart = false } = args;
 
     // Update metadata to show process is starting
     context.updateMetadata({

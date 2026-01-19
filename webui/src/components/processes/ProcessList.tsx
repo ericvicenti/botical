@@ -9,6 +9,9 @@ interface ProcessListProps {
 export function ProcessList({ projectId }: ProcessListProps) {
   const { data: processes, isLoading } = useProcesses(projectId);
 
+  // Filter to only show command processes (not services)
+  const commandProcesses = processes?.filter((p) => p.type === "command") || [];
+
   if (isLoading) {
     return (
       <div className="py-2 text-sm text-text-muted text-center">
@@ -17,11 +20,11 @@ export function ProcessList({ projectId }: ProcessListProps) {
     );
   }
 
-  if (!processes || processes.length === 0) {
+  if (commandProcesses.length === 0) {
     return (
       <div className="py-4 text-center">
         <Terminal className="w-6 h-6 mx-auto text-text-muted mb-2" />
-        <div className="text-sm text-text-muted">No processes</div>
+        <div className="text-sm text-text-muted">No commands</div>
         <div className="text-xs text-text-muted mt-1">
           Run a command to get started
         </div>
@@ -30,10 +33,10 @@ export function ProcessList({ projectId }: ProcessListProps) {
   }
 
   // Split into running and completed processes
-  const running = processes.filter(
+  const running = commandProcesses.filter(
     (p) => p.status === "running" || p.status === "starting"
   );
-  const completed = processes.filter(
+  const completed = commandProcesses.filter(
     (p) => p.status !== "running" && p.status !== "starting"
   );
 
