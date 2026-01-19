@@ -100,15 +100,18 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
+      // Auto-generate ID if not present
+      const messageWithId = {
+        id: generateRequestId(),
+        ...message,
+      };
+      wsRef.current.send(JSON.stringify(messageWithId));
     }
   }, []);
 
   const subscribe = useCallback(
     (channel: string) => {
-      // Send in the format expected by the server's WSRequest schema
       send({
-        id: generateRequestId(),
         type: "subscribe",
         payload: { channel },
       });
@@ -119,9 +122,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   const unsubscribe = useCallback(
     (channel: string) => {
-      // Send in the format expected by the server's WSRequest schema
       send({
-        id: generateRequestId(),
         type: "unsubscribe",
         payload: { channel },
       });
