@@ -2,11 +2,12 @@
 
 ## The App Model
 
-An Iris App is a self-contained unit that combines:
+An Iris App is a single-file application that combines:
 
-1. **Server Logic** - Tools, state, services (runs in Iris backend)
-2. **User Interface** - React frontend (runs in sandboxed iframe)
-3. **Manifest** - Declaration of capabilities and requirements
+1. **State** - Reactive values that drive the UI
+2. **Tools** - Functions exposed to AI agents and the UI
+3. **UI** - A function that returns a component tree (SDR)
+4. **Services** - Optional background processes
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -19,26 +20,67 @@ An Iris App is a self-contained unit that combines:
 │  │                                                        │  │
 │  │  • Identity (name, version, description)              │  │
 │  │  • Capabilities (tools, services)                     │  │
-│  │  • Requirements (permissions, dependencies)           │  │
+│  │  • Requirements (permissions)                         │  │
+│  │  • UI mode (sdr or custom)                            │  │
 │  └──────────────────────────────────────────────────────┘  │
 │                                                              │
-│  ┌────────────────────────┐  ┌────────────────────────┐   │
-│  │     Server Module      │  │      UI Module         │   │
-│  │     (server.ts)        │  │      (ui/)             │   │
-│  │                        │  │                        │   │
-│  │  • defineApp()         │  │  • React components    │   │
-│  │  • State definitions   │  │  • useApp() hooks      │   │
-│  │  • Tool handlers       │  │  • Event handlers      │   │
-│  │  • Service configs     │  │  • Styling             │   │
-│  │  • Lifecycle hooks     │  │                        │   │
-│  └────────────────────────┘  └────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │                   Server Module                       │  │
+│  │                   (server.ts)                         │  │
+│  │                                                        │  │
+│  │  export default defineApp({                           │  │
+│  │    state: { ... },      // Reactive state             │  │
+│  │    tools: [ ... ],      // AI-callable functions      │  │
+│  │    ui: (ctx) => ...,    // SDR UI function            │  │
+│  │    services: { ... },   // Background services        │  │
+│  │    onActivate: ...,     // Lifecycle hooks            │  │
+│  │  })                                                   │  │
+│  │                                                        │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                              │
+│  For most apps: NO SEPARATE UI FOLDER                       │
+│  The ui() function IS the UI                                │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## App Structure
+
+### Minimal App (Single File)
+
+```
+my-app/
+├── app.json        # Manifest
+└── server.ts       # Everything else
+```
+
+### App with Assets
+
+```
+my-app/
+├── app.json        # Manifest
+├── server.ts       # App logic + UI
+└── assets/         # Static files (optional)
+    ├── icon.png
+    └── data.json
+```
+
+### App with Custom UI (Escape Hatch)
+
+```
+my-app/
+├── app.json        # Manifest with ui.mode: "custom"
+├── server.ts       # Tools, state, services
+└── ui/             # Full React app
+    ├── index.html
+    ├── vite.config.ts
+    └── src/
+        └── App.tsx
+```
+
 ## Manifest Schema
 
-The `app.json` manifest declares everything about an app:
+### SDR App (Default)
 
 ```json
 {
@@ -49,27 +91,13 @@ The `app.json` manifest declares everything about an app:
   "version": "1.0.0",
   "description": "Browse and query SQLite databases",
   "icon": "database",
-  "author": "developer@example.com",
-  "license": "MIT",
 
-  "iris": {
-    "minVersion": "0.1.0"
-  },
-
-  "server": {
-    "entry": "server.ts"
-  },
-
-  "ui": {
-    "entry": "ui/index.html",
-    "devPort": 5174
-  },
+  "server": "server.ts",
 
   "tools": [
     {
       "name": "query",
-      "description": "Execute a SQL query against the database",
-      "confirmationRequired": true
+      "description": "Execute a SQL query against the database"
     },
     {
       "name": "list_tables",
@@ -77,40 +105,31 @@ The `app.json` manifest declares everything about an app:
     }
   ],
 
-  "services": [
-    {
-      "name": "connection",
-      "description": "Database connection pool",
-      "autoStart": true
-    }
-  ],
-
   "permissions": [
-    "filesystem:read",
-    "filesystem:write:$PROJECT",
-    "network:localhost",
+    "filesystem:read:$PROJECT",
     "ai:chat"
-  ],
+  ]
+}
+```
 
-  "configuration": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "defaultDatabase": {
-          "type": "string",
-          "description": "Path to default database file"
-        },
-        "maxConnections": {
-          "type": "number",
-          "default": 5
-        }
-      }
-    }
+### Custom UI App
+
+```json
+{
+  "name": "3d-visualizer",
+  "displayName": "3D Visualizer",
+  "version": "1.0.0",
+
+  "server": "server.ts",
+
+  "ui": {
+    "mode": "custom",
+    "entry": "ui/index.html",
+    "devPort": 5174
   },
 
-  "dependencies": {
-    "better-sqlite3": "^9.0.0"
-  }
+  "tools": [...],
+  "permissions": [...]
 }
 ```
 
@@ -122,98 +141,398 @@ The `app.json` manifest declares everything about an app:
 | `displayName` | Yes | Human-readable name |
 | `version` | Yes | Semver version |
 | `description` | No | Brief description |
-| `icon` | No | Icon identifier (from Lucide icons) |
-| `author` | No | Author email or name |
-| `license` | No | SPDX license identifier |
-| `iris.minVersion` | No | Minimum Iris version required |
-| `server.entry` | Yes | Path to server module |
-| `ui.entry` | No | Path to UI entry (if app has UI) |
-| `ui.devPort` | No | Port for Vite dev server |
+| `icon` | No | Icon name (from Lucide icons) |
+| `server` | Yes | Path to server module |
+| `ui` | No | Custom UI config (omit for SDR) |
+| `ui.mode` | No | `"sdr"` (default) or `"custom"` |
+| `ui.entry` | Only for custom | Path to UI entry point |
 | `tools` | No | Tools exposed to AI agent |
 | `services` | No | Background services |
 | `permissions` | Yes | Required permissions |
-| `configuration` | No | User-configurable settings |
-| `dependencies` | No | npm dependencies to install |
 
-## Permission Model
+## Complete App Example
 
-Permissions control what an app can access in the Iris environment.
+```typescript
+// server.ts
+import { defineApp, defineTool, state } from '@iris/app-sdk';
+import { Stack, Heading, Input, Button, DataTable, Text, Alert } from '@iris/ui';
+import { z } from 'zod';
 
-### Permission Categories
+export default defineApp({
+  // Reactive state
+  state: {
+    query: state('SELECT * FROM users LIMIT 10'),
+    results: state<any[]>([]),
+    error: state<string | null>(null),
+    isLoading: state(false),
+  },
 
+  // Tools exposed to AI agent
+  tools: [
+    defineTool({
+      name: 'query',
+      description: 'Execute a SQL query against the database',
+      parameters: z.object({
+        sql: z.string().describe('The SQL query to execute'),
+      }),
+      execute: async ({ sql }, ctx) => {
+        ctx.state.isLoading.set(true);
+        ctx.state.error.set(null);
+        ctx.state.query.set(sql);
+
+        try {
+          const db = await ctx.getService('database');
+          const results = await db.query(sql);
+          ctx.state.results.set(results);
+          return { success: true, rowCount: results.length };
+        } catch (e) {
+          ctx.state.error.set(e.message);
+          return { success: false, error: e.message };
+        } finally {
+          ctx.state.isLoading.set(false);
+        }
+      },
+    }),
+
+    defineTool({
+      name: 'list_tables',
+      description: 'List all tables in the database',
+      parameters: z.object({}),
+      execute: async (_, ctx) => {
+        const db = await ctx.getService('database');
+        const tables = await db.query(
+          "SELECT name FROM sqlite_master WHERE type='table'"
+        );
+        return { tables: tables.map(t => t.name) };
+      },
+    }),
+  ],
+
+  // Services
+  services: {
+    database: {
+      start: async (ctx) => {
+        const dbPath = await ctx.getConfig('databasePath');
+        return new Database(dbPath);
+      },
+      stop: async (db) => {
+        await db.close();
+      },
+      autoStart: true,
+    },
+  },
+
+  // UI function - returns component tree
+  ui: (ctx) => {
+    const { query, results, error, isLoading } = ctx.state;
+
+    return Stack({ padding: 16, gap: 16 }, [
+      // Header
+      Heading({ level: 1 }, 'Database Explorer'),
+
+      // Query input
+      Stack({ gap: 8 }, [
+        Input({
+          value: query,
+          onChangeText: query.set,
+          placeholder: 'Enter SQL query...',
+          multiline: true,
+          rows: 3,
+        }),
+        Button({
+          onPress: () => ctx.runTool('query', { sql: query.get() }),
+          disabled: isLoading,
+        }, isLoading ? 'Running...' : 'Execute Query'),
+      ]),
+
+      // Error display
+      error && Alert({ variant: 'error' }, error),
+
+      // Results table
+      results.length > 0 && DataTable({
+        data: results,
+        columns: Object.keys(results[0] || {}),
+      }),
+
+      // Empty state
+      results.length === 0 && !error && !isLoading &&
+        Text({ color: 'muted' }, 'Run a query to see results'),
+    ]);
+  },
+
+  // Lifecycle
+  onActivate: async (ctx) => {
+    ctx.log.info('Database Explorer activated');
+  },
+});
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    PERMISSION CATEGORIES                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  FILESYSTEM                                                  │
-│  ├─ filesystem:read           Read any file                 │
-│  ├─ filesystem:read:$PROJECT  Read within project only      │
-│  ├─ filesystem:read:$APP      Read within app directory     │
-│  ├─ filesystem:write          Write any file                │
-│  ├─ filesystem:write:$PROJECT Write within project only     │
-│  └─ filesystem:write:$APP     Write within app directory    │
-│                                                              │
-│  NETWORK                                                     │
-│  ├─ network:*                 Any network access            │
-│  ├─ network:localhost         Localhost only                │
-│  ├─ network:fetch             HTTP requests only            │
-│  └─ network:websocket         WebSocket connections         │
-│                                                              │
-│  AI                                                          │
-│  ├─ ai:chat                   Use chat completions          │
-│  ├─ ai:embed                  Use embeddings                │
-│  └─ ai:tools                  Invoke other tools via AI     │
-│                                                              │
-│  PROCESS                                                     │
-│  ├─ process:spawn             Spawn child processes         │
-│  ├─ process:spawn:$APP        Spawn only in app directory   │
-│  └─ process:env               Access environment variables  │
-│                                                              │
-│  IRIS                                                        │
-│  ├─ iris:tools                Call other Iris tools         │
-│  ├─ iris:apps                 Interact with other apps      │
-│  ├─ iris:navigation           Navigate Iris UI              │
-│  └─ iris:notifications        Show notifications            │
-│                                                              │
-│  SYSTEM                                                      │
-│  ├─ system:clipboard          Access clipboard              │
-│  └─ system:notifications      OS notifications              │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+
+## SDR UI Model
+
+### Component Functions
+
+UI is built with component functions that return component nodes:
+
+```typescript
+// Component function signature
+function ComponentName(props: Props, children?: Children): ComponentNode
+
+// Examples
+Heading({ level: 1 }, 'Hello World')
+Button({ onPress: handler, variant: 'primary' }, 'Click Me')
+Stack({ gap: 8, padding: 16 }, [child1, child2, child3])
 ```
 
-### Permission Scopes
+### Component Node Structure
 
-Permissions can be scoped to limit access:
+```typescript
+// What the component function returns
+interface ComponentNode {
+  $: 'component';
+  type: string;              // 'Button', 'Stack', etc.
+  props: Record<string, PropValue>;
+  children?: UINode[];
+}
 
-| Scope | Meaning |
-|-------|---------|
-| `$PROJECT` | Current project directory |
-| `$APP` | App's own directory |
-| `$CONFIG` | App's configuration directory |
-| `$DATA` | App's data directory |
-| Domain pattern | e.g., `network:*.example.com` |
-
-### Permission Inheritance
-
+// Example
+Heading({ level: 1 }, 'Hello')
+// Returns:
+{
+  $: 'component',
+  type: 'Heading',
+  props: { level: 1 },
+  children: ['Hello']
+}
 ```
-Development Mode:
-  App in project "my-project"
-  ├─ Inherits project permissions
-  ├─ Has elevated debug permissions
-  └─ Can be granted additional permissions interactively
 
-Installed Mode:
-  App installed from registry
-  ├─ Only declared permissions
-  ├─ User approval required at install
-  └─ No runtime permission escalation
+### Conditional Rendering
 
-Standalone Mode:
-  App running independently
-  ├─ Full access (no sandbox)
-  └─ User controls via deployment config
+```typescript
+// Using && for conditional
+error && Alert({ variant: 'error' }, error)
+
+// Using ternary
+isLoading ? Spinner({}) : Button({}, 'Submit')
+
+// Filtering arrays
+items.filter(item => item.visible).map(item => Card({}, item.name))
+```
+
+### Lists and Keys
+
+```typescript
+// Map over data with keys
+items.map(item =>
+  Card({ key: item.id }, [
+    Text({ weight: 'bold' }, item.title),
+    Text({ color: 'muted' }, item.description),
+  ])
+)
+```
+
+### Event Handlers
+
+```typescript
+// Direct state update
+Input({
+  value: ctx.state.query,
+  onChangeText: ctx.state.query.set,
+})
+
+// Tool call
+Button({
+  onPress: () => ctx.runTool('submit', { data: ctx.state.form.get() }),
+}, 'Submit')
+
+// Custom handler
+Button({
+  onPress: { $action: 'increment', args: { amount: 5 } },
+}, '+5')
+```
+
+### State References
+
+```typescript
+// Reading state in UI
+Text({}, `Count: ${ctx.state.count}`)
+
+// The ctx.state.count is reactive - UI updates when it changes
+```
+
+## State Model
+
+### State Types
+
+```typescript
+import { state, computed, query } from '@iris/app-sdk';
+
+// Primitive state - simple reactive value
+const count = state(0);
+const name = state('');
+const items = state<Item[]>([]);
+
+// Computed state - derived from other state
+const doubled = computed((get) => get(count) * 2);
+const filtered = computed((get) =>
+  get(items).filter(i => i.active)
+);
+
+// Query state - async data with caching
+const users = query(async (ctx) => {
+  const response = await ctx.fetch('/api/users');
+  return response.json();
+}, {
+  staleTime: 60_000,  // Fresh for 1 minute
+});
+```
+
+### State Operations
+
+```typescript
+// Get current value
+const current = count.get();
+
+// Set new value
+count.set(5);
+
+// Update based on previous
+count.update(n => n + 1);
+
+// For arrays
+items.update(list => [...list, newItem]);
+items.update(list => list.filter(i => i.id !== id));
+
+// Subscribe to changes (rarely needed - UI auto-subscribes)
+const unsubscribe = count.subscribe(value => {
+  console.log('Count changed:', value);
+});
+```
+
+### State in UI Context
+
+```typescript
+ui: (ctx) => {
+  // Access state values (reactive)
+  const { count, items } = ctx.state;
+
+  // Use in UI
+  return Stack({}, [
+    Text({}, `Count: ${count}`),
+    Text({}, `Items: ${items.length}`),
+
+    // Update state
+    Button({ onPress: () => count.update(n => n + 1) }, '+1'),
+  ]);
+}
+```
+
+## Tool Model
+
+### Tool Definition
+
+```typescript
+defineTool({
+  // Required
+  name: 'query',
+  description: 'Execute a SQL query',
+  parameters: z.object({
+    sql: z.string().describe('SQL query to execute'),
+    params: z.array(z.unknown()).optional(),
+  }),
+  execute: async (args, ctx) => {
+    // Implementation
+    return { success: true, data: results };
+  },
+
+  // Optional
+  examples: [
+    {
+      description: 'Get all users',
+      input: { sql: 'SELECT * FROM users' },
+    },
+  ],
+})
+```
+
+### Tool Context
+
+```typescript
+interface ToolContext {
+  // App identity
+  appId: string;
+  projectId: string;
+
+  // State access
+  state: StateMap;
+
+  // Services
+  getService<T>(name: string): Promise<T>;
+
+  // Platform access
+  iris: {
+    ai: { chat, embed };
+    fs: { read, write, list };
+    tools: { call };
+  };
+
+  // Logging
+  log: Logger;
+}
+```
+
+### Calling Tools from UI
+
+```typescript
+ui: (ctx) => {
+  return Button({
+    onPress: async () => {
+      const result = await ctx.runTool('query', {
+        sql: ctx.state.query.get()
+      });
+      if (!result.success) {
+        ctx.state.error.set(result.error);
+      }
+    }
+  }, 'Run Query');
+}
+```
+
+## Service Model
+
+### Internal Service
+
+```typescript
+services: {
+  database: {
+    start: async (ctx) => {
+      const config = await ctx.getConfig('database');
+      const db = new Database(config.path);
+      return db;
+    },
+    stop: async (db) => {
+      await db.close();
+    },
+    autoStart: true,
+  },
+}
+
+// Usage in tools
+const db = await ctx.getService('database');
+```
+
+### Process Service
+
+```typescript
+services: {
+  'dev-server': {
+    type: 'process',
+    command: 'npm',
+    args: ['run', 'dev'],
+    cwd: './server',
+    env: { PORT: '3001' },
+    autoStart: false,
+  },
+}
 ```
 
 ## App Lifecycle
@@ -227,484 +546,125 @@ Standalone Mode:
                            │ load()
                            ▼
                     ┌─────────────┐
-            ┌───────│   LOADING   │───────┐
-            │       └──────┬──────┘       │
-            │              │              │
-       load error     load success    dependency
-            │              │            error
-            │              ▼              │
-            │       ┌─────────────┐       │
-            │       │   LOADED    │       │
-            │       └──────┬──────┘       │
-            │              │              │
-            │         activate()          │
-            │              │              │
-            │              ▼              │
-            │       ┌─────────────┐       │
-            │  ┌────│  STARTING   │────┐  │
-            │  │    └──────┬──────┘    │  │
-            │  │           │           │  │
-            │  │    onActivate()       │  │
-            │  │      success          │  │
-            │  │           │           │  │
-            │  │           ▼           │  │
-            │  │    ┌─────────────┐    │  │
-            │  │    │   ACTIVE    │◀───┼──┼──── reload()
-            │  │    └──────┬──────┘    │  │
-            │  │           │           │  │
-            │  │      deactivate()     │  │
-            │  │           │           │  │
-            │  │           ▼           │  │
-            │  │    ┌─────────────┐    │  │
-            │  │    │  STOPPING   │    │  │
-            │  │    └──────┬──────┘    │  │
-            │  │           │           │  │
-            │  │    onDeactivate()     │  │
-            │  │           │           │  │
-            │  │           ▼           │  │
-            │  │    ┌─────────────┐    │  │
-            └──┼───▶│   STOPPED   │◀───┘  │
-               │    └──────┬──────┘       │
-               │           │              │
-               │      unload()            │
-               │           │              │
-               │           ▼              │
-               │    ┌─────────────┐       │
-               └───▶│  UNLOADED   │◀──────┘
-                    └─────────────┘
+                    │   LOADING   │
+                    └──────┬──────┘
                            │
                       ┌────┴────┐
                       ▼         ▼
                ┌─────────┐ ┌─────────┐
-               │  ERROR  │ │DESTROYED│
-               └─────────┘ └─────────┘
+               │  ERROR  │ │  LOADED │
+               └─────────┘ └────┬────┘
+                                │ activate()
+                                ▼
+                         ┌─────────────┐
+                         │   ACTIVE    │◄──── Hot reload
+                         └──────┬──────┘      (re-run ui())
+                                │
+                           deactivate()
+                                │
+                                ▼
+                         ┌─────────────┐
+                         │   STOPPED   │
+                         └─────────────┘
 ```
 
 ### Lifecycle Hooks
 
-Apps can define hooks for lifecycle events:
-
 ```typescript
 export default defineApp({
-  // Called when app is first loaded (module evaluation)
-  // Use for static initialization
-  onLoad: async (ctx) => {
-    console.log('App module loaded');
-  },
-
-  // Called when app becomes active (user opens it or Iris starts)
-  // Use for connecting to services, loading data
+  // Called when app becomes active
   onActivate: async (ctx) => {
-    await ctx.startService('connection');
-    const lastQuery = await ctx.getConfig('lastQuery');
-    if (lastQuery) {
-      ctx.state.currentQuery.set(lastQuery);
-    }
+    await ctx.startService('database');
+    ctx.log.info('App activated');
   },
 
-  // Called when app is being deactivated
-  // Use for cleanup, saving state
+  // Called when app is deactivated
   onDeactivate: async (ctx) => {
-    await ctx.setConfig('lastQuery', ctx.state.currentQuery.get());
-    await ctx.stopService('connection');
+    await ctx.stopService('database');
+    ctx.log.info('App deactivated');
   },
 
-  // Called when app is being hot-reloaded during development
-  // Previous state is passed so you can migrate if needed
+  // Called on hot reload (state is preserved)
   onReload: async (ctx, previousState) => {
-    // Migrate state if schema changed
-    if (previousState.version !== STATE_VERSION) {
-      ctx.state.data.set(migrateState(previousState.data));
-    }
+    ctx.log.info('App reloaded');
   },
 
-  // Called when an error occurs in the app
-  // Return true to indicate error was handled
+  // Called when an error occurs
   onError: async (ctx, error) => {
     ctx.log.error('App error:', error);
     ctx.state.lastError.set(error.message);
-    return true; // Error handled, don't crash
+    return true; // Error handled
   },
 });
 ```
 
-### Lifecycle Events
+## Configuration
 
-The app runtime emits events during lifecycle transitions:
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `app:loading` | `{ appId }` | App load started |
-| `app:loaded` | `{ appId, manifest }` | App loaded successfully |
-| `app:load-error` | `{ appId, error }` | App failed to load |
-| `app:activating` | `{ appId }` | App activation started |
-| `app:activated` | `{ appId }` | App is now active |
-| `app:activate-error` | `{ appId, error }` | Activation failed |
-| `app:deactivating` | `{ appId }` | App deactivation started |
-| `app:deactivated` | `{ appId }` | App is now stopped |
-| `app:reloading` | `{ appId }` | Hot reload started |
-| `app:reloaded` | `{ appId }` | Hot reload complete |
-| `app:error` | `{ appId, error }` | Runtime error occurred |
-
-## State Model
-
-Apps manage state through a reactive system that syncs with the UI.
-
-### State Types
-
-```typescript
-// 1. Primitive State - Simple reactive values
-const count = state(0);
-const user = state<User | null>(null);
-const items = state<Item[]>([]);
-
-// 2. Computed State - Derived from other state
-const doubleCount = computed(() => count.get() * 2);
-const activeItems = computed(() => items.get().filter(i => i.active));
-
-// 3. Query State - Async data with caching
-const users = query(async () => {
-  const response = await fetch('/api/users');
-  return response.json();
-}, {
-  staleTime: 60000,      // Consider fresh for 1 minute
-  cacheTime: 300000,     // Keep in cache for 5 minutes
-  refetchOnFocus: true,  // Refetch when app becomes visible
-});
-
-// 4. Mutation State - Async operations with optimistic updates
-const updateUser = mutation(async (userId: string, data: Partial<User>) => {
-  const response = await fetch(`/api/users/${userId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  return response.json();
-}, {
-  onMutate: (userId, data) => {
-    // Optimistic update
-    const prev = users.get().find(u => u.id === userId);
-    users.update(list => list.map(u => u.id === userId ? {...u, ...data} : u));
-    return { prev };
-  },
-  onError: (error, userId, data, context) => {
-    // Rollback on error
-    users.update(list => list.map(u => u.id === userId ? context.prev : u));
-  },
-});
-```
-
-### State Serialization
-
-State is automatically serialized for:
-- **UI Sync** - Sent to iframe via postMessage
-- **Hot Reload** - Preserved across code changes
-- **Persistence** - Optionally saved to disk
-
-```typescript
-// State with custom serialization
-const connection = state<DatabaseConnection | null>(null, {
-  // Don't sync to UI (not serializable)
-  sync: false,
-
-  // Don't persist (recreate on reload)
-  persist: false,
-});
-
-// State with persistence
-const history = state<QueryHistory[]>([], {
-  persist: true,
-  persistKey: 'query-history',
-});
-```
-
-### State Access from UI
-
-The UI accesses state through the bridge:
-
-```typescript
-// In app UI (React)
-function QueryHistory() {
-  // Subscribes to state updates
-  const history = useAppState('history');
-
-  // Call server-side mutations
-  const clearHistory = useAppAction('clearHistory');
-
-  return (
-    <ul>
-      {history.map(item => (
-        <li key={item.id}>{item.query}</li>
-      ))}
-      <button onClick={() => clearHistory()}>Clear</button>
-    </ul>
-  );
-}
-```
-
-## Tool Model
-
-Tools are functions that AI agents (and the UI) can invoke.
-
-### Tool Definition
-
-```typescript
-defineTool({
-  // Identity
-  name: 'query',
-  description: 'Execute a SQL query against the connected database',
-
-  // Parameter schema (Zod)
-  parameters: z.object({
-    sql: z.string().describe('The SQL query to execute'),
-    params: z.array(z.unknown()).optional().describe('Query parameters'),
-  }),
-
-  // Return schema (optional, for documentation)
-  returns: z.object({
-    rows: z.array(z.record(z.unknown())),
-    rowCount: z.number(),
-    executionTime: z.number(),
-  }),
-
-  // Execution handler
-  execute: async (args, ctx) => {
-    const db = await ctx.getService('connection');
-    const start = Date.now();
-
-    try {
-      const rows = await db.query(args.sql, args.params);
-      return {
-        success: true,
-        data: {
-          rows,
-          rowCount: rows.length,
-          executionTime: Date.now() - start,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  },
-
-  // Metadata
-  category: 'database',
-  confirmationRequired: true,  // Ask user before executing
-  timeout: 30000,              // 30 second timeout
-
-  // Examples for AI context
-  examples: [
-    {
-      description: 'Get all users',
-      args: { sql: 'SELECT * FROM users' },
-    },
-    {
-      description: 'Find user by email',
-      args: {
-        sql: 'SELECT * FROM users WHERE email = ?',
-        params: ['user@example.com'],
-      },
-    },
-  ],
-});
-```
-
-### Tool Execution Context
-
-```typescript
-interface ToolContext extends AppContext {
-  // Caller information
-  caller: {
-    type: 'ai' | 'ui' | 'api';
-    agentId?: string;      // If called by AI
-    sessionId?: string;    // AI session
-    userId?: string;       // User who initiated
-  };
-
-  // Progress reporting
-  progress: (message: string, percent?: number) => void;
-
-  // Cancellation
-  signal: AbortSignal;
-
-  // Tool-specific permissions (may be elevated)
-  permissions: PermissionSet;
-}
-```
-
-### Tool Results
-
-Tools return structured results:
-
-```typescript
-interface ToolResult {
-  success: boolean;
-
-  // On success
-  data?: unknown;
-
-  // On failure
-  error?: string;
-  errorCode?: string;
-
-  // Rich output
-  summary?: string;           // Human-readable summary for AI
-  artifacts?: Artifact[];     // Files, images created
-
-  // Side effects
-  stateUpdates?: Record<string, unknown>;  // State changes to apply
-  notifications?: Notification[];           // User notifications
-}
-
-interface Artifact {
-  type: 'file' | 'image' | 'chart' | 'table';
-  name: string;
-  path?: string;      // For files
-  data?: unknown;     // For inline data
-  mimeType?: string;
-}
-```
-
-## Service Model
-
-Services are long-running processes or connections managed by the app.
-
-### Service Definition
-
-```typescript
-// Process service (external command)
-const devServer: ServiceDefinition = {
-  name: 'dev-server',
-  type: 'process',
-  command: 'bun',
-  args: ['run', 'dev'],
-  cwd: './server',
-  env: {
-    PORT: '3001',
-  },
-  autoStart: false,
-  restartOnCrash: true,
-  healthCheck: async () => {
-    const res = await fetch('http://localhost:3001/health');
-    return res.ok;
-  },
-};
-
-// Internal service (in-process)
-const dbConnection: ServiceDefinition = {
-  name: 'connection',
-  type: 'internal',
-
-  start: async (ctx) => {
-    const config = await ctx.getConfig('database');
-    const db = new Database(config.path);
-
-    // Run migrations
-    await db.exec(MIGRATIONS);
-
-    return db;
-  },
-
-  stop: async (db) => {
-    await db.close();
-  },
-
-  autoStart: true,
-};
-```
-
-### Service Access
-
-```typescript
-// In tool or lifecycle hook
-async execute(args, ctx) {
-  // Get service instance (starts if needed)
-  const db = await ctx.getService('connection');
-
-  // Use service
-  const result = await db.query(args.sql);
-
-  return { success: true, data: result };
-}
-```
-
-## Configuration Model
-
-Apps can define configurable settings:
-
-### Configuration Schema
+### Config Schema in Manifest
 
 ```json
 {
   "configuration": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "database": {
-          "type": "object",
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "Path to database file"
-            },
-            "maxConnections": {
-              "type": "number",
-              "default": 5,
-              "minimum": 1,
-              "maximum": 20
-            }
-          },
-          "required": ["path"]
-        },
-        "ui": {
-          "type": "object",
-          "properties": {
-            "theme": {
-              "type": "string",
-              "enum": ["light", "dark", "auto"],
-              "default": "auto"
-            },
-            "pageSize": {
-              "type": "number",
-              "default": 50
-            }
-          }
-        }
+    "properties": {
+      "databasePath": {
+        "type": "string",
+        "description": "Path to SQLite database file",
+        "default": "./data.db"
+      },
+      "maxResults": {
+        "type": "number",
+        "default": 100
       }
     }
   }
 }
 ```
 
-### Configuration Access
+### Accessing Config
 
 ```typescript
-// Server-side
-const dbPath = await ctx.getConfig('database.path');
-await ctx.setConfig('ui.theme', 'dark');
+// In tools or lifecycle hooks
+const dbPath = await ctx.getConfig('databasePath');
+await ctx.setConfig('maxResults', 50);
 
 // Watch for changes
-ctx.onConfigChange('database', async (newConfig) => {
-  await ctx.restartService('connection');
+ctx.onConfigChange('databasePath', async (newPath) => {
+  await ctx.restartService('database');
 });
 ```
 
-### Configuration UI
+## Permission Model
 
-Iris auto-generates a settings UI from the schema, or apps can provide custom UI:
+### Permission Declaration
 
-```typescript
-// In app.json
+```json
 {
-  "configuration": {
-    "schema": { ... },
-    "ui": "ui/settings.html"  // Custom settings page
-  }
+  "permissions": [
+    "filesystem:read:$PROJECT",
+    "filesystem:write:$APP/data",
+    "network:localhost",
+    "ai:chat"
+  ]
 }
 ```
 
+### Permission Scopes
+
+| Scope | Description |
+|-------|-------------|
+| `$PROJECT` | Current project directory |
+| `$APP` | App's directory |
+| `$DATA` | App's data directory |
+| Domain pattern | e.g., `*.example.com` |
+
+### Permission Categories
+
+- `filesystem:read`, `filesystem:write` - File access
+- `network:*`, `network:localhost` - Network access
+- `ai:chat`, `ai:embed` - AI model access
+- `iris:tools` - Call other Iris tools
+- `process:spawn` - Run shell commands
+
 ---
 
-*Next: [03-sdk-design.md](./03-sdk-design.md) - SDK API design and developer experience*
+*Next: [03-sdk-design.md](./03-sdk-design.md) - SDK API design*

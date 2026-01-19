@@ -2,7 +2,7 @@
 
 ## Overview
 
-Iris Apps communicate through multiple channels:
+With Server-Defined Rendering (SDR), communication is simpler than traditional approaches. The server sends UI trees; the client renders them. Actions flow back to the server.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -10,179 +10,294 @@ Iris Apps communicate through multiple channels:
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌──────────┐         ┌──────────┐         ┌──────────┐                │
-│  │  Iris    │◄───────►│   App    │◄───────►│  App UI  │                │
-│  │  Core    │   WS    │  Server  │ Bridge  │ (iframe) │                │
+│  │  Iris    │◄───────►│   App    │◄───────►│  SDR     │                │
+│  │  Core    │   WS    │  Server  │   WS    │ Renderer │                │
 │  └──────────┘         └──────────┘         └──────────┘                │
 │       │                    │                    │                       │
 │       │                    │                    │                       │
 │       ▼                    ▼                    ▼                       │
 │  ┌──────────┐         ┌──────────┐         ┌──────────┐                │
 │  │  Other   │         │ External │         │  User    │                │
-│  │  Apps    │         │ Services │         │ Browser  │                │
+│  │  Apps    │         │ Services │         │ Actions  │                │
 │  └──────────┘         └──────────┘         └──────────┘                │
 │                                                                          │
-│  Protocols:                                                             │
-│  • Iris ↔ App Server: Internal RPC over WebSocket                      │
-│  • App Server ↔ App UI: Bridge Protocol over postMessage               │
-│  • App ↔ External: HTTP/WebSocket (permission-gated)                   │
+│  Primary Flow:                                                          │
+│  1. App server generates ui() → Component tree                         │
+│  2. Tree sent via WebSocket → Client                                   │
+│  3. SDR Renderer maps tree → Native components                         │
+│  4. User actions → Server → State change → New tree                    │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Internal RPC Protocol (Iris ↔ App Server)
+## SDR Protocol (Server ↔ Client)
 
 ### Message Format
 
-All messages follow a consistent envelope:
+All messages use a simple JSON envelope:
 
 ```typescript
-interface RPCMessage {
+interface SDRMessage {
   // Message identity
-  id: string;              // Unique message ID (UUID)
-  type: 'request' | 'response' | 'event' | 'stream';
-
-  // Routing
-  source: string;          // Sender identifier
-  target?: string;         // Recipient (for requests)
+  id: string;
+  type: SDRMessageType;
 
   // Payload
-  method?: string;         // For requests
-  params?: unknown;        // For requests
-  result?: unknown;        // For responses
-  error?: RPCError;        // For error responses
-  event?: string;          // For events
-  data?: unknown;          // For events/streams
+  payload: unknown;
 
   // Metadata
   timestamp: number;
-  correlationId?: string;  // Links related messages
+  correlationId?: string;  // Links request/response
 }
 
-interface RPCError {
-  code: number;
-  message: string;
-  data?: unknown;
-}
+type SDRMessageType =
+  // UI synchronization
+  | 'ui:sync'        // Full UI tree (on connect, after reload)
+  | 'ui:patch'       // Partial UI update (optimized)
+
+  // State
+  | 'state:sync'     // Full state sync
+  | 'state:update'   // Single state update
+
+  // Actions (from client)
+  | 'action:call'    // User triggered action
+  | 'action:result'  // Action result
+
+  // Lifecycle
+  | 'app:ready'      // App initialized
+  | 'app:reload'     // Hot reload triggered
+  | 'app:error'      // App error occurred
+
+  // Input events
+  | 'input:change'   // Form input changed
+  | 'input:submit'   // Form submitted
+;
 ```
 
-### Request-Response Pattern
+### UI Sync Flow
+
+The primary communication pattern:
 
 ```
 ┌──────────┐                              ┌──────────┐
-│   Iris   │                              │   App    │
-│   Core   │                              │  Server  │
+│   App    │                              │   SDR    │
+│  Server  │                              │ Renderer │
 └────┬─────┘                              └────┬─────┘
      │                                         │
-     │  REQUEST                                │
+     │  UI:SYNC (on connect)                   │
      │  {                                      │
-     │    id: "msg-123",                       │
-     │    type: "request",                     │
-     │    source: "iris",                      │
-     │    target: "app:my-app",                │
-     │    method: "tool:query",                │
-     │    params: { sql: "SELECT *" }          │
-     │  }                                      │
-     │────────────────────────────────────────►│
-     │                                         │
-     │                                         │  Execute
-     │                                         │
-     │  RESPONSE                               │
-     │  {                                      │
-     │    id: "msg-124",                       │
-     │    type: "response",                    │
-     │    correlationId: "msg-123",            │
-     │    result: { rows: [...] }              │
-     │  }                                      │
-     │◄────────────────────────────────────────│
-     │                                         │
-```
-
-### Event Pattern
-
-```
-┌──────────┐                              ┌──────────┐
-│   App    │                              │   Iris   │
-│  Server  │                              │   Core   │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  EVENT                                  │
-     │  {                                      │
-     │    id: "msg-456",                       │
-     │    type: "event",                       │
-     │    source: "app:my-app",                │
-     │    event: "state:changed",              │
-     │    data: {                              │
-     │      key: "count",                      │
-     │      value: 42                          │
+     │    type: "ui:sync",                     │
+     │    payload: {                           │
+     │      tree: {                            │
+     │        $: "component",                  │
+     │        type: "Stack",                   │
+     │        props: { padding: 16 },          │
+     │        children: [                      │
+     │          { type: "Text", ... },         │
+     │          { type: "Button", ... }        │
+     │        ]                                │
+     │      },                                 │
+     │      state: {                           │
+     │        count: 0,                        │
+     │        items: []                        │
+     │      }                                  │
      │    }                                    │
      │  }                                      │
      │────────────────────────────────────────►│
      │                                         │
-     │                         (no response)   │
+     │                                         │  Render tree
+     │                                         │  using registry
      │                                         │
 ```
 
-### Stream Pattern (for long-running operations)
+### Action Flow
+
+When user interacts with the UI:
 
 ```
 ┌──────────┐                              ┌──────────┐
-│   Iris   │                              │   App    │
+│   App    │                              │   SDR    │
+│  Server  │                              │ Renderer │
 └────┬─────┘                              └────┬─────┘
      │                                         │
-     │  REQUEST (stream)                       │
+     │                            User clicks  │
+     │                            Button       │
+     │                                         │
+     │  ACTION:CALL                            │
      │  {                                      │
-     │    method: "tool:analyze",              │
-     │    params: { ... }                      │
+     │    type: "action:call",                 │
+     │    id: "act-123",                       │
+     │    payload: {                           │
+     │      action: "increment",               │
+     │      args: { amount: 1 }                │
+     │    }                                    │
+     │  }                                      │
+     │◄────────────────────────────────────────│
+     │                                         │
+     │  Execute tool                           │
+     │  Update state                           │
+     │  Re-run ui()                            │
+     │                                         │
+     │  UI:SYNC (new tree)                     │
+     │  {                                      │
+     │    payload: {                           │
+     │      tree: { ... },                     │
+     │      state: { count: 1 }                │
+     │    }                                    │
      │  }                                      │
      │────────────────────────────────────────►│
      │                                         │
-     │  STREAM (progress)                      │
+     │                                         │  Diff & update
+     │                                         │
+```
+
+### State Updates (Optimistic)
+
+For responsive UIs, state can update optimistically:
+
+```
+┌──────────┐                              ┌──────────┐
+│   App    │                              │   SDR    │
+│  Server  │                              │ Renderer │
+└────┬─────┘                              └────┬─────┘
+     │                                         │
+     │                            User types   │
+     │                            in Input     │
+     │                                         │
+     │  INPUT:CHANGE                           │
      │  {                                      │
-     │    type: "stream",                      │
-     │    correlationId: "msg-789",            │
-     │    data: { progress: 0.25 }             │
+     │    type: "input:change",                │
+     │    payload: {                           │
+     │      path: "query",                     │
+     │      value: "SELECT *"                  │
+     │    }                                    │
      │  }                                      │
      │◄────────────────────────────────────────│
      │                                         │
-     │  STREAM (progress)                      │
-     │  { data: { progress: 0.50 } }           │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  STREAM (progress)                      │
-     │  { data: { progress: 0.75 } }           │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  RESPONSE (final)                       │
+     │  STATE:UPDATE (confirmation)            │
      │  {                                      │
-     │    type: "response",                    │
-     │    result: { analysis: ... }            │
+     │    type: "state:update",                │
+     │    payload: {                           │
+     │      key: "query",                      │
+     │      value: "SELECT *"                  │
+     │    }                                    │
      │  }                                      │
-     │◄────────────────────────────────────────│
+     │────────────────────────────────────────►│
      │                                         │
+     │  (UI already shows value - no flicker)  │
+     │                                         │
+```
+
+### Component Tree Structure
+
+The UI tree is a JSON representation of components:
+
+```typescript
+interface ComponentNode {
+  // Marker for component nodes
+  $: 'component';
+
+  // Component type (from registry)
+  type: string;
+
+  // Props passed to component
+  props: Record<string, PropValue>;
+
+  // Children (text, nodes, or mixed)
+  children?: UIChild[];
+
+  // Unique key for list diffing
+  key?: string;
+}
+
+type UIChild = string | number | boolean | null | ComponentNode;
+
+type PropValue =
+  | string
+  | number
+  | boolean
+  | null
+  | PropValue[]
+  | { [key: string]: PropValue }
+  | ActionDescriptor;
+
+interface ActionDescriptor {
+  $action: string;      // Tool/action name
+  args?: unknown;       // Arguments
+  optimistic?: unknown; // Optimistic state update
+}
+```
+
+Example tree:
+
+```json
+{
+  "$": "component",
+  "type": "Stack",
+  "props": { "padding": 16, "gap": 12 },
+  "children": [
+    {
+      "$": "component",
+      "type": "Text",
+      "props": { "size": "2xl", "weight": "bold" },
+      "children": ["Counter: 5"]
+    },
+    {
+      "$": "component",
+      "type": "Button",
+      "props": {
+        "variant": "primary",
+        "onPress": { "$action": "increment", "args": { "amount": 1 } }
+      },
+      "children": ["+1"]
+    }
+  ]
+}
+```
+
+## Internal RPC Protocol (Iris ↔ App Server)
+
+For Iris platform access (AI, filesystem, tools):
+
+```typescript
+interface RPCMessage {
+  id: string;
+  type: 'request' | 'response' | 'event';
+
+  // For requests
+  method?: string;
+  params?: unknown;
+
+  // For responses
+  result?: unknown;
+  error?: RPCError;
+
+  // For events
+  event?: string;
+  data?: unknown;
+
+  correlationId?: string;
+  timestamp: number;
+}
 ```
 
 ### Method Namespaces
 
 ```
-Methods are namespaced by category:
+iris:*             Iris platform access
+  iris:ai:chat
+  iris:ai:embed
+  iris:fs:read
+  iris:fs:write
+  iris:fs:list
+  iris:tools:call
+  iris:navigate
+  iris:notify
 
-lifecycle:*        App lifecycle management
+lifecycle:*        App lifecycle
   lifecycle:activate
   lifecycle:deactivate
   lifecycle:reload
-
-tool:*             Tool invocation
-  tool:{toolName}
-
-state:*            State management
-  state:get
-  state:set
-  state:subscribe
-  state:unsubscribe
-
-query:*            Query operations
-  query:fetch
-  query:invalidate
 
 service:*          Service management
   service:start
@@ -192,117 +307,87 @@ service:*          Service management
 config:*           Configuration
   config:get
   config:set
-
-iris:*             Iris platform access
-  iris:ai:chat
-  iris:ai:embed
-  iris:fs:read
-  iris:fs:write
-  iris:tools:call
-  iris:navigate
-  iris:notify
 ```
 
-### Error Codes
+### Example: AI Chat Call
 
-```typescript
-const RPCErrorCodes = {
-  // Standard JSON-RPC codes
-  PARSE_ERROR: -32700,
-  INVALID_REQUEST: -32600,
-  METHOD_NOT_FOUND: -32601,
-  INVALID_PARAMS: -32602,
-  INTERNAL_ERROR: -32603,
-
-  // Custom codes
-  PERMISSION_DENIED: -32001,
-  APP_NOT_FOUND: -32002,
-  TOOL_NOT_FOUND: -32003,
-  STATE_NOT_FOUND: -32004,
-  SERVICE_NOT_FOUND: -32005,
-  TIMEOUT: -32006,
-  CANCELLED: -32007,
-  RATE_LIMITED: -32008,
-  APP_ERROR: -32009,
-};
+```
+┌──────────┐                              ┌──────────┐
+│   App    │                              │   Iris   │
+│  Server  │                              │   Core   │
+└────┬─────┘                              └────┬─────┘
+     │                                         │
+     │  REQUEST                                │
+     │  {                                      │
+     │    id: "rpc-456",                       │
+     │    type: "request",                     │
+     │    method: "iris:ai:chat",              │
+     │    params: {                            │
+     │      messages: [                        │
+     │        { role: "user", content: "..." } │
+     │      ],                                 │
+     │      model: "claude-sonnet"             │
+     │    }                                    │
+     │  }                                      │
+     │────────────────────────────────────────►│
+     │                                         │
+     │                         Check permission│
+     │                         Execute AI call │
+     │                                         │
+     │  RESPONSE                               │
+     │  {                                      │
+     │    type: "response",                    │
+     │    correlationId: "rpc-456",            │
+     │    result: {                            │
+     │      content: "Here's the answer...",   │
+     │      usage: { tokens: 150 }             │
+     │    }                                    │
+     │  }                                      │
+     │◄────────────────────────────────────────│
+     │                                         │
 ```
 
-## Bridge Protocol (App Server ↔ App UI)
+## Custom UI Bridge Protocol (iframe mode)
 
-The bridge uses `postMessage` for communication between the Iris shell/App Server and the sandboxed app UI iframe.
-
-### Message Format
+For apps using custom UI mode (the escape hatch), communication uses postMessage:
 
 ```typescript
 interface BridgeMessage {
-  // Protocol identifier
   protocol: 'iris-bridge';
   version: 1;
-
-  // Message type
   type: BridgeMessageType;
-
-  // Message ID (for request/response correlation)
   id?: string;
-
-  // Payload
   payload: unknown;
 }
 
 type BridgeMessageType =
-  // Lifecycle
-  | 'init'           // Shell → App: Initialize with context
-  | 'ready'          // App → Shell: App is ready
-  | 'reload'         // Shell → App: Prepare for hot reload
-
-  // State
-  | 'state:sync'     // Shell → App: Full state sync
-  | 'state:update'   // Shell → App: State delta
-  | 'state:set'      // App → Shell: Request state change
-
-  // Tools/Actions
-  | 'action:call'    // App → Shell: Call a tool/action
-  | 'action:result'  // Shell → App: Tool result
-
-  // Queries
-  | 'query:fetch'    // App → Shell: Fetch query data
-  | 'query:data'     // Shell → App: Query result
-  | 'query:error'    // Shell → App: Query error
-
-  // Events
-  | 'event'          // Bidirectional: Custom events
-
-  // Navigation
-  | 'navigate'       // App → Shell: Navigate Iris
-
-  // Notifications
-  | 'notify'         // App → Shell: Show notification
-
-  // Errors
-  | 'error'          // App → Shell: Report error
-
-  // Theme
-  | 'theme:change'   // Shell → App: Theme changed
+  | 'init'          // Shell → iframe: Initialize
+  | 'ready'         // iframe → Shell: Ready
+  | 'state:sync'    // Shell → iframe: State sync
+  | 'state:update'  // Shell → iframe: State change
+  | 'state:set'     // iframe → Shell: Set state
+  | 'action:call'   // iframe → Shell: Call tool
+  | 'action:result' // Shell → iframe: Tool result
+  | 'theme:change'  // Shell → iframe: Theme changed
+;
 ```
 
-### Initialization Flow
+### Bridge Initialization
 
 ```
 ┌──────────┐                              ┌──────────┐
-│  Shell   │                              │ App UI   │
-│ (parent) │                              │ (iframe) │
+│  Shell   │                              │  iframe  │
+│ (parent) │                              │  (app)   │
 └────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  iframe loads                           │
      │                                         │
      │  INIT                                   │
      │  {                                      │
      │    type: "init",                        │
      │    payload: {                           │
-     │      projectId: "proj-123",             │
      │      appId: "my-app",                   │
+     │      projectId: "proj-123",             │
+     │      state: { count: 0 },               │
      │      theme: "dark",                     │
-     │      state: { count: 0, ... },          │
      │      config: { ... }                    │
      │    }                                    │
      │  }                                      │
@@ -312,429 +397,145 @@ type BridgeMessageType =
      │                                         │  React app
      │                                         │
      │  READY                                  │
-     │  {                                      │
-     │    type: "ready",                       │
-     │    payload: {                           │
-     │      version: "1.0.0"                   │
-     │    }                                    │
-     │  }                                      │
      │◄────────────────────────────────────────│
      │                                         │
 ```
 
-### State Synchronization
-
-```
-┌──────────┐                              ┌──────────┐
-│  Shell   │                              │ App UI   │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  STATE:UPDATE (from server)             │
-     │  {                                      │
-     │    type: "state:update",                │
-     │    payload: {                           │
-     │      key: "count",                      │
-     │      value: 42                          │
-     │    }                                    │
-     │  }                                      │
-     │────────────────────────────────────────►│
-     │                                         │
-     │                                         │
-     │  STATE:SET (user action)                │
-     │  {                                      │
-     │    type: "state:set",                   │
-     │    id: "req-456",                       │
-     │    payload: {                           │
-     │      key: "count",                      │
-     │      value: 43                          │
-     │    }                                    │
-     │  }                                      │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  (forwards to app server)               │
-     │                                         │
-     │  STATE:UPDATE (confirmation)            │
-     │  {                                      │
-     │    type: "state:update",                │
-     │    payload: { key: "count", value: 43 } │
-     │  }                                      │
-     │────────────────────────────────────────►│
-     │                                         │
-```
-
-### Action/Tool Calls
-
-```
-┌──────────┐                              ┌──────────┐
-│  Shell   │                              │ App UI   │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  ACTION:CALL                            │
-     │  {                                      │
-     │    type: "action:call",                 │
-     │    id: "call-789",                      │
-     │    payload: {                           │
-     │      action: "query",                   │
-     │      args: { sql: "SELECT *" }          │
-     │    }                                    │
-     │  }                                      │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  (execute via app server)               │
-     │                                         │
-     │  ACTION:RESULT                          │
-     │  {                                      │
-     │    type: "action:result",               │
-     │    id: "call-789",                      │
-     │    payload: {                           │
-     │      success: true,                     │
-     │      data: { rows: [...] }              │
-     │    }                                    │
-     │  }                                      │
-     │────────────────────────────────────────►│
-     │                                         │
-```
-
-### Security Considerations
+### Security for Bridge
 
 ```typescript
 class SecureBridge {
-  private iframe: HTMLIFrameElement;
   private allowedOrigin: string;
-  private pendingRequests: Map<string, PendingRequest>;
 
   constructor(iframe: HTMLIFrameElement) {
-    this.iframe = iframe;
-    // Only allow messages from the iframe's origin
     this.allowedOrigin = new URL(iframe.src).origin;
-
     window.addEventListener('message', this.handleMessage);
   }
 
   private handleMessage = (event: MessageEvent) => {
     // Verify origin
     if (event.origin !== this.allowedOrigin) {
-      console.warn('Rejected message from unauthorized origin:', event.origin);
-      return;
-    }
-
-    // Verify source is our iframe
-    if (event.source !== this.iframe.contentWindow) {
-      console.warn('Rejected message from unknown source');
+      console.warn('Rejected message from:', event.origin);
       return;
     }
 
     // Validate message structure
-    const message = event.data;
-    if (!this.isValidBridgeMessage(message)) {
-      console.warn('Rejected malformed message:', message);
+    if (!this.isValidBridgeMessage(event.data)) {
       return;
     }
 
-    // Process message
-    this.processMessage(message);
+    this.process(event.data);
   };
 
   send(message: BridgeMessage): void {
-    // Always include protocol identifier
-    const fullMessage = {
-      protocol: 'iris-bridge',
-      version: 1,
-      ...message,
-    };
-
-    // Send to iframe
-    this.iframe.contentWindow?.postMessage(fullMessage, this.allowedOrigin);
+    this.iframe.contentWindow?.postMessage(
+      { protocol: 'iris-bridge', version: 1, ...message },
+      this.allowedOrigin
+    );
   }
 }
-```
-
-## State Sync Protocol
-
-### Full State Sync
-
-On initialization and reconnection:
-
-```typescript
-interface StateSyncMessage {
-  type: 'state:sync';
-  payload: {
-    // All current state values
-    state: Record<string, unknown>;
-
-    // All computed values
-    computed: Record<string, unknown>;
-
-    // Query states
-    queries: Record<string, {
-      data?: unknown;
-      isLoading: boolean;
-      error?: string;
-      staleAt?: number;
-    }>;
-
-    // Sync timestamp
-    timestamp: number;
-  };
-}
-```
-
-### Delta Updates
-
-For efficiency, only changed values are sent:
-
-```typescript
-interface StateUpdateMessage {
-  type: 'state:update';
-  payload: {
-    // Single state update
-    key: string;
-    value: unknown;
-
-    // Or batch updates
-    updates?: Array<{ key: string; value: unknown }>;
-
-    // Update sequence number for ordering
-    sequence: number;
-  };
-}
-```
-
-### Optimistic Updates
-
-For responsive UIs, updates can be optimistic:
-
-```
-┌──────────┐                              ┌──────────┐
-│ App UI   │                              │  Server  │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  User clicks +1                         │
-     │                                         │
-     │  Optimistic: count = count + 1          │
-     │  (UI updates immediately)               │
-     │                                         │
-     │  STATE:SET                              │
-     │  { key: "count", value: 43,             │
-     │    optimisticId: "opt-1" }              │
-     │────────────────────────────────────────►│
-     │                                         │
-     │                         Server validates│
-     │                         and updates     │
-     │                                         │
-     │  STATE:UPDATE                           │
-     │  { key: "count", value: 43,             │
-     │    confirmedOptimistic: "opt-1" }       │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  (UI already shows 43, no flicker)      │
-     │                                         │
-```
-
-### Conflict Resolution
-
-If server rejects an optimistic update:
-
-```
-┌──────────┐                              ┌──────────┐
-│ App UI   │                              │  Server  │
-└────┬─────┘                              └────┬─────┘
-     │                                         │
-     │  Optimistic: count = 100                │
-     │                                         │
-     │  STATE:SET                              │
-     │  { key: "count", value: 100,            │
-     │    optimisticId: "opt-2" }              │
-     │────────────────────────────────────────►│
-     │                                         │
-     │                         Server: Invalid!│
-     │                         count must be   │
-     │                         <= 50           │
-     │                                         │
-     │  STATE:ROLLBACK                         │
-     │  { optimisticId: "opt-2",               │
-     │    key: "count", value: 42,             │
-     │    error: "Value exceeds max" }         │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  Rollback to 42, show error             │
-     │                                         │
-```
-
-## Event Protocol
-
-### Custom Events
-
-Apps can define and emit custom events:
-
-```typescript
-// Server-side
-ctx.emit('item:created', { id: 'item-1', title: 'New Item' });
-
-// UI-side subscription
-useAppEvent('item:created', (payload) => {
-  console.log('New item:', payload);
-});
-```
-
-### Event Namespacing
-
-```
-Events use dot-notation namespacing:
-
-app:*              App lifecycle events
-  app:activated
-  app:deactivated
-  app:error
-
-state:*            State events
-  state:changed
-  state:error
-
-service:*          Service events
-  service:started
-  service:stopped
-  service:error
-
-custom:*           App-defined events (recommended namespace)
-  custom:item:created
-  custom:sync:complete
-```
-
-### Event Delivery Guarantees
-
-```typescript
-interface EventOptions {
-  // At-most-once (default): Fire and forget
-  delivery?: 'at-most-once';
-
-  // At-least-once: Retry until acknowledged
-  delivery?: 'at-least-once';
-  retryCount?: number;
-  retryDelay?: number;
-
-  // Exactly-once: Deduplicate on receiver
-  delivery?: 'exactly-once';
-  eventId?: string;  // For deduplication
-}
-
-// Example: Important event with retry
-ctx.emit('payment:processed', { orderId }, {
-  delivery: 'at-least-once',
-  retryCount: 3,
-  retryDelay: 1000,
-});
 ```
 
 ## Hot Reload Protocol
 
-### Server Module Reload
-
-```
-┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  FSWatch │     │  Iris    │     │   App    │     │  App UI  │
-└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
-     │                │                │                │
-     │  File changed  │                │                │
-     │───────────────►│                │                │
-     │                │                │                │
-     │                │  LIFECYCLE:RELOAD              │
-     │                │───────────────►│                │
-     │                │                │                │
-     │                │                │  Snapshot state│
-     │                │                │                │
-     │                │  RELOAD:PREPARING              │
-     │                │◄───────────────│                │
-     │                │                │                │
-     │                │                │  Unload module│
-     │                │                │  Load new     │
-     │                │                │                │
-     │                │  RELOAD:READY  │                │
-     │                │◄───────────────│                │
-     │                │                │                │
-     │                │                │  Restore state│
-     │                │                │                │
-     │                │                │  STATE:SYNC   │
-     │                │                │───────────────►│
-     │                │                │                │
-     │                │  RELOAD:COMPLETE               │
-     │                │◄───────────────│                │
-     │                │                │                │
-```
-
-### UI Hot Reload (Vite HMR)
+### Server Module Reload (SDR)
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────┐
-│  Vite    │     │  Shell   │     │  App UI  │
+│  Bun FS  │     │   App    │     │   SDR    │
+│  Watcher │     │  Server  │     │ Renderer │
 └────┬─────┘     └────┬─────┘     └────┬─────┘
      │                │                │
-     │  HMR update    │                │
-     │ (via WS)       │                │
-     │────────────────┼───────────────►│
+     │  File change   │                │
+     │───────────────►│                │
      │                │                │
-     │                │                │  React Fast
-     │                │                │  Refresh
-     │                │                │  (state preserved)
+     │                │  1. Snapshot   │
+     │                │     state      │
      │                │                │
+     │                │  2. Unload     │
+     │                │     module     │
+     │                │                │
+     │                │  3. Load new   │
+     │                │     module     │
+     │                │                │
+     │                │  4. Restore    │
+     │                │     state      │
+     │                │                │
+     │                │  5. Run ui()   │
+     │                │                │
+     │                │  UI:SYNC       │
+     │                │───────────────►│
+     │                │                │
+     │                │                │  Re-render
+     │                │                │  (instant!)
+     │                │                │
+```
+
+### State Migration
+
+If state shape changes during hot reload:
+
+```typescript
+export default defineApp({
+  state: {
+    // Renamed from 'count' to 'counter'
+    counter: state(0),
+  },
+
+  onReload: async (ctx, previousState) => {
+    // Migrate old state
+    if ('count' in previousState) {
+      ctx.state.counter.set(previousState.count);
+    }
+  },
+});
 ```
 
 ## WebSocket Connection Management
 
-### Connection Lifecycle
+### Connection States
 
 ```typescript
-interface ConnectionState {
-  status: 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
-  attempts: number;
-  lastConnected?: number;
-  lastError?: Error;
-}
+type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'reconnecting';
 
 class AppConnection {
-  private ws: WebSocket | null = null;
-  private state: ConnectionState = { status: 'disconnected', attempts: 0 };
-  private reconnectTimer: Timer | null = null;
+  private state: ConnectionState = 'disconnected';
+  private reconnectAttempts = 0;
 
   connect(): void {
-    this.state = { status: 'connecting', attempts: this.state.attempts + 1 };
-
+    this.state = 'connecting';
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
-      this.state = { status: 'connected', attempts: 0, lastConnected: Date.now() };
-      this.onConnect();
+      this.state = 'connected';
+      this.reconnectAttempts = 0;
+      this.requestFullSync();
     };
 
     this.ws.onclose = (event) => {
-      if (event.code === 1000) {
-        // Normal close
-        this.state = { status: 'disconnected', attempts: 0 };
-      } else {
-        // Unexpected close - reconnect
+      if (event.code !== 1000) {
         this.scheduleReconnect();
       }
-    };
-
-    this.ws.onerror = (error) => {
-      this.state.lastError = error;
     };
   }
 
   private scheduleReconnect(): void {
-    this.state.status = 'reconnecting';
-
-    // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
-    const delay = Math.min(1000 * Math.pow(2, this.state.attempts), 30000);
-
-    this.reconnectTimer = setTimeout(() => {
-      this.connect();
-    }, delay);
+    this.state = 'reconnecting';
+    const delay = Math.min(
+      1000 * Math.pow(2, this.reconnectAttempts),
+      30000
+    );
+    setTimeout(() => this.connect(), delay);
+    this.reconnectAttempts++;
   }
 }
 ```
 
-### Heartbeat/Ping-Pong
+### Heartbeat
 
 ```
 ┌──────────┐                              ┌──────────┐
@@ -742,47 +543,92 @@ class AppConnection {
 └────┬─────┘                              └────┬─────┘
      │                                         │
      │  PING (every 30s)                       │
-     │  { type: "ping", timestamp: 123 }       │
+     │  { type: "ping" }                       │
      │────────────────────────────────────────►│
      │                                         │
      │  PONG                                   │
-     │  { type: "pong", timestamp: 123 }       │
+     │  { type: "pong" }                       │
      │◄────────────────────────────────────────│
-     │                                         │
-     │  (measure latency: Date.now() - 123)    │
      │                                         │
 ```
 
-### Reconnection with State Recovery
+## Error Protocol
+
+### Error Message Format
+
+```typescript
+interface ErrorMessage {
+  type: 'app:error';
+  payload: {
+    category: 'server_load' | 'ui_generation' | 'action' | 'runtime';
+    message: string;
+    stack?: string;
+    file?: string;
+    line?: number;
+    column?: number;
+    recoverable: boolean;
+    timestamp: number;
+  };
+}
+```
+
+### Error Flow
 
 ```
 ┌──────────┐                              ┌──────────┐
-│  Client  │                              │  Server  │
+│   App    │                              │   SDR    │
+│  Server  │                              │ Renderer │
 └────┬─────┘                              └────┬─────┘
      │                                         │
-     │  (connection lost)                      │
+     │  ui() throws error                      │
      │                                         │
-     │  ~~~ reconnecting ~~~                   │
-     │                                         │
-     │  CONNECT                                │
-     │  { resumeToken: "abc123",               │
-     │    lastSequence: 456 }                  │
+     │  APP:ERROR                              │
+     │  {                                      │
+     │    type: "app:error",                   │
+     │    payload: {                           │
+     │      category: "ui_generation",         │
+     │      message: "Cannot read 'name'...",  │
+     │      file: "server.ts",                 │
+     │      line: 45,                          │
+     │      recoverable: true                  │
+     │    }                                    │
+     │  }                                      │
      │────────────────────────────────────────►│
      │                                         │
-     │                         Resume session  │
-     │                         Find missed msgs│
+     │                                         │  Show error
+     │                                         │  overlay with
+     │                                         │  last valid UI
      │                                         │
-     │  RESUME                                 │
-     │  { missedMessages: [                    │
-     │      { seq: 457, ... },                 │
-     │      { seq: 458, ... }                  │
-     │    ],                                   │
-     │    currentState: { ... }                │
-     │  }                                      │
-     │◄────────────────────────────────────────│
-     │                                         │
-     │  (apply missed messages, sync state)    │
-     │                                         │
+```
+
+## Rate Limiting
+
+To prevent abuse, certain operations are rate-limited:
+
+```typescript
+const rateLimits: Record<string, RateLimit> = {
+  'iris:ai:chat': { requests: 100, window: '1h' },
+  'iris:fs:read': { requests: 1000, window: '1m' },
+  'iris:fs:write': { requests: 100, window: '1m' },
+  'ui:sync': { requests: 60, window: '1s' },  // Max 60 FPS
+};
+```
+
+Rate limit errors return:
+
+```typescript
+{
+  type: 'response',
+  error: {
+    code: -32008,
+    message: 'Rate limit exceeded',
+    data: {
+      limit: 100,
+      window: '1h',
+      resetAt: 1705234567890
+    }
+  }
+}
 ```
 
 ---

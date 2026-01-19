@@ -2,782 +2,707 @@
 
 ## Overview
 
-The Iris App SDK provides a unified developer experience for building apps that run inside Iris and standalone. The SDK is split into two main packages:
+The Iris App SDK enables developers to build apps with Server-Defined Rendering. The SDK is intentionally simple—most apps are a single file.
 
 ```
 @iris/app-sdk
-├── /server     Server-side APIs (tools, state, services)
-├── /react      React hooks and components for UI
-├── /runtime    Standalone runtime (for deployment)
-└── /types      Shared TypeScript types
+├── defineApp()       Define an app
+├── defineTool()      Define a tool
+├── state()           Create reactive state
+├── computed()        Create derived state
+├── query()           Create async query state
+└── ...
+
+@iris/ui
+├── Stack, Row, Box   Layout components
+├── Text, Heading     Typography
+├── Button, Input     Form elements
+├── DataTable, List   Data display
+└── 100+ components   Full UI kit
 ```
 
-## Design Principles
-
-### 1. Progressive Disclosure
-Simple things should be simple. Complex things should be possible.
+## Quick Start
 
 ```typescript
-// Simple: Define a tool in 5 lines
-defineTool({
-  name: 'hello',
-  description: 'Say hello',
-  parameters: z.object({ name: z.string() }),
-  execute: async ({ name }) => ({ greeting: `Hello, ${name}!` }),
-});
-
-// Complex: Full control when needed
-defineTool({
-  name: 'query',
-  description: '...',
-  parameters: z.object({ sql: z.string() }),
-  execute: async (args, ctx) => {
-    ctx.progress('Connecting...');
-    const db = await ctx.getService('db');
-    ctx.progress('Executing query...');
-    // ...
-  },
-  confirmationRequired: true,
-  timeout: 60000,
-  permissions: ['filesystem:read'],
-});
-```
-
-### 2. Type Safety Throughout
-Full TypeScript support with inference. No runtime surprises.
-
-```typescript
-// Types flow from schema to handler to result
-const tool = defineTool({
-  parameters: z.object({
-    userId: z.string(),
-    includeProfile: z.boolean().optional(),
-  }),
-  // args is typed as { userId: string; includeProfile?: boolean }
-  execute: async (args) => {
-    const user = await getUser(args.userId);
-    // Return type is inferred
-    return { user, timestamp: Date.now() };
-  },
-});
-```
-
-### 3. Familiar Patterns
-Use patterns developers already know (React hooks, Zod, etc.).
-
-```typescript
-// Feels like React Query
-const users = useQuery('users');
-
-// Feels like useState
-const [count, setCount] = useAppState('count');
-
-// Feels like event handlers
-<Button onPress={() => runTool('increment')}>+1</Button>
-```
-
-### 4. Resilient by Default
-Errors are expected. Handle them gracefully.
-
-```typescript
-// Tools can't crash the app
-const result = await runTool('query', { sql });
-if (result.success) {
-  setResults(result.data.rows);
-} else {
-  setError(result.error);
-}
-
-// UI errors show friendly overlays, not white screens
-// Server errors are caught and surfaced
-```
-
-## Server SDK (`@iris/app-sdk/server`)
-
-### App Definition
-
-```typescript
-import {
-  defineApp,
-  defineTool,
-  state,
-  computed,
-  query,
-  mutation,
-} from '@iris/app-sdk/server';
+// server.ts - A complete Iris App
+import { defineApp, defineTool, state } from '@iris/app-sdk';
+import { Stack, Text, Button } from '@iris/ui';
 import { z } from 'zod';
 
 export default defineApp({
-  // State definitions
   state: {
     count: state(0),
-    items: state<Item[]>([]),
-    selectedId: state<string | null>(null),
   },
 
-  // Computed values
-  computed: {
-    selectedItem: computed((get) => {
-      const items = get('items');
-      const id = get('selectedId');
-      return items.find(i => i.id === id);
-    }),
-    itemCount: computed((get) => get('items').length),
-  },
-
-  // Async data
-  queries: {
-    remoteItems: query(async (ctx) => {
-      const response = await ctx.fetch('https://api.example.com/items');
-      return response.json();
-    }, {
-      staleTime: 60_000,
-    }),
-  },
-
-  // Tools exposed to AI and UI
   tools: [
     defineTool({
-      name: 'add_item',
-      description: 'Add a new item to the list',
+      name: 'increment',
+      description: 'Increment the counter',
       parameters: z.object({
-        title: z.string().describe('Item title'),
-        priority: z.enum(['low', 'medium', 'high']).optional(),
+        amount: z.number().default(1),
       }),
-      execute: async (args, ctx) => {
-        const item: Item = {
-          id: crypto.randomUUID(),
-          title: args.title,
-          priority: args.priority ?? 'medium',
-          createdAt: Date.now(),
-        };
-        ctx.state.items.update(list => [...list, item]);
-        return { success: true, item };
+      execute: async ({ amount }, ctx) => {
+        ctx.state.count.update(n => n + amount);
+        return { newValue: ctx.state.count.get() };
       },
     }),
   ],
 
-  // Background services
+  ui: (ctx) => (
+    Stack({ padding: 24, gap: 16, align: 'center' }, [
+      Text({ size: '4xl', weight: 'bold' }, ctx.state.count),
+      Button({
+        onPress: () => ctx.state.count.update(n => n + 1),
+        size: 'lg',
+      }, '+1'),
+    ])
+  ),
+});
+```
+
+## Core API
+
+### defineApp()
+
+Creates an app definition:
+
+```typescript
+import { defineApp } from '@iris/app-sdk';
+
+export default defineApp({
+  // Reactive state (optional)
+  state: {
+    count: state(0),
+    items: state<Item[]>([]),
+  },
+
+  // Computed values (optional)
+  computed: {
+    total: computed((get) => get('items').reduce((sum, i) => sum + i.price, 0)),
+  },
+
+  // Async queries (optional)
+  queries: {
+    users: query(async (ctx) => {
+      return ctx.fetch('/api/users').then(r => r.json());
+    }),
+  },
+
+  // Tools for AI and UI (optional)
+  tools: [
+    defineTool({ ... }),
+  ],
+
+  // Background services (optional)
   services: {
-    sync: {
-      start: async (ctx) => {
-        // Start sync service
-        return startSyncService(ctx);
-      },
-      stop: async (service) => {
-        await service.close();
-      },
-      autoStart: true,
-    },
+    database: { ... },
   },
 
-  // Lifecycle hooks
-  onActivate: async (ctx) => {
-    ctx.log.info('App activated');
+  // UI function - returns component tree
+  ui: (ctx) => {
+    return Stack({}, [...]);
   },
 
-  onDeactivate: async (ctx) => {
-    ctx.log.info('App deactivated');
-  },
+  // Lifecycle hooks (optional)
+  onActivate: async (ctx) => { ... },
+  onDeactivate: async (ctx) => { ... },
+  onReload: async (ctx) => { ... },
+  onError: async (ctx, error) => { ... },
 });
 ```
 
-### State API
+### defineTool()
+
+Creates a tool that AI agents and the UI can call:
 
 ```typescript
-import { state, computed, query, mutation } from '@iris/app-sdk/server';
-
-// Primitive state
-const count = state(0);
-count.get();              // 0
-count.set(5);             // Set to 5
-count.update(n => n + 1); // Increment
-
-// With options
-const history = state<string[]>([], {
-  persist: true,           // Save to disk
-  persistKey: 'history',   // Custom storage key
-  sync: true,              // Sync to UI (default: true)
-  maxHistory: 100,         // Keep last N values for undo
-});
-
-// Computed state
-const doubled = computed(() => count.get() * 2);
-doubled.get(); // Always up-to-date
-
-// Query state (async with caching)
-const users = query(async (ctx) => {
-  const res = await ctx.fetch('/api/users');
-  return res.json();
-}, {
-  staleTime: 60_000,       // Fresh for 1 minute
-  cacheTime: 300_000,      // Cache for 5 minutes
-  refetchOnFocus: true,    // Refetch when app visible
-  retry: 3,                // Retry failed requests
-});
-
-users.get();          // Current data (may be undefined)
-users.load();         // Force load, returns promise
-users.invalidate();   // Clear cache
-
-// Mutation state (async operations)
-const createUser = mutation(
-  async (data: CreateUserInput, ctx) => {
-    const res = await ctx.fetch('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-  {
-    onMutate: (data, ctx) => {
-      // Optimistic update
-    },
-    onSuccess: (result, data, ctx) => {
-      users.invalidate();
-    },
-    onError: (error, data, ctx, rollback) => {
-      rollback();
-    },
-  }
-);
-```
-
-### Tool Definition API
-
-```typescript
-import { defineTool } from '@iris/app-sdk/server';
+import { defineTool } from '@iris/app-sdk';
 import { z } from 'zod';
 
 const queryTool = defineTool({
   // Required
   name: 'query',
-  description: 'Execute a SQL query',
+  description: 'Execute a SQL query against the database',
   parameters: z.object({
-    sql: z.string().describe('SQL query to execute'),
-    params: z.array(z.unknown()).optional(),
+    sql: z.string().describe('The SQL query'),
+    limit: z.number().optional().default(100),
   }),
   execute: async (args, ctx) => {
-    // Implementation
+    const db = await ctx.getService('database');
+    const results = await db.query(args.sql, args.limit);
+    ctx.state.lastQuery.set(args.sql);
+    ctx.state.results.set(results);
+    return { rowCount: results.length, rows: results };
   },
 
-  // Optional metadata
-  category: 'database',
-  tags: ['sql', 'data'],
-
-  // Behavior
-  confirmationRequired: true,   // Prompt user before running
-  timeout: 30_000,              // Execution timeout
-  retryable: false,             // Can AI retry on failure
-
-  // Permissions (elevated beyond app permissions)
-  permissions: [],
-
-  // Documentation
+  // Optional
   examples: [
-    {
-      description: 'Select all users',
-      input: { sql: 'SELECT * FROM users' },
-      output: { rows: [{ id: 1, name: 'Alice' }] },
-    },
+    { description: 'Get all users', input: { sql: 'SELECT * FROM users' } },
   ],
-
-  // Return type (for documentation/validation)
-  returns: z.object({
-    rows: z.array(z.unknown()),
-    count: z.number(),
-  }),
 });
 ```
 
-### Context API
+### state()
+
+Creates reactive state:
 
 ```typescript
-interface AppContext {
-  // Identity
-  appId: string;
-  appName: string;
-  appVersion: string;
-  projectId: string;
-  projectPath: string;
+import { state } from '@iris/app-sdk';
 
-  // State access
-  state: StateMap;       // All state handles
-  queries: QueryMap;     // All query handles
+// Primitive values
+const count = state(0);
+const name = state('');
+const isActive = state(false);
 
-  // Services
-  getService<T>(name: string): Promise<T>;
-  startService(name: string): Promise<void>;
-  stopService(name: string): Promise<void>;
-  restartService(name: string): Promise<void>;
+// Complex values
+const items = state<Item[]>([]);
+const user = state<User | null>(null);
+const form = state({ name: '', email: '' });
 
-  // Configuration
-  getConfig<T = unknown>(path: string): Promise<T>;
-  setConfig<T>(path: string, value: T): Promise<void>;
-  onConfigChange(path: string, handler: (value: unknown) => void): () => void;
+// With options
+const history = state<string[]>([], {
+  persist: true,           // Save to disk
+  persistKey: 'history',   // Custom key
+  maxLength: 100,          // Limit array length
+});
+```
 
-  // Iris Platform Access (requires permissions)
-  iris: {
-    // AI capabilities
-    ai: {
-      chat(messages: Message[], options?: ChatOptions): Promise<ChatResponse>;
-      embed(text: string | string[]): Promise<number[][]>;
-      complete(prompt: string, options?: CompleteOptions): Promise<string>;
-    };
+**State Operations:**
 
-    // Filesystem (scoped by permissions)
-    fs: {
-      read(path: string): Promise<string>;
-      write(path: string, content: string): Promise<void>;
-      list(path: string): Promise<FileInfo[]>;
-      exists(path: string): Promise<boolean>;
-      watch(path: string, handler: (event: FSEvent) => void): () => void;
-    };
+```typescript
+// Read
+const value = count.get();
 
-    // Other Iris tools
-    tools: {
-      list(): Promise<ToolInfo[]>;
-      call(name: string, args: unknown): Promise<ToolResult>;
-    };
+// Write
+count.set(5);
 
-    // Other apps (requires iris:apps permission)
-    apps: {
-      list(): Promise<AppInfo[]>;
-      call(appName: string, toolName: string, args: unknown): Promise<ToolResult>;
-    };
+// Update
+count.update(n => n + 1);
+items.update(list => [...list, newItem]);
+items.update(list => list.filter(i => i.id !== targetId));
 
-    // UI navigation
-    navigate(path: string): void;
-    openTab(tabData: TabData): void;
-
-    // Notifications
-    notify(message: string, options?: NotifyOptions): void;
-  };
-
-  // Network (scoped by permissions)
-  fetch: typeof fetch;
-
-  // Logging
-  log: {
-    debug(...args: unknown[]): void;
-    info(...args: unknown[]): void;
-    warn(...args: unknown[]): void;
-    error(...args: unknown[]): void;
-  };
-
-  // Events
-  emit(event: string, payload?: unknown): void;
-  on(event: string, handler: (payload: unknown) => void): () => void;
+// In UI context, state is reactive
+ui: (ctx) => {
+  // This auto-updates when count changes
+  return Text({}, `Count: ${ctx.state.count}`);
 }
 ```
 
-### Iris Platform Integration
+### computed()
 
-The SDK provides safe access to Iris capabilities:
+Creates derived state:
 
 ```typescript
-// Using AI (requires ai:chat permission)
+import { computed } from '@iris/app-sdk';
+
+// Simple computation
+const doubled = computed((get) => get('count') * 2);
+
+// Derived from multiple states
+const summary = computed((get) => {
+  const items = get('items');
+  const filter = get('filter');
+  return items
+    .filter(i => i.name.includes(filter))
+    .map(i => i.name)
+    .join(', ');
+});
+
+// Async computed (becomes a query)
+const filteredUsers = computed(async (get, ctx) => {
+  const filter = get('filter');
+  const users = await ctx.queries.users.get();
+  return users.filter(u => u.name.includes(filter));
+});
+```
+
+### query()
+
+Creates async data with caching:
+
+```typescript
+import { query } from '@iris/app-sdk';
+
+const users = query(
+  async (ctx) => {
+    const response = await ctx.fetch('/api/users');
+    return response.json();
+  },
+  {
+    staleTime: 60_000,      // Fresh for 1 minute
+    cacheTime: 300_000,     // Keep in cache for 5 minutes
+    refetchOnMount: true,   // Refetch when app opens
+    retry: 3,               // Retry failed requests
+  }
+);
+
+// Usage
+const data = users.get();        // Current data (may be undefined)
+await users.load();              // Force load
+users.invalidate();              // Clear cache
+const isLoading = users.loading; // Loading state
+const error = users.error;       // Error state
+```
+
+## UI Components (@iris/ui)
+
+### Layout Components
+
+```typescript
+import { Stack, Row, Box, ScrollView, Divider } from '@iris/ui';
+
+// Vertical stack
+Stack({ gap: 8, padding: 16 }, [
+  child1,
+  child2,
+])
+
+// Horizontal row
+Row({ gap: 8, justify: 'space-between' }, [
+  left,
+  right,
+])
+
+// Generic container
+Box({ padding: 16, background: 'muted', rounded: 'lg' }, content)
+
+// Scrollable area
+ScrollView({ maxHeight: 400 }, longContent)
+
+// Separator
+Divider({ orientation: 'horizontal' })
+```
+
+### Typography
+
+```typescript
+import { Text, Heading, Code, Link } from '@iris/ui';
+
+// Basic text
+Text({}, 'Hello world')
+Text({ size: 'lg', weight: 'bold', color: 'primary' }, 'Important')
+
+// Headings
+Heading({ level: 1 }, 'Page Title')
+Heading({ level: 2 }, 'Section')
+
+// Code
+Code({ language: 'typescript' }, 'const x = 1')
+
+// Links
+Link({ href: '/other-page' }, 'Click here')
+```
+
+### Form Elements
+
+```typescript
+import { Button, Input, TextArea, Select, Checkbox, Switch } from '@iris/ui';
+
+// Button
+Button({ onPress: handler, variant: 'primary', size: 'lg' }, 'Submit')
+Button({ onPress: handler, disabled: true }, 'Disabled')
+
+// Text input
+Input({
+  value: ctx.state.name,
+  onChangeText: ctx.state.name.set,
+  placeholder: 'Enter name...',
+})
+
+// Number input
+Input({
+  type: 'number',
+  value: ctx.state.amount,
+  onChangeText: v => ctx.state.amount.set(Number(v)),
+})
+
+// Text area
+TextArea({
+  value: ctx.state.description,
+  onChangeText: ctx.state.description.set,
+  rows: 4,
+})
+
+// Select dropdown
+Select({
+  value: ctx.state.category,
+  onValueChange: ctx.state.category.set,
+  options: [
+    { label: 'Option 1', value: 'opt1' },
+    { label: 'Option 2', value: 'opt2' },
+  ],
+})
+
+// Checkbox
+Checkbox({
+  checked: ctx.state.agreed,
+  onCheckedChange: ctx.state.agreed.set,
+  label: 'I agree to terms',
+})
+
+// Switch/toggle
+Switch({
+  checked: ctx.state.enabled,
+  onCheckedChange: ctx.state.enabled.set,
+})
+```
+
+### Data Display
+
+```typescript
+import { DataTable, List, Card, Badge, Avatar } from '@iris/ui';
+
+// Data table
+DataTable({
+  data: ctx.state.users,
+  columns: [
+    { key: 'name', header: 'Name' },
+    { key: 'email', header: 'Email' },
+    { key: 'role', header: 'Role', render: (role) => Badge({}, role) },
+  ],
+  onRowClick: (row) => ctx.state.selected.set(row.id),
+})
+
+// List
+List({
+  data: ctx.state.items,
+  renderItem: (item) => (
+    Row({ gap: 8 }, [
+      Avatar({ src: item.avatar }),
+      Text({}, item.name),
+    ])
+  ),
+})
+
+// Card
+Card({ padding: 16 }, [
+  Heading({ level: 3 }, 'Card Title'),
+  Text({}, 'Card content'),
+])
+
+// Badge
+Badge({ variant: 'success' }, 'Active')
+Badge({ variant: 'error' }, 'Failed')
+```
+
+### Feedback
+
+```typescript
+import { Alert, Spinner, Progress, Toast } from '@iris/ui';
+
+// Alert
+Alert({ variant: 'info', title: 'Note' }, 'This is informational')
+Alert({ variant: 'error' }, 'Something went wrong')
+
+// Loading spinner
+Spinner({ size: 'lg' })
+
+// Progress bar
+Progress({ value: 0.7, max: 1 })
+
+// Toast (triggered via context)
+ctx.toast({ message: 'Saved!', variant: 'success' })
+```
+
+### Overlays
+
+```typescript
+import { Dialog, Sheet, Tooltip, Popover } from '@iris/ui';
+
+// Dialog
+Dialog({
+  open: ctx.state.dialogOpen,
+  onOpenChange: ctx.state.dialogOpen.set,
+  title: 'Confirm',
+}, [
+  Text({}, 'Are you sure?'),
+  Row({ gap: 8, justify: 'end' }, [
+    Button({ onPress: () => ctx.state.dialogOpen.set(false) }, 'Cancel'),
+    Button({ onPress: handleConfirm, variant: 'primary' }, 'Confirm'),
+  ]),
+])
+
+// Tooltip
+Tooltip({ content: 'More information' },
+  Button({}, 'Hover me')
+)
+```
+
+### Icons
+
+```typescript
+import { Icon } from '@iris/ui';
+
+// Uses Lucide icons
+Icon({ name: 'database', size: 24 })
+Icon({ name: 'check', color: 'green' })
+Icon({ name: 'x', color: 'red' })
+```
+
+### Specialized Components
+
+```typescript
+import { CodeEditor, Terminal, FileTree, Markdown } from '@iris/ui';
+
+// Code editor
+CodeEditor({
+  value: ctx.state.code,
+  onChange: ctx.state.code.set,
+  language: 'typescript',
+  theme: 'dark',
+})
+
+// Terminal output
+Terminal({
+  lines: ctx.state.logs,
+  autoScroll: true,
+})
+
+// File tree
+FileTree({
+  files: ctx.state.files,
+  onSelect: (path) => ctx.state.selectedFile.set(path),
+})
+
+// Markdown renderer
+Markdown({}, ctx.state.readme)
+```
+
+## UI Context
+
+The `ui` function receives a context with everything needed:
+
+```typescript
+ui: (ctx) => {
+  // State access
+  const { count, items, user } = ctx.state;
+
+  // Computed values
+  const { total, filteredItems } = ctx.computed;
+
+  // Query data
+  const users = ctx.queries.users;
+
+  // Run tools
+  const handleSubmit = () => ctx.runTool('submit', { data: form.get() });
+
+  // Access Iris platform (if permitted)
+  const handleAI = async () => {
+    const response = await ctx.iris.ai.chat([
+      { role: 'user', content: 'Summarize this' }
+    ]);
+  };
+
+  // Show notifications
+  ctx.toast({ message: 'Saved!', variant: 'success' });
+
+  // Theme info
+  const { theme, isDark } = ctx.theme;
+
+  // App info
+  const { appId, projectId } = ctx.app;
+
+  return Stack({}, [...]);
+}
+```
+
+## Platform Access
+
+Apps can access Iris platform features through the context:
+
+### AI Access
+
+```typescript
+// Requires: "ai:chat" permission
 const response = await ctx.iris.ai.chat([
-  { role: 'user', content: 'Summarize this data' },
+  { role: 'system', content: 'You are a helpful assistant' },
+  { role: 'user', content: userQuestion },
 ], {
   model: 'claude-sonnet',
   maxTokens: 1000,
 });
 
-// Reading files (requires filesystem:read permission)
-const content = await ctx.iris.fs.read('/path/to/file.txt');
+// Requires: "ai:embed" permission
+const embeddings = await ctx.iris.ai.embed(['text1', 'text2']);
+```
 
-// Calling other tools (requires iris:tools permission)
-const result = await ctx.iris.tools.call('builtin:bash', {
-  command: 'ls -la',
-});
+### File System
 
-// Navigating Iris UI (requires iris:navigation permission)
-ctx.iris.navigate(`/projects/${ctx.projectId}/files/src/index.ts`);
+```typescript
+// Requires: "filesystem:read:$PROJECT" permission
+const content = await ctx.iris.fs.read('src/index.ts');
+const files = await ctx.iris.fs.list('src');
+const exists = await ctx.iris.fs.exists('package.json');
 
-// Cross-app communication (requires iris:apps permission)
-const dbResult = await ctx.iris.apps.call('database-explorer', 'query', {
-  sql: 'SELECT * FROM users',
+// Requires: "filesystem:write:$APP/data" permission
+await ctx.iris.fs.write('data/output.json', JSON.stringify(data));
+```
+
+### Other Tools
+
+```typescript
+// Requires: "iris:tools" permission
+const result = await ctx.iris.tools.call('bash', {
+  command: 'npm run build',
 });
 ```
 
-## React SDK (`@iris/app-sdk/react`)
+### Navigation
 
-### Provider Setup
-
-```tsx
-// ui/src/main.tsx
-import { IrisAppProvider } from '@iris/app-sdk/react';
-import App from './App';
-
-// Provider connects to app server via bridge
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <IrisAppProvider>
-    <App />
-  </IrisAppProvider>
-);
+```typescript
+// Requires: "iris:navigation" permission (usually implicit)
+ctx.iris.navigate('/files/src/index.ts');
+ctx.iris.openTab({ type: 'file', path: 'src/index.ts' });
 ```
 
-### State Hooks
+## Type Safety
 
-```tsx
+The SDK provides full TypeScript support:
+
+```typescript
+// Types are inferred from state definitions
+const count = state(0);              // StateHandle<number>
+const items = state<Item[]>([]);     // StateHandle<Item[]>
+
+// Tool parameters are validated at runtime AND compile time
+defineTool({
+  parameters: z.object({
+    id: z.string(),
+    count: z.number(),
+  }),
+  execute: async (args, ctx) => {
+    // args is typed as { id: string; count: number }
+    args.id;    // string
+    args.count; // number
+  },
+});
+
+// Component props are typed
+Button({
+  onPress: () => {},  // required
+  variant: 'primary', // 'primary' | 'secondary' | 'ghost' | ...
+  size: 'lg',         // 'sm' | 'md' | 'lg'
+  disabled: false,    // boolean
+}, 'Click');
+```
+
+## Custom UI Mode
+
+For apps that need full React control, opt into custom UI mode:
+
+```json
+{
+  "ui": {
+    "mode": "custom",
+    "entry": "ui/index.html"
+  }
+}
+```
+
+Then create a full React app in `ui/`:
+
+```typescript
+// ui/src/App.tsx
+import { useIrisApp, IrisAppProvider } from '@iris/app-sdk/react';
+
+function App() {
+  return (
+    <IrisAppProvider>
+      <CustomUI />
+    </IrisAppProvider>
+  );
+}
+
+function CustomUI() {
+  const { state, runTool, iris } = useIrisApp();
+
+  // Full React control
+  return (
+    <div>
+      <ThreeJSVisualization data={state.data} />
+      <button onClick={() => runTool('refresh')}>
+        Refresh
+      </button>
+    </div>
+  );
+}
+```
+
+**Custom UI Hooks:**
+
+```typescript
 import {
-  useAppState,
-  useComputed,
-  useQuery,
-  useMutation,
-  useAppContext,
+  useIrisApp,      // Full app context
+  useAppState,     // Single state value
+  useRunTool,      // Tool execution
+  useIrisAI,       // AI access
+  useIrisFS,       // File system
 } from '@iris/app-sdk/react';
 
 function MyComponent() {
-  // Subscribe to primitive state
   const [count, setCount] = useAppState('count');
-  // count: number
-  // setCount: (value: number | (prev: number) => number) => void
-
-  // Subscribe to computed state
-  const doubled = useComputed('doubled');
-  // doubled: number (read-only)
-
-  // Subscribe to query state
-  const users = useQuery('users');
-  // users: { data?: User[], isLoading: boolean, error?: Error, refetch: () => void }
-
-  // Get mutation handle
-  const createUser = useMutation('createUser');
-  // createUser: { mutate: (args) => Promise, isLoading: boolean, error?: Error }
-
-  // Access full app context
-  const ctx = useAppContext();
-  // ctx: { appId, projectId, theme, ... }
-
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={() => setCount(c => c + 1)}>Increment</button>
-
-      <p>Doubled: {doubled}</p>
-
-      {users.isLoading ? (
-        <Spinner />
-      ) : (
-        <ul>
-          {users.data?.map(user => (
-            <li key={user.id}>{user.name}</li>
-          ))}
-        </ul>
-      )}
-
-      <button
-        onClick={() => createUser.mutate({ name: 'New User' })}
-        disabled={createUser.isLoading}
-      >
-        Add User
-      </button>
-    </div>
-  );
-}
-```
-
-### Tool Hooks
-
-```tsx
-import { useTool, useToolCall } from '@iris/app-sdk/react';
-
-function QueryRunner() {
-  // Full tool control
-  const queryTool = useTool('query');
-  // queryTool: {
-  //   call: (args) => Promise<ToolResult>,
-  //   isRunning: boolean,
-  //   lastResult?: ToolResult,
-  //   lastError?: Error,
-  //   reset: () => void,
-  // }
-
-  // Simple one-shot call
-  const [runQuery, queryState] = useToolCall('query');
-  // runQuery: (args) => Promise<ToolResult>
-  // queryState: { isRunning, result?, error? }
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const result = await queryTool.call({ sql: e.target.sql.value });
-    if (result.success) {
-      setResults(result.data.rows);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <textarea name="sql" placeholder="Enter SQL..." />
-      <button disabled={queryTool.isRunning}>
-        {queryTool.isRunning ? 'Running...' : 'Execute'}
-      </button>
-      {queryTool.lastError && (
-        <p className="error">{queryTool.lastError.message}</p>
-      )}
-    </form>
-  );
-}
-```
-
-### Iris Integration Hooks
-
-```tsx
-import {
-  useIrisAI,
-  useIrisFS,
-  useIrisTools,
-  useIrisNavigation,
-  useIrisNotifications,
-} from '@iris/app-sdk/react';
-
-function AIAssistant() {
+  const runTool = useRunTool();
   const ai = useIrisAI();
 
-  const handleAsk = async (question: string) => {
-    const response = await ai.chat([
-      { role: 'user', content: question }
-    ]);
-    return response.content;
-  };
-
-  // ...
-}
-
-function FileBrowser() {
-  const fs = useIrisFS();
-  const [files, setFiles] = useState<FileInfo[]>([]);
-
-  useEffect(() => {
-    fs.list('/src').then(setFiles);
-  }, []);
-
-  // ...
-}
-
-function ToolCaller() {
-  const tools = useIrisTools();
-
-  const handleBash = async () => {
-    const result = await tools.call('builtin:bash', {
-      command: 'git status',
-    });
-    // ...
-  };
-
-  // ...
-}
-
-function Navigation() {
-  const nav = useIrisNavigation();
-
-  return (
-    <button onClick={() => nav.openFile('/src/index.ts')}>
-      Open Source
-    </button>
-  );
+  // Use like regular React hooks
 }
 ```
 
-### Event Hooks
+## Error Handling
 
-```tsx
-import { useAppEvent, useAppEmit } from '@iris/app-sdk/react';
+### In Tools
 
-function ConnectionStatus() {
-  const [status, setStatus] = useState('unknown');
-
-  // Subscribe to events
-  useAppEvent('connection:status', (payload) => {
-    setStatus(payload.status);
-  });
-
-  // Emit events
-  const emit = useAppEmit();
-
-  return (
-    <div>
-      <p>Status: {status}</p>
-      <button onClick={() => emit('connection:reconnect')}>
-        Reconnect
-      </button>
-    </div>
-  );
-}
-```
-
-### Theme Integration
-
-```tsx
-import { useIrisTheme, IrisThemeProvider } from '@iris/app-sdk/react';
-
-function ThemedComponent() {
-  const { theme, isDark } = useIrisTheme();
-  // theme: 'light' | 'dark' | 'auto'
-  // isDark: boolean (resolved)
-
-  return (
-    <div className={isDark ? 'dark-mode' : 'light-mode'}>
-      {/* ... */}
-    </div>
-  );
-}
-
-// Or use the provider for CSS variable integration
-function App() {
-  return (
-    <IrisThemeProvider>
-      {/* Child components get Iris theme CSS variables */}
-      <ThemedComponent />
-    </IrisThemeProvider>
-  );
-}
-```
-
-### Error Boundary
-
-```tsx
-import { AppErrorBoundary, useAppError } from '@iris/app-sdk/react';
-
-function App() {
-  return (
-    <AppErrorBoundary
-      fallback={({ error, resetError, viewSource }) => (
-        <div className="error-screen">
-          <h2>Something went wrong</h2>
-          <p>{error.message}</p>
-          <button onClick={resetError}>Try Again</button>
-          {error.file && (
-            <button onClick={viewSource}>View Source</button>
-          )}
-        </div>
-      )}
-    >
-      <MainContent />
-    </AppErrorBoundary>
-  );
-}
-
-// Or handle errors manually
-function SafeComponent() {
-  const { error, clearError, reportError } = useAppError();
-
-  const handleRiskyOperation = async () => {
+```typescript
+defineTool({
+  execute: async (args, ctx) => {
     try {
-      await riskyOperation();
-    } catch (e) {
-      reportError(e);
+      const result = await riskyOperation(args);
+      return { success: true, data: result };
+    } catch (error) {
+      // Return error - don't throw
+      return { success: false, error: error.message };
     }
-  };
+  },
+});
+```
 
+### In UI
+
+```typescript
+ui: (ctx) => {
+  const { error, isLoading, data } = ctx.state;
+
+  // Handle error states in UI
   if (error) {
-    return <ErrorDisplay error={error} onDismiss={clearError} />;
+    return Alert({ variant: 'error' }, error);
   }
 
-  return <NormalUI onRisky={handleRiskyOperation} />;
+  if (isLoading) {
+    return Stack({ align: 'center', padding: 24 }, [
+      Spinner({}),
+      Text({}, 'Loading...'),
+    ]);
+  }
+
+  return DataTable({ data });
 }
 ```
 
-## Runtime SDK (`@iris/app-sdk/runtime`)
-
-For standalone deployment:
+### Global Error Handler
 
 ```typescript
-// standalone.ts
-import { createRuntime } from '@iris/app-sdk/runtime';
-import app from './server';
+export default defineApp({
+  onError: async (ctx, error) => {
+    ctx.log.error('App error:', error);
+    ctx.state.lastError.set(error.message);
 
-const runtime = createRuntime({
-  app,
-  port: 3000,
-
-  // Provide implementations for Iris services
-  implementations: {
-    // Simple in-memory config
-    config: new InMemoryConfigStore(),
-
-    // Or connect to external services
-    ai: new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY }),
-  },
-
-  // Standalone mode settings
-  standalone: {
-    serveUI: true,        // Serve UI from dist/
-    cors: true,           // Enable CORS for API
-    auth: 'api-key',      // Require API key for tool calls
+    // Return true to indicate error was handled
+    // Return false or throw to propagate
+    return true;
   },
 });
-
-runtime.start().then(() => {
-  console.log('App running at http://localhost:3000');
-});
-```
-
-## CLI Integration
-
-The SDK includes CLI commands for development:
-
-```bash
-# Create new app from template
-iris app create my-app
-
-# Start development mode
-iris app dev
-
-# Build for production
-iris app build
-
-# Run standalone
-iris app start
-
-# Publish to registry
-iris app publish
-```
-
-## Type Generation
-
-Types are automatically generated from your app definition:
-
-```typescript
-// .iris/types.d.ts (auto-generated)
-declare module '@iris/app-sdk/react' {
-  interface AppState {
-    count: number;
-    items: Item[];
-    selectedId: string | null;
-  }
-
-  interface AppComputed {
-    selectedItem: Item | undefined;
-    itemCount: number;
-  }
-
-  interface AppQueries {
-    remoteItems: Item[];
-  }
-
-  interface AppTools {
-    add_item: {
-      params: { title: string; priority?: 'low' | 'medium' | 'high' };
-      result: { success: boolean; item: Item };
-    };
-  }
-}
-```
-
-This enables full autocomplete and type checking:
-
-```tsx
-// TypeScript knows the shape of everything
-const [count, setCount] = useAppState('count');
-//     ^-- number        ^-- (value: number) => void
-
-const result = await runTool('add_item', { title: 'Test' });
-//    ^-- { success: boolean; item: Item }
 ```
 
 ---
 
-*Next: [04-security-model.md](./04-security-model.md) - Security, permissions, and sandboxing*
+*Next: [04-security-model.md](./04-security-model.md) - Security and permissions*

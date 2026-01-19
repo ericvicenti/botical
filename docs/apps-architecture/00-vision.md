@@ -12,28 +12,75 @@ Today's software development is fractured:
 
 4. **Mobile is an afterthought** - Most development tools barely work on tablets, let alone phones. Yet mobile is where users spend their time.
 
-5. **Deployment is a chasm** - The gap between "it works on my machine" and "it's deployed" remains enormous.
+5. **UI and logic are entangled** - Building an app means maintaining separate frontend and backend codebases, build systems, and deployment pipelines.
 
 ## The Vision
 
 **Iris Apps** is a new paradigm where:
 
-> *The application you're building is running inside the tool you're using to build it, and an AI agent can interact with both.*
+> *The application you're building runs inside the tool you're using to build it, the UI is defined by your server code, and an AI agent can interact with everything.*
 
 ### Core Principles
 
-#### 1. Self-Hosted Development
-You build Iris Apps inside Iris. The app runs as a tab alongside your code. Edit a file, see it update instantly. No separate terminal, no browser tab, no context switch.
+#### 1. Server-Defined Rendering (SDR)
+
+The breakthrough insight: **UI is just data**.
+
+Instead of maintaining a separate frontend codebase, your server returns a component tree that the client renders. Change your server code, and the UI updates instantly.
+
+```typescript
+// Your entire app - server AND UI - in one file
+export default defineApp({
+  state: {
+    query: state(''),
+    results: state<Row[]>([]),
+  },
+
+  tools: [
+    defineTool({
+      name: 'run_query',
+      description: 'Execute a SQL query',
+      parameters: z.object({ sql: z.string() }),
+      execute: async ({ sql }, ctx) => {
+        const rows = await db.query(sql);
+        ctx.state.results.set(rows);
+        return { rowCount: rows.length };
+      },
+    }),
+  ],
+
+  ui: (ctx) => (
+    Stack({ padding: 16, gap: 12 }, [
+      Heading({}, 'Database Explorer'),
+      Input({
+        value: ctx.state.query,
+        onChangeText: ctx.state.query.set,
+        placeholder: 'SELECT * FROM ...',
+      }),
+      Button({ onPress: () => ctx.runTool('run_query', { sql: ctx.state.query }) },
+        'Execute'
+      ),
+      ctx.state.results.length > 0 && DataTable({ data: ctx.state.results }),
+    ])
+  ),
+});
+```
+
+No separate frontend. No build step for UI. No bundler configuration. Just describe what you want, and it renders—on web AND mobile.
+
+#### 2. Self-Hosted Development
+
+You build Iris Apps inside Iris. The app runs as a tab alongside your code. Edit your server file, see the UI update instantly.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ IRIS                                                        │
 ├─────────────┬───────────────────────────────────────────────┤
-│ Files       │  [app.json] [server.ts] [▶ My App]           │
-│ ├─ app.json │  ┌─────────────────────────────────────────┐ │
-│ ├─ server.ts│  │                                         │ │
-│ └─ ui/      │  │     Your app running live here          │ │
-│   └─ App.tsx│  │                                         │ │
+│ Files       │  [server.ts] [▶ My App]                       │
+│             │  ┌─────────────────────────────────────────┐ │
+│ ├─ app.json │  │                                         │ │
+│ └─ server.ts│  │     Your app running live here          │ │
+│             │  │                                         │ │
 │             │  │     Edit code on left                   │ │
 │             │  │     See changes instantly on right      │ │
 │             │  │                                         │ │
@@ -41,106 +88,155 @@ You build Iris Apps inside Iris. The app runs as a tab alongside your code. Edit
 └─────────────┴───────────────────────────────────────────────┘
 ```
 
-#### 2. AI-Native Architecture
-Apps aren't just code—they expose **tools** that AI agents can use. The agent doesn't just help you write a database query; it can *run* the query through your app's exposed tool and see the results.
+Notice: there's no `ui/` folder. No Vite. No React build. The UI IS the server code.
+
+#### 3. AI-Native Architecture
+
+Apps expose **tools** that AI agents can use. The agent doesn't just help you write code; it can *use* your app to accomplish tasks.
 
 ```typescript
-// Your app exposes this tool
-defineTool({
-  name: 'query_database',
-  description: 'Run a SQL query',
-  execute: async ({ sql }) => db.query(sql)
-})
-
 // The AI agent can now:
-// 1. Understand what your app does
-// 2. Actually use it to accomplish tasks
-// 3. Help users interact with YOUR app
+// 1. Understand what your app does (from tool descriptions)
+// 2. Actually use it ("Run a query to find all users")
+// 3. See and interpret the results
+// 4. Help users interact with YOUR app
 ```
 
-#### 3. Graceful Degradation
+#### 4. True Mobile-First
+
+Because UI is rendered from component definitions, the same app works natively on mobile:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│   WEB                          MOBILE (React Native)        │
+│                                                              │
+│   Stack({ padding: 16 })   →   <View style={padding: 16}>  │
+│   Text({ size: 'lg' })     →   <Text style={fontSize: 18}> │
+│   Button({ onPress })      →   <Pressable onPress>         │
+│   Input({ value })         →   <TextInput value>           │
+│                                                              │
+│   Same code. Native components. No WebView.                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 5. Graceful Degradation
+
 During development, code breaks. That's normal. Iris Apps are resilient:
 
-- **Broken UI?** Show an error overlay with source link, not a white screen
-- **Server crash?** Catch it, show the stack trace, let the developer fix it
-- **Partial functionality?** Keep working parts running while broken parts show helpful errors
+- **Server error?** Show the error with stack trace and source link
+- **Invalid UI tree?** Render what's valid, highlight what's broken
+- **Tool fails?** Return error state, don't crash the app
 
-The development experience should feel like pair programming with a safety net, not walking a tightrope.
+The development experience should feel like pair programming with a safety net.
 
-#### 4. Universal Runtime
+#### 6. Universal Runtime
+
 An Iris App runs in three modes from the same codebase:
 
 | Mode | Context | Use Case |
 |------|---------|----------|
 | **Development** | Inside Iris IDE | Building the app |
-| **Installed** | As a tab in any Iris project | Using the app as a tool |
-| **Standalone** | Independent deployment | Production, sharing |
+| **Installed** | In any Iris project | Using the app as a tool |
+| **Standalone** | Independent server | Production deployment |
 
 Write once. Run everywhere. Not as a compromise, but as a feature.
-
-#### 5. Mobile-First
-Iris Apps work beautifully on phones and tablets. Not "mobile-compatible"—truly mobile-first:
-
-- Touch-optimized interactions
-- Responsive layouts by default
-- Native performance through React Native
-- Develop on your iPad, deploy to the world
 
 ## What This Enables
 
 ### For Individual Developers
-- Build custom tools that integrate with AI assistance
-- Create personal productivity apps in minutes
-- Prototype ideas with instant feedback
-- Take your tools with you on any device
+- Build custom tools in a single file
+- See changes instantly—no build step
+- AI can use your tools immediately
+- Works on your phone and tablet
 
 ### For Teams
 - Share internal tools as installable apps
-- Standardize workflows across projects
-- Give AI agents team-specific capabilities
-- Collaborate on apps in real-time
+- Consistent UI via shared component library
+- AI agents get team-specific capabilities
+- Same app works on all devices
 
 ### For the Ecosystem
-- A new category of AI-enhanced applications
-- Apps that get smarter as AI improves
-- A marketplace of composable capabilities
-- The bridge between code and conversation
+- Apps are tiny (just server code)
+- Easy to review, audit, and trust
+- Component library evolves independently
+- Mobile and web parity by default
 
-## The Breakthrough
+## Why Server-Defined Rendering?
 
-The key insight is this:
+The traditional approach:
 
-> **Applications and development environments have been artificially separated.**
+```
+Server Code  →  API  →  Frontend Code  →  Build  →  Bundle  →  Browser
+     │                       │               │          │
+     └─── Two codebases ─────┘               └── Slow ──┘
+```
 
-When your app runs inside your development environment:
-- The AI can see and interact with your actual application
-- Errors become learning opportunities, not catastrophes
-- The feedback loop approaches zero latency
-- The boundary between "building" and "using" dissolves
+The SDR approach:
 
-This is not incremental improvement. This is a new way of creating software.
+```
+Server Code  →  Component Tree  →  Render
+     │               │               │
+     └── One file ───┴── Instant ────┘
+```
+
+**Benefits:**
+- **Instant updates** - No build step, no bundling
+- **Single source of truth** - UI logic lives with business logic
+- **Mobile parity** - Same components render natively
+- **Smaller apps** - No frontend bundle to ship
+- **AI-friendly** - UI is introspectable data
+
+**Trade-offs:**
+- Limited to the component library (by design)
+- Can't use arbitrary npm packages in UI (but can in server)
+- Less flexibility for highly custom UIs
+
+For the 90% of apps that are forms, lists, and data displays, SDR is dramatically simpler. For the 10% that need full control, we provide an escape hatch.
+
+## The Escape Hatch
+
+Some apps genuinely need full React control:
+- 3D visualization (Three.js)
+- Rich text editors (ProseMirror, TipTap)
+- Canvas-based drawing
+- Complex animations
+
+For these, apps can opt into **Custom UI Mode**:
+
+```json
+{
+  "ui": {
+    "mode": "custom",
+    "entry": "ui/index.html"
+  }
+}
+```
+
+Custom UI runs in a sandboxed context with a bridge to the server. It's more work to build but provides full flexibility when needed.
 
 ## Success Metrics
 
 We'll know we've succeeded when:
 
-1. **Developers build apps without leaving Iris** - No context switching to browsers, terminals, or other tools
+1. **Most apps are single-file** - No separate UI codebase needed
 
-2. **AI agents meaningfully use app tools** - Not just code suggestions, but actual tool invocation and result interpretation
+2. **Mobile works automatically** - Apps built on desktop work on phones
 
-3. **Broken code doesn't break flow** - Errors are informative and recoverable, not showstoppers
+3. **AI agents use apps naturally** - Tool invocation feels seamless
 
-4. **Apps deploy with one command** - From development to production is a single step
+4. **Instant feedback** - Edit → See change is under 100ms
 
-5. **Mobile development feels native** - Building on a tablet is as natural as on a desktop
+5. **Errors don't break flow** - Every error has a recovery path
 
 ## What We're Not Building
 
 To stay focused, we explicitly exclude:
 
-- **A general-purpose IDE** - Iris is for Iris Apps, not arbitrary codebases
+- **A general-purpose IDE** - Iris is for Iris Apps
 - **A no-code platform** - This is for developers who write code
-- **A runtime without AI** - AI integration is core, not optional
+- **Arbitrary React apps** - SDR is the primary path; custom UI is the escape hatch
 - **A web-only solution** - Mobile parity is a requirement
 
 ## The Name
@@ -148,9 +244,9 @@ To stay focused, we explicitly exclude:
 **Iris** - The messenger goddess, the rainbow bridge between worlds.
 
 We're building the bridge between:
+- Server and UI (SDR)
 - Development and runtime
 - Human intent and machine execution
-- Code and conversation
 - Desktop and mobile
 
 **Iris Apps** - Applications that see, understand, and respond.

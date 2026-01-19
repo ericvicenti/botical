@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Iris Apps architecture consists of five major subsystems that work together to enable the development, execution, and deployment of AI-integrated applications.
+Iris Apps use **Server-Defined Rendering (SDR)** as the primary UI approach. The server defines the UI as a component tree, and the client renders it using a shared component library. This enables instant updates, mobile parity, and dramatically simpler app development.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -12,40 +12,179 @@ The Iris Apps architecture consists of five major subsystems that work together 
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐            │
 │  │   App Manager  │  │  Tool Registry │  │ Service Runner │            │
 │  │                │  │                │  │                │            │
-│  │  • Lifecycle   │  │  • Discovery   │  │  • Process mgmt│            │
-│  │  • Hot reload  │  │  • Invocation  │  │  • Health check│            │
-│  │  • Isolation   │  │  • Permissions │  │  • Logging     │            │
+│  │  • Discovery   │  │  • AI tools    │  │  • Background  │            │
+│  │  • Lifecycle   │  │  • App tools   │  │  • Health      │            │
+│  │  • Hot reload  │  │  • Permissions │  │  • Logging     │            │
 │  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘            │
 │          │                   │                   │                      │
 │          └───────────────────┼───────────────────┘                      │
 │                              │                                          │
 │                    ┌─────────▼─────────┐                               │
-│                    │   App Runtime     │                               │
+│                    │    App Runtime    │                               │
 │                    │                   │                               │
-│                    │  • Server exec    │                               │
-│                    │  • State sync     │                               │
+│                    │  • State mgmt     │                               │
+│                    │  • UI generation  │◄──── SDR: UI is data          │
+│                    │  • Tool exec      │                               │
 │                    │  • Event bridge   │                               │
 │                    └─────────┬─────────┘                               │
 │                              │                                          │
 │          ┌───────────────────┼───────────────────┐                      │
 │          │                   │                   │                      │
 │  ┌───────▼────────┐  ┌───────▼────────┐  ┌──────▼───────┐             │
-│  │    App Host    │  │  AI Agent      │  │  Protocol    │             │
-│  │   (Frontend)   │  │  Integration   │  │  Layer       │             │
+│  │   SDR Client   │  │   AI Agent     │  │   Protocol   │             │
+│  │   (Renderer)   │  │  Integration   │  │    Layer     │             │
 │  │                │  │                │  │              │             │
-│  │  • iframe      │  │  • Tool calls  │  │  • WebSocket │             │
-│  │  • Error UI    │  │  • Context     │  │  • HTTP API  │             │
-│  │  • Bridge      │  │  • Results     │  │  • Events    │             │
+│  │  • Component   │  │  • Tool calls  │  │  • WebSocket │             │
+│  │    registry    │  │  • Context     │  │  • State sync│             │
+│  │  • Web + RN    │  │  • Results     │  │  • Events    │             │
 │  └────────────────┘  └────────────────┘  └──────────────┘             │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+
+## SDR Architecture
+
+### How Server-Defined Rendering Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          SDR DATA FLOW                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   SERVER                              CLIENT                            │
+│   (Bun)                               (Web / React Native)              │
+│                                                                          │
+│   ┌──────────────────┐               ┌──────────────────┐              │
+│   │                  │               │                  │              │
+│   │   App State      │───────────────│   State Store    │              │
+│   │   { count: 5 }   │   WebSocket   │   { count: 5 }   │              │
+│   │                  │               │                  │              │
+│   └────────┬─────────┘               └────────┬─────────┘              │
+│            │                                  │                         │
+│            ▼                                  ▼                         │
+│   ┌──────────────────┐               ┌──────────────────┐              │
+│   │                  │               │                  │              │
+│   │   ui(ctx)        │───────────────│   SDR Renderer   │              │
+│   │   returns tree   │  Component    │   renders tree   │              │
+│   │                  │  Tree (JSON)  │                  │              │
+│   └──────────────────┘               └────────┬─────────┘              │
+│                                               │                         │
+│            Component Tree:                    ▼                         │
+│            {                         ┌──────────────────┐              │
+│              type: 'Stack',          │                  │              │
+│              props: { gap: 12 },     │   Native UI      │              │
+│              children: [             │   (React / RN)   │              │
+│                {                     │                  │              │
+│                  type: 'Text',       └──────────────────┘              │
+│                  props: { size: 'xl' },                                │
+│                  children: ['Count: 5']                                │
+│                },                                                       │
+│                {                                                        │
+│                  type: 'Button',                                       │
+│                  props: { onPress: { $action: 'increment' } },         │
+│                  children: ['+1']                                      │
+│                }                                                        │
+│              ]                                                          │
+│            }                                                            │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Component Tree Model
+
+The UI is represented as a JSON-serializable tree:
+
+```typescript
+// Component node in the tree
+interface ComponentNode {
+  $: 'component';
+  type: string;              // Component name from registry
+  key?: string;              // React key for reconciliation
+  props: Record<string, PropValue>;
+  children?: UINode[];
+}
+
+// Different node types
+type UINode =
+  | ComponentNode            // { $: 'component', type: 'Button', ... }
+  | string                   // Plain text
+  | number                   // Numbers render as text
+  | boolean                  // true/false (false = don't render)
+  | null                     // Don't render
+  | UINode[];                // Fragment (array of nodes)
+
+// Props can be values or special objects
+type PropValue =
+  | string | number | boolean | null
+  | PropValue[]
+  | { [key: string]: PropValue }
+  | ActionRef                // { $action: 'toolName', args?: {...} }
+  | StateRef                 // { $state: 'stateName' }
+  | StyleValue;              // { $style: {...} }
+```
+
+### Client-Side Rendering
+
+The SDR client renders the tree using a component registry:
+
+```typescript
+// Component registry maps type names to React components
+const ComponentRegistry = {
+  // Layout
+  'Stack': StackComponent,
+  'Row': RowComponent,
+  'Box': BoxComponent,
+  'ScrollView': ScrollViewComponent,
+
+  // Typography
+  'Text': TextComponent,
+  'Heading': HeadingComponent,
+  'Code': CodeComponent,
+
+  // Forms
+  'Button': ButtonComponent,
+  'Input': InputComponent,
+  'TextArea': TextAreaComponent,
+  'Select': SelectComponent,
+  'Checkbox': CheckboxComponent,
+  'Switch': SwitchComponent,
+
+  // Data Display
+  'DataTable': DataTableComponent,
+  'List': ListComponent,
+  'Card': CardComponent,
+
+  // Feedback
+  'Alert': AlertComponent,
+  'Spinner': SpinnerComponent,
+  'Progress': ProgressComponent,
+
+  // ...100+ more components
+};
+
+// Renderer walks the tree and creates React elements
+function renderNode(node: UINode): React.ReactNode {
+  if (node === null || node === false) return null;
+  if (typeof node === 'string' || typeof node === 'number') return node;
+  if (Array.isArray(node)) return node.map(renderNode);
+
+  const Component = ComponentRegistry[node.type];
+  if (!Component) {
+    return <UnknownComponent type={node.type} />;
+  }
+
+  const props = resolveProps(node.props);
+  const children = node.children?.map(renderNode);
+
+  return <Component key={node.key} {...props}>{children}</Component>;
+}
 ```
 
 ## Subsystem Details
 
 ### 1. App Manager
 
-The App Manager is responsible for the complete lifecycle of Iris Apps.
+The App Manager handles discovery, loading, and lifecycle of apps.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -54,71 +193,61 @@ The App Manager is responsible for the complete lifecycle of Iris Apps.
 │                                                              │
 │  Discovery          Loading           Lifecycle              │
 │  ┌──────────┐      ┌──────────┐      ┌──────────┐          │
-│  │ Scan     │      │ Validate │      │ Start    │          │
-│  │ project  │─────▶│ manifest │─────▶│ runtime  │          │
-│  │ for apps │      │ & code   │      │ & UI     │          │
-│  └──────────┘      └──────────┘      └──────────┘          │
+│  │ Scan for │      │ Validate │      │ Activate │          │
+│  │ app.json │─────▶│ manifest │─────▶│ runtime  │          │
+│  └──────────┘      │ + code   │      │          │          │
+│                    └──────────┘      └──────────┘          │
 │                                             │                │
 │  ┌──────────┐      ┌──────────┐            │                │
 │  │ Watch    │      │ Hot      │◀───────────┘                │
 │  │ files    │─────▶│ reload   │                             │
 │  └──────────┘      └──────────┘                             │
 │                                                              │
+│  For SDR apps:                                              │
+│  • No separate UI build needed                              │
+│  • File change → re-run ui() → push new tree               │
+│  • State preserved across reloads                           │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-**Responsibilities:**
-
-| Function | Description |
-|----------|-------------|
-| **Discovery** | Scan project directories for `app.json` manifests |
-| **Validation** | Verify manifest schema, check dependencies |
-| **Loading** | Import server module, initialize state |
-| **Hot Reload** | Watch source files, reload on change |
-| **Isolation** | Ensure apps don't interfere with each other |
-| **Lifecycle** | Start, stop, restart, unload apps |
 
 **Key Data Structures:**
 
 ```typescript
 interface ManagedApp {
   // Identity
-  id: string;                    // Unique app instance ID
-  manifest: AppManifest;         // Parsed app.json
-  projectId: string;             // Owning project
+  id: string;
+  manifest: AppManifest;
+  projectId: string;
 
   // Paths
-  rootPath: string;              // App directory
-  serverPath: string;            // server.ts location
-  uiPath: string;                // ui/ directory
+  rootPath: string;
+  serverPath: string;
 
   // Runtime state
-  status: AppStatus;             // loading | active | error | stopped
-  serverModule: AppServerModule; // Loaded server.ts exports
-  devServer: DevServer | null;   // Vite dev server for UI
+  status: AppStatus;
+  runtime: AppRuntime;
 
-  // Error tracking
-  lastError: AppError | null;
-  errorCount: number;
+  // UI mode
+  uiMode: 'sdr' | 'custom';
+
+  // For SDR: current UI tree
+  currentUI?: UINode;
+
+  // For custom UI: sandbox info
+  customUI?: {
+    entry: string;
+    devPort?: number;
+  };
 
   // Hot reload
   watcher: FSWatcher;
-  reloadCount: number;
 }
-
-type AppStatus =
-  | 'discovered'    // Found app.json, not yet loaded
-  | 'loading'       // Loading server module
-  | 'starting'      // Running onActivate
-  | 'active'        // Fully running
-  | 'error'         // Failed, not running
-  | 'stopping'      // Running onDeactivate
-  | 'stopped';      // Cleanly stopped
 ```
 
 ### 2. App Runtime
 
-The App Runtime executes app server code and manages reactive state.
+The runtime executes app code and manages the UI generation.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -127,11 +256,12 @@ The App Runtime executes app server code and manages reactive state.
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │                    Server Module                      │   │
+│  │                                                       │   │
 │  │  ┌───────────┐  ┌───────────┐  ┌───────────┐        │   │
-│  │  │   State   │  │  Queries  │  │   Tools   │        │   │
+│  │  │   State   │  │   Tools   │  │   UI fn   │        │   │
 │  │  │           │  │           │  │           │        │   │
-│  │  │ Reactive  │  │ Async     │  │ AI-       │        │   │
-│  │  │ values    │  │ data      │  │ callable  │        │   │
+│  │  │ Reactive  │  │ AI-       │  │ Returns   │        │   │
+│  │  │ values    │  │ callable  │  │ tree      │        │   │
 │  │  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘        │   │
 │  │        │              │              │               │   │
 │  │        └──────────────┼──────────────┘               │   │
@@ -139,83 +269,142 @@ The App Runtime executes app server code and manages reactive state.
 │  └───────────────────────┼───────────────────────────────┘   │
 │                          │                                    │
 │                  ┌───────▼───────┐                           │
-│                  │  State Store  │                           │
+│                  │  UI Generator │                           │
 │                  │               │                           │
-│                  │  Observable   │                           │
-│                  │  values with  │                           │
-│                  │  subscribers  │                           │
+│                  │  • Run ui(ctx)│                           │
+│                  │  • Diff trees │                           │
+│                  │  • Push delta │                           │
 │                  └───────┬───────┘                           │
 │                          │                                    │
 │            ┌─────────────┼─────────────┐                     │
 │            │             │             │                     │
 │    ┌───────▼───────┐ ┌───▼───┐ ┌───────▼───────┐           │
-│    │  UI Sync      │ │ Tools │ │  Persistence  │           │
-│    │  (WebSocket)  │ │       │ │  (Optional)   │           │
+│    │  State Sync   │ │ Tools │ │  Persistence  │           │
+│    │  (WebSocket)  │ │       │ │  (optional)   │           │
 │    └───────────────┘ └───────┘ └───────────────┘           │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**State Model:**
-
-The runtime implements a reactive state system inspired by signals/atoms:
+**UI Generation Flow:**
 
 ```typescript
-// Primitive state - simple reactive value
-const count = state(0);
-count.get();        // 0
-count.set(5);       // Updates all subscribers
-count.update(n => n + 1);
+class AppRuntime {
+  private ui: UINode | null = null;
 
-// Computed state - derived from other state
-const doubled = computed(() => count.get() * 2);
+  // Called when state changes or on reload
+  async regenerateUI(): Promise<void> {
+    // Create context with current state
+    const ctx = this.createUIContext();
 
-// Async state - for data fetching
-const users = query(async () => {
-  const response = await fetch('/api/users');
-  return response.json();
-});
-users.get();        // Returns cached data or undefined
-users.load();       // Triggers fetch, returns promise
-users.invalidate(); // Clears cache, re-fetches on next get
-```
+    // Run the UI function
+    const newUI = await this.module.ui(ctx);
 
-**Execution Context:**
+    // Validate the tree
+    const validated = validateUITree(newUI);
 
-Every tool execution and lifecycle hook receives a context:
+    // Diff against current
+    const delta = diffTrees(this.ui, validated);
 
-```typescript
-interface AppContext {
-  // Identity
-  appId: string;
-  projectId: string;
-  projectPath: string;
+    // Store new tree
+    this.ui = validated;
 
-  // State access
-  state: Record<string, StateHandle>;
-  queries: Record<string, QueryHandle>;
+    // Push delta to connected clients
+    this.broadcast({ type: 'ui:update', delta });
+  }
 
-  // Services
-  getService<T>(name: string): Promise<T>;
-  startService(name: string): Promise<void>;
-  stopService(name: string): Promise<void>;
-
-  // Configuration
-  getConfig<T>(key: string): Promise<T>;
-  setConfig<T>(key: string, value: T): Promise<void>;
-
-  // Events
-  emit(event: string, payload: unknown): void;
-  on(event: string, handler: (payload: unknown) => void): () => void;
-
-  // Logging
-  log: Logger;
+  private createUIContext(): UIContext {
+    return {
+      state: this.createStateProxy(),
+      runTool: (name, args) => this.executeTool(name, args),
+      // ... other context methods
+    };
+  }
 }
 ```
 
-### 3. Tool Registry
+### 3. Component Registry
 
-The Tool Registry manages tools exposed by apps to AI agents.
+The component registry maps type strings to actual React components.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    COMPONENT REGISTRY                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                    @iris/ui-kit                       │   │
+│  │                                                       │   │
+│  │  LAYOUT          FORMS           DATA DISPLAY        │   │
+│  │  ────────        ─────           ────────────        │   │
+│  │  Stack           Button          DataTable           │   │
+│  │  Row             Input           List                │   │
+│  │  Box             TextArea        Card                │   │
+│  │  ScrollView      Select          Badge               │   │
+│  │  Divider         Checkbox        Avatar              │   │
+│  │                  Switch          Image               │   │
+│  │  TYPOGRAPHY      Radio           Code                │   │
+│  │  ──────────      Slider                              │   │
+│  │  Text            DatePicker      FEEDBACK            │   │
+│  │  Heading                         ────────            │   │
+│  │  Paragraph       NAVIGATION      Alert               │   │
+│  │  Label           ──────────      Toast               │   │
+│  │  Code            Tabs            Spinner             │   │
+│  │  Link            Menu            Progress            │   │
+│  │                  Breadcrumb      Skeleton            │   │
+│  │  OVERLAYS        Link                                │   │
+│  │  ────────                        SPECIALIZED         │   │
+│  │  Dialog          ICONS           ───────────         │   │
+│  │  Sheet           ─────           CodeEditor          │   │
+│  │  Tooltip         Icon            Terminal            │   │
+│  │  Popover         (lucide)        FileTree            │   │
+│  │                                  DiffViewer          │   │
+│  │                                  Markdown            │   │
+│  │                                                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Web: React components with Tailwind/CSS                    │
+│  Mobile: React Native components with StyleSheet            │
+│  Same API, platform-native rendering                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Cross-Platform Implementation:**
+
+```typescript
+// @iris/ui-kit/src/Button.tsx (web)
+export function Button({ onPress, variant, size, children, ...props }) {
+  return (
+    <button
+      onClick={onPress}
+      className={cn(buttonVariants({ variant, size }))}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+// @iris/ui-kit/src/Button.native.tsx (React Native)
+export function Button({ onPress, variant, size, children, ...props }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.base, styles[variant], styles[size]]}
+      {...props}
+    >
+      <Text style={styles.text}>{children}</Text>
+    </Pressable>
+  );
+}
+
+// Same import, different implementation per platform
+```
+
+### 4. Tool Registry
+
+Tools are the primary way AI agents interact with apps.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -225,280 +414,185 @@ The Tool Registry manages tools exposed by apps to AI agents.
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │                    Tool Index                         │   │
 │  │                                                       │   │
-│  │  app:database-explorer                               │   │
-│  │  ├─ query          "Execute SQL query"               │   │
-│  │  ├─ list_tables    "List database tables"            │   │
-│  │  └─ describe       "Describe table schema"           │   │
+│  │  BUILTIN TOOLS (Iris Core)                           │   │
+│  │  ├─ read_file         Read file contents             │   │
+│  │  ├─ write_file        Write file contents            │   │
+│  │  ├─ bash              Execute shell command          │   │
+│  │  └─ ...                                              │   │
 │  │                                                       │   │
-│  │  app:api-tester                                      │   │
-│  │  ├─ request        "Make HTTP request"               │   │
-│  │  └─ save_request   "Save request to collection"      │   │
+│  │  APP TOOLS (from Iris Apps)                          │   │
+│  │  ├─ app:database-explorer/query                      │   │
+│  │  ├─ app:database-explorer/list_tables                │   │
+│  │  ├─ app:api-tester/send_request                      │   │
+│  │  └─ ...                                              │   │
 │  │                                                       │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Discovery   │  │  Invocation  │  │  Permissions │      │
-│  │              │  │              │  │              │      │
-│  │  • Scan apps │  │  • Validate  │  │  • Check     │      │
-│  │  • Extract   │  │  • Execute   │  │  • Approve   │      │
-│  │  • Register  │  │  • Return    │  │  • Log       │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  Tool Execution Flow:                                       │
+│  1. AI requests tool call                                   │
+│  2. Registry finds tool by name                             │
+│  3. Permission check                                        │
+│  4. Execute tool with context                               │
+│  5. Tool updates app state (triggers UI regeneration)       │
+│  6. Return result to AI                                     │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Tool Namespacing:**
+### 5. SDR Client
 
-Tools are namespaced to prevent collisions:
-
-```
-{source}:{app-name}/{tool-name}
-
-Examples:
-  app:database-explorer/query       # Tool from an app
-  builtin:filesystem/read           # Built-in Iris tool
-  mcp:github/create_issue           # Tool from MCP server
-```
-
-**Tool Definition:**
-
-```typescript
-interface ToolDefinition {
-  name: string;
-  description: string;
-  parameters: z.ZodSchema;
-
-  // Execution
-  execute: (args: unknown, ctx: ToolContext) => Promise<ToolResult>;
-
-  // Optional metadata
-  category?: string;
-  requiresApproval?: boolean;
-  timeout?: number;
-
-  // UI hints for the agent
-  examples?: ToolExample[];
-  relatedTools?: string[];
-}
-
-interface ToolResult {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-
-  // Rich output for agent
-  summary?: string;        // Human-readable summary
-  artifacts?: Artifact[];  // Files, images, etc.
-}
-```
-
-### 4. Service Runner
-
-The Service Runner manages long-running processes defined by apps.
+The client receives UI trees and renders them.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      SERVICE RUNNER                          │
+│                        SDR CLIENT                            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │                  Service Pool                         │   │
+│  │                    Connection                         │   │
 │  │                                                       │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │   │
-│  │  │ db-conn     │  │ api-server  │  │ watcher     │  │   │
-│  │  │ ● running   │  │ ● running   │  │ ○ stopped   │  │   │
-│  │  │ pid: 1234   │  │ pid: 1235   │  │             │  │   │
-│  │  │ 2m uptime   │  │ 5m uptime   │  │             │  │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  │   │
-│  │                                                       │   │
+│  │  WebSocket to Iris server                            │   │
+│  │  ├─ Receive: ui:sync, ui:update, state:update        │   │
+│  │  └─ Send: action, state:set                          │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  Process Management        Health Monitoring                 │
-│  ┌──────────────┐         ┌──────────────┐                 │
-│  │ • Spawn      │         │ • Heartbeat  │                 │
-│  │ • Signal     │         │ • Restart    │                 │
-│  │ • Stream I/O │         │ • Backoff    │                 │
-│  │ • Cleanup    │         │ • Alerts     │                 │
-│  └──────────────┘         └──────────────┘                 │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Service Types:**
-
-| Type | Description | Example |
-|------|-------------|---------|
-| **Process** | External command | `bun run server.ts` |
-| **Internal** | In-process service | Database connection pool |
-| **Managed** | Iris-supervised | Dev servers, watchers |
-
-**Service Definition:**
-
-```typescript
-interface ServiceDefinition {
-  name: string;
-  description?: string;
-
-  // For process services
-  command?: string;
-  args?: string[];
-  cwd?: string;
-  env?: Record<string, string>;
-
-  // For internal services
-  start?: (ctx: ServiceContext) => Promise<unknown>;
-  stop?: (instance: unknown) => Promise<void>;
-
-  // Lifecycle
-  autoStart?: boolean;     // Start when app activates
-  restartOnCrash?: boolean;
-  maxRestarts?: number;
-  restartDelay?: number;   // Exponential backoff base
-
-  // Health
-  healthCheck?: () => Promise<boolean>;
-  healthInterval?: number;
-}
-```
-
-### 5. App Host (Frontend)
-
-The App Host renders app UIs with isolation and error handling.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        APP HOST                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │                    Tab Container                      │   │
-│  │  ┌─────────────────────────────────────────────┐    │   │
-│  │  │  [My App]  [Other Tab]  [+]                  │    │   │
-│  │  └─────────────────────────────────────────────┘    │   │
+│  │                    Renderer                           │   │
 │  │                                                       │   │
-│  │  ┌─────────────────────────────────────────────┐    │   │
-│  │  │              App Frame                       │    │   │
-│  │  │  ┌───────────────────────────────────────┐  │    │   │
-│  │  │  │                                       │  │    │   │
-│  │  │  │           iframe sandbox              │  │    │   │
-│  │  │  │                                       │  │    │   │
-│  │  │  │    App UI renders here               │  │    │   │
-│  │  │  │    Isolated from Iris shell          │  │    │   │
-│  │  │  │                                       │  │    │   │
-│  │  │  └───────────────────────────────────────┘  │    │   │
-│  │  │                                             │    │   │
-│  │  │  ┌───────────────────────────────────────┐  │    │   │
-│  │  │  │  Bridge Layer (postMessage)           │  │    │   │
-│  │  │  └───────────────────────────────────────┘  │    │   │
-│  │  └─────────────────────────────────────────────┘    │   │
-│  │                                                       │   │
+│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐        │   │
+│  │  │ Receive  │──▶│ Validate │──▶│  Render  │        │   │
+│  │  │   tree   │   │   tree   │   │   tree   │        │   │
+│  │  └──────────┘   └──────────┘   └────┬─────┘        │   │
+│  │                                      │              │   │
+│  │                                      ▼              │   │
+│  │                              ┌──────────────┐       │   │
+│  │                              │  React /     │       │   │
+│  │                              │  React Native│       │   │
+│  │                              └──────────────┘       │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  Error Overlay (when app crashes)                           │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  ⚠️ Error in App.tsx:42                              │   │
-│  │  TypeError: Cannot read 'map' of undefined           │   │
+│  │                 Action Handler                        │   │
 │  │                                                       │   │
-│  │  [View Source]  [Retry]  [Stop App]                  │   │
+│  │  When user interacts (button press, input change):   │   │
+│  │  1. Serialize action: { $action: 'increment' }       │   │
+│  │  2. Send to server via WebSocket                     │   │
+│  │  3. Server executes tool/updates state               │   │
+│  │  4. Server pushes new UI tree                        │   │
+│  │  5. Client re-renders                                │   │
+│  │                                                       │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
-```
-
-**Isolation Strategy:**
-
-| Concern | Solution |
-|---------|----------|
-| **JavaScript** | iframe with separate context |
-| **CSS** | iframe boundary prevents bleed |
-| **Crashes** | Caught by error boundary, doesn't affect shell |
-| **Memory** | iframe can be destroyed to reclaim |
-| **Security** | sandbox attribute restricts capabilities |
-
-**Bridge Protocol:**
-
-The App Host and iframe communicate via postMessage:
-
-```typescript
-// Host → App
-{ type: 'iris:init', payload: { projectId, theme, ... } }
-{ type: 'iris:theme', payload: { theme: 'dark' } }
-{ type: 'iris:state', payload: { key: 'users', value: [...] } }
-
-// App → Host
-{ type: 'iris:ready' }
-{ type: 'iris:action', payload: { name: 'query', args: {...} } }
-{ type: 'iris:navigate', payload: { path: '/files/...' } }
-{ type: 'iris:error', payload: { message, stack, file, line } }
 ```
 
 ## Data Flow
 
-### Development Mode
+### State Change → UI Update
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Developer  │     │    Iris     │     │    App      │
-│             │     │   (Host)    │     │  (iframe)   │
+│   User      │     │   Server    │     │   Client    │
+│  (or AI)    │     │             │     │             │
 └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
        │                   │                   │
-       │  Edit server.ts   │                   │
+       │  Tool call:       │                   │
+       │  increment()      │                   │
        │──────────────────▶│                   │
        │                   │                   │
-       │                   │  Hot reload       │
-       │                   │  server module    │
+       │                   │  Update state     │
+       │                   │  count = count + 1│
        │                   │                   │
-       │                   │  Push state       │
+       │                   │  Re-run ui(ctx)   │
+       │                   │                   │
+       │                   │  UI tree update   │
        │                   │──────────────────▶│
        │                   │                   │
        │                   │                   │  Re-render
-       │                   │                   │  with new state
        │                   │                   │
-       │  Edit App.tsx     │                   │
+       │  Result           │                   │
+       │◀──────────────────│                   │
+       │                   │                   │
+```
+
+### Hot Reload Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  File Edit  │     │   Server    │     │   Client    │
+│             │     │             │     │             │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │
+       │  server.ts saved  │                   │
        │──────────────────▶│                   │
        │                   │                   │
-       │                   │  Vite HMR         │
+       │                   │  Snapshot state   │
+       │                   │                   │
+       │                   │  Reload module    │
+       │                   │  (Bun hot reload) │
+       │                   │                   │
+       │                   │  Restore state    │
+       │                   │                   │
+       │                   │  Re-run ui(ctx)   │
+       │                   │                   │
+       │                   │  Push new tree    │
        │                   │──────────────────▶│
        │                   │                   │
-       │                   │                   │  Fast refresh
-       │                   │                   │  (preserves state)
+       │                   │                   │  Re-render
+       │                   │                   │  (instant)
        │                   │                   │
 ```
 
-### Tool Invocation
+## Custom UI Mode (Escape Hatch)
+
+For apps that need full React control:
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  AI Agent   │     │    Iris     │     │    App      │     │   App UI    │
-│             │     │   Server    │     │  Runtime    │     │             │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │                   │
-       │  Tool call:       │                   │                   │
-       │  app:myapp/query  │                   │                   │
-       │──────────────────▶│                   │                   │
-       │                   │                   │                   │
-       │                   │  Route to app     │                   │
-       │                   │──────────────────▶│                   │
-       │                   │                   │                   │
-       │                   │                   │  Execute tool     │
-       │                   │                   │  Update state     │
-       │                   │                   │                   │
-       │                   │                   │  Push state       │
-       │                   │                   │──────────────────▶│
-       │                   │                   │                   │
-       │                   │  Return result    │                   │  Re-render
-       │                   │◀──────────────────│                   │
-       │                   │                   │                   │
-       │  Result + state   │                   │                   │
-       │◀──────────────────│                   │                   │
-       │                   │                   │                   │
+┌─────────────────────────────────────────────────────────────┐
+│                     CUSTOM UI MODE                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  App opts in via manifest:                                  │
+│  {                                                           │
+│    "ui": {                                                   │
+│      "mode": "custom",                                       │
+│      "entry": "ui/index.html"                               │
+│    }                                                         │
+│  }                                                           │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                    Web Platform                       │   │
+│  │                                                       │   │
+│  │  Options:                                            │   │
+│  │  • Shadow DOM (same context, style isolation)        │   │
+│  │  • iframe (full isolation, security sandbox)         │   │
+│  │                                                       │   │
+│  │  Communication via postMessage bridge                │   │
+│  │                                                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                   Mobile Platform                     │   │
+│  │                                                       │   │
+│  │  WebView with bridge to React Native                 │   │
+│  │  (Acknowledged limitation - not native)              │   │
+│  │                                                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Trade-offs vs SDR:                                         │
+│  ✗ Requires separate build system (Vite)                   │
+│  ✗ Slower hot reload                                        │
+│  ✗ Mobile uses WebView, not native                         │
+│  ✓ Full control over UI                                     │
+│  ✓ Can use any npm packages                                 │
+│  ✓ Complex visualizations possible                          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Deployment Architecture
 
 ### Standalone Mode
-
-When an Iris App runs standalone (outside Iris):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -509,45 +603,18 @@ When an Iris App runs standalone (outside Iris):
 │  │                  @iris/runtime                        │   │
 │  │                                                       │   │
 │  │  Minimal runtime that provides:                      │   │
+│  │  • App loading and execution                         │   │
 │  │  • State management                                  │   │
-│  │  • Tool execution (without AI, via API)             │   │
-│  │  • Service management                                │   │
-│  │  • WebSocket server for UI                          │   │
+│  │  • WebSocket server for SDR clients                  │   │
+│  │  • HTTP API for tool invocation                      │   │
+│  │  • Optional: static file serving for web client      │   │
 │  │                                                       │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
-│  ┌──────────────────────┐  ┌──────────────────────┐        │
-│  │   Server Bundle      │  │   UI Bundle          │        │
-│  │   (dist/server.js)   │  │   (dist/ui/)         │        │
-│  └──────────────────────┘  └──────────────────────┘        │
-│                                                              │
-│  No iframe needed - UI served directly                      │
-│  Tools accessible via REST API                              │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Installed Mode
-
-When an app is installed in another project:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    IRIS (Host Project)                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Installed App: database-explorer@1.2.0             │   │
-│  │                                                       │   │
-│  │  Source: npm:@iris-apps/database-explorer           │   │
-│  │  Location: .iris/apps/database-explorer/            │   │
-│  │                                                       │   │
-│  │  • Pre-built bundles (no Vite needed)              │   │
-│  │  • Tools registered in project scope               │   │
-│  │  • Services run on demand                           │   │
-│  │  • UI loads in iframe from static files            │   │
-│  │                                                       │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  Deployment options:                                        │
+│  • Server + Web client (serve from same process)           │
+│  • Server + Mobile app (connect via WebSocket)             │
+│  • API-only (tools accessible via REST)                    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -556,13 +623,13 @@ When an app is installed in another project:
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| **Backend Runtime** | Bun | Fast startup, native TypeScript, hot reload |
-| **Frontend Build** | Vite | Fast HMR, modern ESM, great DX |
-| **UI Framework** | React | Ecosystem, React Native for mobile |
-| **State** | Custom (signals-inspired) | Simple, predictable, serializable |
-| **IPC** | WebSocket + postMessage | Real-time, bidirectional, secure |
-| **Schema** | Zod | Runtime validation, TypeScript inference |
-| **Mobile** | React Native | Code sharing, native performance |
+| **Backend Runtime** | Bun | Fast startup, native TS, hot reload |
+| **Component Library** | React + React Native | Cross-platform, ecosystem |
+| **State Management** | Custom signals | Simple, serializable, reactive |
+| **Communication** | WebSocket | Real-time, bidirectional |
+| **Schema Validation** | Zod | Runtime validation, TS inference |
+| **Styling (Web)** | Tailwind CSS | Utility-first, consistent |
+| **Styling (Mobile)** | StyleSheet | Native performance |
 
 ## Security Boundaries
 
@@ -580,20 +647,25 @@ When an app is installed in another project:
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  ZONE 2: App Server (Sandboxed by Permissions)      │   │
+│  │  ZONE 2: App Server (Permission-gated)              │   │
 │  │                                                       │   │
 │  │  • Declared permissions only                         │   │
-│  │  • Project-scoped file access                        │   │
-│  │  • Network access if permitted                       │   │
+│  │  • Scoped file access                                │   │
+│  │  • Scoped network access                             │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  ZONE 3: App UI (iframe Sandbox)                    │   │
+│  │  ZONE 3: SDR Client (Data-only)                     │   │
 │  │                                                       │   │
+│  │  • Only renders data from server                     │   │
 │  │  • No direct system access                           │   │
-│  │  • Communication only via bridge                     │   │
-│  │  • Cannot escape iframe                              │   │
+│  │  • Components are from trusted registry              │   │
 │  └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Note: SDR simplifies security!                             │
+│  • No arbitrary JS execution on client                     │
+│  • No need for iframe sandbox                              │
+│  • All logic runs on server (controlled environment)       │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```

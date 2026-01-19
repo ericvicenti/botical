@@ -9,114 +9,146 @@ This documentation describes the architecture for **Iris Apps** — a revolution
 | Document | Description |
 |----------|-------------|
 | [00-vision.md](./00-vision.md) | The vision, philosophy, and "why" behind Iris Apps |
-| [01-architecture.md](./01-architecture.md) | System architecture and component overview |
-| [02-app-model.md](./02-app-model.md) | App structure, lifecycle, and configuration |
-| [03-sdk-design.md](./03-sdk-design.md) | SDK APIs for building apps (server + React) |
-| [04-security-model.md](./04-security-model.md) | Permissions, sandboxing, and security |
+| [01-architecture.md](./01-architecture.md) | System architecture with Server-Defined Rendering |
+| [02-app-model.md](./02-app-model.md) | App structure, lifecycle, and single-file apps |
+| [03-sdk-design.md](./03-sdk-design.md) | SDK APIs: defineApp, state, tools, @iris/ui |
+| [04-security-model.md](./04-security-model.md) | Permissions and SDR security benefits |
 | [05-resilience.md](./05-resilience.md) | Error handling and development experience |
-| [06-protocol.md](./06-protocol.md) | Communication protocols between components |
+| [06-protocol.md](./06-protocol.md) | Communication protocols (SDR & bridge) |
 | [07-implementation-roadmap.md](./07-implementation-roadmap.md) | Phased implementation plan |
 
 ## Core Concepts
 
 ### What is an Iris App?
 
-An Iris App is a self-contained application that:
+An Iris App is a single-file application that:
 
-1. **Runs inside Iris** — As a tab in your project, with full hot reload
+1. **Runs inside Iris** — As a tab in your project, with instant hot reload
 2. **Exposes tools to AI** — The agent can interact with your app's functionality
 3. **Handles errors gracefully** — Broken code shows helpful errors, not crashes
 4. **Can run standalone** — Deploy independently with `@iris/runtime`
+5. **Works everywhere** — Same code runs on web and mobile (React Native)
 
-### The Three Modes
+### Server-Defined Rendering (SDR)
+
+Most Iris Apps use SDR — the server defines what the UI looks like using a simple component tree:
+
+```typescript
+// server.ts - A complete Iris App
+import { defineApp, state } from '@iris/app-sdk';
+import { Stack, Text, Button } from '@iris/ui';
+
+export default defineApp({
+  state: {
+    count: state(0),
+  },
+
+  ui: (ctx) => (
+    Stack({ padding: 24, gap: 16 }, [
+      Text({ size: '4xl' }, ctx.state.count),
+      Button({
+        onPress: () => ctx.state.count.update(n => n + 1),
+      }, '+1'),
+    ])
+  ),
+});
+```
+
+**Why SDR?**
+- **Single file** — No separate frontend build, no React boilerplate
+- **Instant hot reload** — Change code, see results immediately
+- **Mobile native** — Same code renders natively on phones
+- **Secure by default** — UI is just data, not executable code
+- **AI-friendly** — Simple enough for AI to generate and modify
+
+### The Two Modes
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    IRIS APP MODES                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  DEVELOPMENT MODE                                            │
-│  • App source lives in your project                         │
-│  • Hot reload as you edit                                   │
-│  • Full debugging and error overlays                        │
-│  • AI agent can use your app's tools                        │
-│                                                              │
-│  INSTALLED MODE                                              │
-│  • Pre-built app from registry or local path                │
-│  • Runs in sandboxed environment                            │
-│  • Tools available to AI agent                              │
-│  • User approves permissions at install                     │
-│                                                              │
-│  STANDALONE MODE                                             │
-│  • App runs independently with @iris/runtime                │
-│  • Can be deployed anywhere                                 │
-│  • API access to tools (without AI)                         │
-│  • Same codebase as development mode                        │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    IRIS APP MODES                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  SDR MODE (Default)                                              │
+│  • Single server.ts file                                        │
+│  • ui() function returns component tree                         │
+│  • Rendered by @iris/ui component registry                      │
+│  • Best for: Most apps, data tools, dashboards                  │
+│                                                                  │
+│  CUSTOM UI MODE (Escape Hatch)                                   │
+│  • Full React app in ui/ folder                                 │
+│  • Runs in sandboxed iframe                                     │
+│  • Bridge protocol for state/tools                              │
+│  • Best for: 3D, canvas, complex interactions                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### App Structure
 
+**SDR App (most apps):**
 ```
-my-iris-app/
-├── app.json              # Manifest: name, tools, permissions
-├── server.ts             # Backend: state, tools, services
-└── ui/                   # Frontend: React application
+my-app/
+├── app.json        # Manifest
+└── server.ts       # Everything: state, tools, UI
+```
+
+**Custom UI App (escape hatch):**
+```
+my-app/
+├── app.json        # Manifest with ui.mode: "custom"
+├── server.ts       # State, tools, services
+└── ui/             # Full React app
     ├── index.html
-    ├── vite.config.ts
-    └── src/
-        ├── main.tsx
-        └── App.tsx
+    └── src/App.tsx
 ```
-
-### Key Principles
-
-1. **Self-hosted development** — Build apps inside the app
-2. **AI-native** — Tools are first-class citizens
-3. **Resilient by default** — Errors are informative, not fatal
-4. **Universal runtime** — Same code runs everywhere
-5. **Security-first** — Permissions, sandboxing, audit logging
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         IRIS                                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ App Manager  │  │ Tool Registry│  │Service Runner│      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
-│         │                 │                 │               │
-│         └─────────────────┼─────────────────┘               │
-│                           │                                  │
-│                  ┌────────▼────────┐                        │
-│                  │   App Runtime   │                        │
-│                  │                 │                        │
-│                  │  • State mgmt   │                        │
-│                  │  • Tool exec    │                        │
-│                  │  • Platform API │                        │
-│                  └────────┬────────┘                        │
-│                           │                                  │
-│            ┌──────────────┼──────────────┐                  │
-│            │              │              │                  │
-│     ┌──────▼──────┐ ┌─────▼─────┐ ┌──────▼──────┐         │
-│     │  App Host   │ │ AI Agent  │ │  Protocol   │         │
-│     │  (iframe)   │ │Integration│ │   Layer     │         │
-│     └─────────────┘ └───────────┘ └─────────────┘         │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     DATA FLOW (SDR)                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  SERVER                              CLIENT                      │
+│                                                                  │
+│  ┌─────────────┐                    ┌─────────────┐             │
+│  │  App State  │                    │ State Store │             │
+│  │  count: 5   │◄──── WebSocket ───►│  count: 5   │             │
+│  └──────┬──────┘                    └──────┬──────┘             │
+│         │                                  │                     │
+│         ▼                                  ▼                     │
+│  ┌─────────────┐                    ┌─────────────┐             │
+│  │   ui(ctx)   │    Component Tree  │SDR Renderer │             │
+│  │   returns   │──────────────────►│   renders   │             │
+│  │   tree      │    (JSON data)     │   React     │             │
+│  └─────────────┘                    └──────┬──────┘             │
+│                                            │                     │
+│                                            ▼                     │
+│                                     ┌─────────────┐             │
+│                                     │  Native UI  │             │
+│                                     │  (Web/RN)   │             │
+│                                     └─────────────┘             │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+## Key Principles
+
+1. **Single-file simplicity** — Most apps are just `app.json` + `server.ts`
+2. **AI-native** — Tools are first-class citizens, easily callable by agents
+3. **Resilient by default** — Errors are informative, not fatal
+4. **Cross-platform** — Same code runs on web, iOS, Android
+5. **Security through simplicity** — SDR means no arbitrary code execution
 
 ## Security Model
 
-Apps have access to powerful capabilities but operate within strict security boundaries:
+Like VS Code extensions, Iris Apps are trusted based on their source:
 
-- **Permissions** — Apps declare required permissions in manifest
-- **Sandboxing** — UI runs in iframe, server in restricted context
-- **Audit logging** — All sensitive operations are logged
-- **Trust levels** — Different trust for dev, installed, and unknown apps
+- **Development apps** — Full project access (you're the developer)
+- **Installed apps** — Declared permissions, approved at install
+- **Untrusted apps** — Minimal permissions, explicit approval required
+
+SDR provides additional security: the UI is just data rendered by trusted components, not arbitrary JavaScript that could steal data or cause harm.
 
 See [04-security-model.md](./04-security-model.md) for details.
 
@@ -124,14 +156,68 @@ See [04-security-model.md](./04-security-model.md) for details.
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 1: Foundation | 📋 Planned | Manifest, loader, basic display |
-| Phase 2: Core Runtime | 📋 Planned | State, tools, bridge |
-| Phase 3: SDK & DX | 📋 Planned | SDK package, CLI, hot reload |
-| Phase 4: Platform Integration | 📋 Planned | AI, filesystem, cross-app |
-| Phase 5: Security | 📋 Planned | Permissions, sandboxing |
-| Phase 6: Production | 📋 Planned | Standalone, marketplace |
+| Phase 1: Foundation | 📋 Planned | Manifest, loader, component registry |
+| Phase 2: SDR Core | 📋 Planned | ui() execution, rendering |
+| Phase 3: State & Tools | 📋 Planned | Reactive state, hot reload |
+| Phase 4: SDK & DX | 📋 Planned | @iris/app-sdk, @iris/ui |
+| Phase 5: Platform Integration | 📋 Planned | AI, filesystem, permissions |
+| Phase 6: Production | 📋 Planned | Custom UI, mobile, standalone |
 
 See [07-implementation-roadmap.md](./07-implementation-roadmap.md) for the detailed plan.
+
+## Example App
+
+A database explorer that lets you browse and query SQLite databases:
+
+```typescript
+// server.ts
+import { defineApp, defineTool, state } from '@iris/app-sdk';
+import { Stack, Input, Button, DataTable, Alert } from '@iris/ui';
+import { z } from 'zod';
+
+export default defineApp({
+  state: {
+    query: state('SELECT * FROM users LIMIT 10'),
+    results: state<any[]>([]),
+    error: state<string | null>(null),
+  },
+
+  tools: [
+    defineTool({
+      name: 'query',
+      description: 'Execute a SQL query',
+      parameters: z.object({ sql: z.string() }),
+      execute: async ({ sql }, ctx) => {
+        try {
+          const db = await ctx.getService('database');
+          const results = await db.query(sql);
+          ctx.state.results.set(results);
+          ctx.state.error.set(null);
+          return { rowCount: results.length };
+        } catch (e) {
+          ctx.state.error.set(e.message);
+          return { error: e.message };
+        }
+      },
+    }),
+  ],
+
+  ui: (ctx) => (
+    Stack({ padding: 16, gap: 16 }, [
+      Input({
+        value: ctx.state.query,
+        onChangeText: ctx.state.query.set,
+        multiline: true,
+      }),
+      Button({
+        onPress: () => ctx.runTool('query', { sql: ctx.state.query.get() }),
+      }, 'Run Query'),
+      ctx.state.error.get() && Alert({ variant: 'error' }, ctx.state.error),
+      DataTable({ data: ctx.state.results }),
+    ])
+  ),
+});
+```
 
 ## Getting Involved
 
