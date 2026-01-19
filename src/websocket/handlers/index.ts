@@ -12,6 +12,7 @@ import { MessageHandlers } from "./messages.ts";
 import { ToolHandlers } from "./tools.ts";
 import { SubscriptionHandlers } from "./subscriptions.ts";
 import { ProcessHandlers } from "./processes.ts";
+import { AppHandlers } from "./apps.ts";
 
 /**
  * Handler function type
@@ -46,6 +47,14 @@ const handlers: Record<RequestType, Handler> = {
   "process.resize": ProcessHandlers.resize,
   "process.kill": ProcessHandlers.kill,
 
+  // App handlers
+  "app.subscribe": AppHandlers.subscribe,
+  "app.unsubscribe": AppHandlers.unsubscribe,
+  "app.action": AppHandlers.action,
+  "app.activate": AppHandlers.activate,
+  "app.deactivate": AppHandlers.deactivate,
+  "app.reload": AppHandlers.reload,
+
   // Ping handler
   ping: async () => ({ pong: Date.now() }),
 };
@@ -72,3 +81,4 @@ export { MessageHandlers } from "./messages.ts";
 export { ToolHandlers, registerPendingApproval, removePendingApproval } from "./tools.ts";
 export { SubscriptionHandlers } from "./subscriptions.ts";
 export { ProcessHandlers } from "./processes.ts";
+export { AppHandlers, getAppRoom } from "./apps.ts";

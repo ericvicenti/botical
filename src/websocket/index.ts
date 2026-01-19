@@ -48,6 +48,7 @@ export {
   removePendingApproval,
 } from "./handlers/tools.ts";
 export { SubscriptionHandlers } from "./handlers/subscriptions.ts";
+export { AppHandlers, getAppRoom } from "./handlers/apps.ts";
 
 // Event bus bridge
 export {

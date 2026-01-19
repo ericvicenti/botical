@@ -5,7 +5,6 @@
  * Handles app lifecycle: discover → load → activate → deactivate → unload
  */
 
-import { watch } from "fs";
 import type {
   AppManifest,
   ManagedApp,
@@ -16,7 +15,7 @@ import type {
 } from "../types.ts";
 import { AppManifestSchema } from "../types.ts";
 import { AppRuntime } from "../runtime/index.ts";
-import { generateId } from "../../utils/id.ts";
+import { HotReloadManager } from "../hot-reload.ts";
 
 /**
  * App Manager - singleton per project
@@ -24,13 +23,16 @@ import { generateId } from "../../utils/id.ts";
 export class AppManager {
   private apps = new Map<string, ManagedApp>();
   private runtimes = new Map<string, AppRuntime>();
-  private watchers = new Map<string, ReturnType<typeof watch>>();
+  private hotReload: HotReloadManager;
   private projectId: string;
   private projectPath: string;
 
   constructor(projectId: string, projectPath: string) {
     this.projectId = projectId;
     this.projectPath = projectPath;
+    this.hotReload = new HotReloadManager(this, {
+      debounceMs: 150, // Wait 150ms after last change
+    });
   }
 
   /**
@@ -294,31 +296,11 @@ export class AppManager {
   }
 
   private startWatching(app: ManagedApp): void {
-    // Watch the app directory for changes
-    const watcher = watch(
-      app.path,
-      { recursive: true },
-      async (eventType, filename) => {
-        if (!filename) return;
-
-        // Only reload on .ts/.tsx/.json changes
-        if (!/\.(ts|tsx|json)$/.test(filename)) return;
-
-        // Debounce: wait a bit for multiple saves
-        // TODO: Implement proper debouncing
-        await this.hotReload(app.id);
-      }
-    );
-
-    this.watchers.set(app.id, watcher);
+    this.hotReload.watch(app.id, app.path);
   }
 
   private stopWatching(appId: string): void {
-    const watcher = this.watchers.get(appId);
-    if (watcher) {
-      watcher.close();
-      this.watchers.delete(appId);
-    }
+    this.hotReload.unwatch(appId);
   }
 }
 

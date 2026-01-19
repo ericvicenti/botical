@@ -44,6 +44,14 @@ export const RequestType = z.enum([
   "process.resize",
   "process.kill",
 
+  // App operations
+  "app.subscribe",
+  "app.unsubscribe",
+  "app.action",
+  "app.activate",
+  "app.deactivate",
+  "app.reload",
+
   // Ping/pong
   "ping",
 ]);
@@ -126,6 +134,36 @@ export const ProcessResizePayload = z.object({
 
 export const ProcessKillPayload = z.object({
   id: z.string(),
+});
+
+// ============================================================================
+// App Payloads
+// ============================================================================
+
+export const AppSubscribePayload = z.object({
+  appId: z.string(),
+});
+
+export const AppUnsubscribePayload = z.object({
+  appId: z.string(),
+});
+
+export const AppActionPayload = z.object({
+  appId: z.string(),
+  action: z.string(),
+  args: z.unknown().optional(),
+});
+
+export const AppActivatePayload = z.object({
+  appId: z.string(),
+});
+
+export const AppDeactivatePayload = z.object({
+  appId: z.string(),
+});
+
+export const AppReloadPayload = z.object({
+  appId: z.string(),
 });
 
 // ============================================================================
@@ -230,6 +268,15 @@ export const EventType = z.enum([
   "process.output",
   "process.exited",
   "process.killed",
+
+  // App events
+  "app.ui.sync",
+  "app.ui.patch",
+  "app.state.update",
+  "app.error",
+  "app.reloaded",
+  "app.activated",
+  "app.deactivated",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

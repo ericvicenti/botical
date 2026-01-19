@@ -14,3 +14,6 @@ export { AppManager, getAppManager, disposeAppManager } from "./manager/index.ts
 
 // Runtime
 export { AppRuntime } from "./runtime/index.ts";
+
+// Hot Reload
+export { HotReloadManager, debounce } from "./hot-reload.ts";
