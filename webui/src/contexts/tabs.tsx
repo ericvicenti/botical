@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Tab, TabData } from "@/types/tabs";
+import { generateTabId, generateTabLabel } from "@/lib/tabs";
 
 const STORAGE_KEY = "iris:tabs";
 const DIRTY_CONTENT_KEY = "iris:dirty-content";
@@ -72,52 +73,6 @@ function saveDirtyContentToStorage(dirtyContent: Record<string, string>) {
     localStorage.setItem(DIRTY_CONTENT_KEY, JSON.stringify(dirtyContent));
   } catch (e) {
     console.warn("Failed to save dirty content to storage:", e);
-  }
-}
-
-function generateTabId(data: TabData): string {
-  switch (data.type) {
-    case "projects":
-      return "projects";
-    case "project":
-      return `project:${data.projectId}`;
-    case "mission":
-      return `mission:${data.missionId}`;
-    case "file":
-      return `file:${data.projectId}:${data.path}`;
-    case "process":
-      return `process:${data.processId}`;
-    case "diff":
-      return `diff:${data.projectId}:${data.path}:${data.base || "working"}`;
-    case "settings":
-      return "settings";
-    case "create-project":
-      return "create-project";
-    case "task":
-      return `task:${data.sessionId}`;
-  }
-}
-
-function generateTabLabel(data: TabData): string {
-  switch (data.type) {
-    case "projects":
-      return "Projects";
-    case "project":
-      return data.projectName;
-    case "mission":
-      return data.missionTitle;
-    case "file":
-      return data.path.split("/").pop() || "File";
-    case "process":
-      return data.label || "Process";
-    case "diff":
-      return `Diff: ${data.path.split("/").pop()}`;
-    case "settings":
-      return "Settings";
-    case "create-project":
-      return "New Project";
-    case "task":
-      return data.title || "Task";
   }
 }
 

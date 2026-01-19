@@ -1,28 +1,6 @@
 import type { Command, ExecutionContext } from "../types";
 import type { Tab } from "@/types/tabs";
-
-function getTabRoute(tab: Tab): { to: string; params?: Record<string, string> } {
-  switch (tab.data.type) {
-    case "projects":
-      return { to: "/" };
-    case "project":
-      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
-    case "mission":
-      return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
-    case "file":
-      return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
-    case "process":
-      return { to: "/processes/$processId", params: { processId: tab.data.processId } };
-    case "task":
-      return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
-    case "settings":
-      return { to: "/settings" };
-    case "create-project":
-      return { to: "/create-project" };
-    default:
-      return { to: "/" };
-  }
-}
+import { getTabRoute } from "@/lib/tabs";
 
 function navigateToTab(ctx: ExecutionContext, tab: Tab) {
   ctx.tabActions.setActiveTab(tab.id);

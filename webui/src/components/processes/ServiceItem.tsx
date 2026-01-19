@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
+import { truncateCommand } from "@/lib/tabs";
 import type { Service } from "@/lib/api/types";
 import {
   Play,
@@ -18,6 +19,11 @@ import {
   Radio,
 } from "lucide-react";
 import { useState } from "react";
+
+function handleMutationError(action: string, error: Error) {
+  console.error(`Failed to ${action}:`, error);
+  alert(`Failed to ${action}: ${error.message}`);
+}
 
 interface ServiceItemProps {
   service: Service;
@@ -60,13 +66,19 @@ export function ServiceItem({ service }: ServiceItemProps) {
             openProcessTab(data.processId);
           }
         },
+        onError: (error) => handleMutationError("start service", error),
       }
     );
   };
 
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation();
-    stopService.mutate({ serviceId: service.id });
+    stopService.mutate(
+      { serviceId: service.id },
+      {
+        onError: (error) => handleMutationError("stop service", error),
+      }
+    );
   };
 
   const handleRestart = (e: React.MouseEvent) => {
@@ -79,6 +91,7 @@ export function ServiceItem({ service }: ServiceItemProps) {
             openProcessTab(data.processId);
           }
         },
+        onError: (error) => handleMutationError("restart service", error),
       }
     );
   };
@@ -86,16 +99,26 @@ export function ServiceItem({ service }: ServiceItemProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm(`Delete service "${service.name}"?`)) {
-      deleteService.mutate({ serviceId: service.id });
+      deleteService.mutate(
+        { serviceId: service.id },
+        {
+          onError: (error) => handleMutationError("delete service", error),
+        }
+      );
     }
   };
 
   const handleToggleAutoStart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    updateService.mutate({
-      serviceId: service.id,
-      autoStart: !service.autoStart,
-    });
+    updateService.mutate(
+      {
+        serviceId: service.id,
+        autoStart: !service.autoStart,
+      },
+      {
+        onError: (error) => handleMutationError("update service", error),
+      }
+    );
   };
 
   const handleViewProcess = () => {
@@ -104,11 +127,7 @@ export function ServiceItem({ service }: ServiceItemProps) {
     }
   };
 
-  // Truncate command for display
-  const displayCommand =
-    service.command.length > 40
-      ? service.command.substring(0, 37) + "..."
-      : service.command;
+  const displayCommand = truncateCommand(service.command);
 
   return (
     <div

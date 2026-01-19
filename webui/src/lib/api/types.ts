@@ -143,8 +143,8 @@ export interface Service {
   createdBy: string;
   createdAt: number;
   updatedAt: number;
-  isRunning?: boolean;
-  runningProcessId?: string | null;
+  isRunning: boolean;
+  runningProcessId: string | null;
 }
 
 export interface ListResponse<T> {

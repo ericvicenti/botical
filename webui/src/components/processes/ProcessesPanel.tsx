@@ -8,10 +8,10 @@ interface ProcessesPanelProps {
   projectId: string;
 }
 
-type Tab = "commands" | "services";
+type PanelTab = "commands" | "services";
 
 export function ProcessesPanel({ projectId }: ProcessesPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("commands");
+  const [activeTab, setActiveTab] = useState<PanelTab>("commands");
 
   return (
     <div className="h-full flex flex-col">

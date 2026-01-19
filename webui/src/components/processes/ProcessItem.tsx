@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils/cn";
 import { useKillProcess } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
+import { truncateCommand } from "@/lib/tabs";
 import type { Process } from "@/lib/api/types";
 import { Square, Terminal, Radio, Clock, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 
@@ -67,11 +68,7 @@ export function ProcessItem({ process }: ProcessItemProps) {
     return `${Math.floor(duration / 3600000)}h`;
   };
 
-  // Truncate command for display
-  const displayCommand =
-    process.command.length > 40
-      ? process.command.substring(0, 37) + "..."
-      : process.command;
+  const displayCommand = truncateCommand(process.command);
 
   return (
     <button
