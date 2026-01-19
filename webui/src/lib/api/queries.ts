@@ -478,6 +478,10 @@ export function useSaveFile() {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "files", path, "content"],
       });
+      // Invalidate git status since file changed
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
     },
   });
 }
@@ -506,6 +510,10 @@ export function useCreateFile() {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "files"],
       });
+      // Invalidate git status since file was created
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
     },
   });
 }
@@ -524,6 +532,10 @@ export function useDeleteFile() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "files"],
+      });
+      // Invalidate git status since file was deleted
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
       });
     },
   });
@@ -552,6 +564,10 @@ export function useRenameFile() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "files"],
+      });
+      // Invalidate git status since file was renamed
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
       });
     },
   });
@@ -755,7 +771,7 @@ export function useGitStatus(projectId: string) {
       return response.data;
     },
     enabled: !!projectId,
-    refetchInterval: 2000, // Poll for changes every 2 seconds
+    refetchInterval: 30000, // Poll as fallback every 30 seconds (immediate updates on file operations)
   });
 }
 

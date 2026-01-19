@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, ChevronDown, ChevronRight } from "lucide-react";
+import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, ChevronDown, ChevronRight, ChevronsUpDown } from "lucide-react";
 import { useGitStatus, useGitDiff, useCreateCommit } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import type { FileStatus } from "@/lib/api/types";
@@ -134,6 +134,18 @@ function ReviewCommitPage() {
     });
   };
 
+  const allExpanded = status?.files.every(f => !collapsedFiles.has(f.path)) ?? false;
+
+  const toggleAllFiles = () => {
+    if (allExpanded) {
+      // Collapse all
+      setCollapsedFiles(new Set(status?.files.map(f => f.path) || []));
+    } else {
+      // Expand all
+      setCollapsedFiles(new Set());
+    }
+  };
+
   if (statusLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -216,8 +228,17 @@ function ReviewCommitPage() {
 
       {/* Changes list with diffs shown by default */}
       <div className="flex-1 overflow-auto">
-        <div className="px-4 py-2 text-xs font-medium text-text-secondary uppercase tracking-wide bg-bg-secondary sticky top-0 border-b border-border">
-          Changes
+        <div className="px-4 py-2 flex items-center justify-between bg-bg-secondary sticky top-0 border-b border-border">
+          <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+            Changes
+          </span>
+          <button
+            onClick={toggleAllFiles}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded transition-colors"
+          >
+            <ChevronsUpDown className="w-3.5 h-3.5" />
+            {allExpanded ? "Collapse All" : "Expand All"}
+          </button>
         </div>
         <div className="divide-y divide-border">
           {status.files.map((file) => {
@@ -241,23 +262,29 @@ function ReviewCommitPage() {
                 </button>
                 {!isCollapsed && diffSections[file.path] && (
                   <div className="px-4 pb-3">
-                    <pre className="text-xs font-mono bg-bg-secondary p-3 rounded-md overflow-x-auto">
-                      {diffSections[file.path].split("\n").map((line, i) => (
-                        <div
-                          key={i}
-                          className={
-                            line.startsWith("+") && !line.startsWith("+++")
-                              ? "text-green-600 dark:text-green-400"
-                              : line.startsWith("-") && !line.startsWith("---")
-                                ? "text-red-600 dark:text-red-400"
-                                : line.startsWith("@@")
-                                  ? "text-blue-600 dark:text-blue-400"
-                                  : "text-text-primary"
-                          }
-                        >
-                          {line || " "}
-                        </div>
-                      ))}
+                    <pre className="text-xs font-mono bg-bg-secondary rounded-md overflow-x-auto">
+                      {diffSections[file.path].split("\n").map((line, i) => {
+                        const isAddition = line.startsWith("+") && !line.startsWith("+++");
+                        const isDeletion = line.startsWith("-") && !line.startsWith("---");
+                        const isHunk = line.startsWith("@@");
+
+                        return (
+                          <div
+                            key={i}
+                            className={`px-3 py-0.5 ${
+                              isAddition
+                                ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                                : isDeletion
+                                  ? "bg-red-500/20 text-red-700 dark:text-red-300"
+                                  : isHunk
+                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 py-1"
+                                    : "text-text-primary"
+                            }`}
+                          >
+                            {line || " "}
+                          </div>
+                        );
+                      })}
                     </pre>
                   </div>
                 )}
