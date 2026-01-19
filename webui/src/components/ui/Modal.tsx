@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils/cn";
 import { FocusTrap } from "./FocusTrap";
@@ -18,6 +18,30 @@ export function Modal({
   className,
   position = "center",
 }: ModalProps) {
+  // Track whether modal should be rendered (stays true during exit animation)
+  const [shouldRender, setShouldRender] = useState(false);
+  // Track animation state
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // Small delay to ensure DOM is ready before starting animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+      // Wait for exit animation to complete before unmounting
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 150); // Match the transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -36,13 +60,16 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className={cn(
+          "absolute inset-0 bg-black/50 transition-opacity duration-150",
+          isAnimating ? "opacity-100" : "opacity-0"
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -50,9 +77,10 @@ export function Modal({
       {/* Content */}
       <div
         className={cn(
-          "absolute left-1/2 -translate-x-1/2",
+          "absolute left-1/2 -translate-x-1/2 transition-all duration-150",
           position === "center" && "top-1/2 -translate-y-1/2",
-          position === "top" && "top-[15%]"
+          position === "top" && (isAnimating ? "top-[15%]" : "top-[10%]"),
+          isAnimating ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       >
         <FocusTrap active={isOpen} onEscape={onClose}>

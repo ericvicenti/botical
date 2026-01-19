@@ -69,77 +69,50 @@ export function Sidebar() {
     };
   }, [isResizing, resize, stopResizing]);
 
-  if (sidebarCollapsed) {
-    return (
-      <div className="w-12 bg-bg-secondary border-r border-border flex flex-col">
-        {selectedProjectId ? (
-          PROJECT_PANELS.map((panel) => (
-            <button
-              key={panel.id}
-              onClick={() => {
-                setSidebarPanel(panel.id);
-                toggleSidebar();
-              }}
-              className={cn(
-                "w-12 h-12 flex items-center justify-center",
-                "hover:bg-bg-elevated transition-colors",
-                sidebarPanel === panel.id
-                  ? "text-accent-primary border-l-2 border-accent-primary"
-                  : "text-text-secondary"
-              )}
-              title={panel.label}
-            >
-              <panel.icon className="w-5 h-5" />
-            </button>
-          ))
-        ) : (
-          <button
-            onClick={toggleSidebar}
-            className={cn(
-              "w-12 h-12 flex items-center justify-center",
-              "hover:bg-bg-elevated transition-colors",
-              "text-accent-primary border-l-2 border-accent-primary"
-            )}
-            title="Projects"
-          >
-            <FolderTree className="w-5 h-5" />
-          </button>
-        )}
+  // Unified sidebar with animation support
+  const effectiveWidth = sidebarCollapsed ? 48 : sidebarWidth;
 
-        {/* Spacer and Settings at bottom */}
-        <div className="flex-1" />
-        <button
-          onClick={() => {
-            setSidebarPanel("settings");
-            toggleSidebar();
-          }}
-          className={cn(
-            "w-12 h-12 flex items-center justify-center",
-            "hover:bg-bg-elevated transition-colors",
-            sidebarPanel === "settings"
-              ? "text-accent-primary border-l-2 border-accent-primary"
-              : "text-text-secondary"
-          )}
-          title="Settings"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-      </div>
-    );
-  }
+  // Handler for icon clicks when collapsed - expand and switch to panel
+  const handleCollapsedIconClick = (panelId: SidebarPanelType) => {
+    setSidebarPanel(panelId);
+    toggleSidebar();
+  };
 
-  // When no project is selected, show project list or settings
-  if (!selectedProjectId) {
-    return (
-      <div
-        ref={sidebarRef}
-        className="bg-bg-secondary border-r border-border flex flex-col relative"
-        style={{ width: sidebarWidth }}
-      >
-        <div className="flex flex-1 min-h-0">
-          <div className="w-12 border-r border-border flex flex-col shrink-0">
+  return (
+    <div
+      ref={sidebarRef}
+      className="bg-bg-secondary border-r border-border flex flex-col relative transition-[width] duration-200 ease-out"
+      style={{ width: effectiveWidth }}
+    >
+      {/* Project selector - only show when expanded and project selected */}
+      {selectedProjectId && !sidebarCollapsed && <ProjectSelector />}
+
+      <div className="flex flex-1 min-h-0">
+        {/* Icon rail - always visible */}
+        <div className={cn(
+          "w-12 flex flex-col shrink-0",
+          !sidebarCollapsed && "border-r border-border"
+        )}>
+          {selectedProjectId ? (
+            PROJECT_PANELS.map((panel) => (
+              <button
+                key={panel.id}
+                onClick={() => sidebarCollapsed ? handleCollapsedIconClick(panel.id) : setSidebarPanel(panel.id)}
+                className={cn(
+                  "w-12 h-12 flex items-center justify-center",
+                  "hover:bg-bg-elevated transition-colors",
+                  sidebarPanel === panel.id
+                    ? "text-accent-primary border-l-2 border-accent-primary"
+                    : "text-text-secondary"
+                )}
+                title={panel.label}
+              >
+                <panel.icon className="w-5 h-5" />
+              </button>
+            ))
+          ) : (
             <button
-              onClick={() => setSidebarPanel("files")}
+              onClick={() => sidebarCollapsed ? toggleSidebar() : setSidebarPanel("files")}
               className={cn(
                 "w-12 h-12 flex items-center justify-center",
                 "hover:bg-bg-elevated transition-colors",
@@ -151,75 +124,14 @@ export function Sidebar() {
             >
               <FolderTree className="w-5 h-5" />
             </button>
-            <div className="flex-1" />
-            <button
-              onClick={() => setSidebarPanel("settings")}
-              className={cn(
-                "w-12 h-12 flex items-center justify-center",
-                "hover:bg-bg-elevated transition-colors",
-                sidebarPanel === "settings"
-                  ? "text-accent-primary border-l-2 border-accent-primary"
-                  : "text-text-secondary"
-              )}
-              title="Settings"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {sidebarPanel === "settings" ? (
-              <SettingsPanel />
-            ) : (
-              <>
-                <div className="px-3 py-2 border-b border-border">
-                  <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
-                    Projects
-                  </div>
-                </div>
-                <div className="flex-1 overflow-auto">
-                  <ProjectList />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-        <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={sidebarRef}
-      className="bg-bg-secondary border-r border-border flex flex-col relative"
-      style={{ width: sidebarWidth }}
-    >
-      <ProjectSelector />
-      <div className="flex flex-1 min-h-0">
-        <div className="w-12 border-r border-border flex flex-col shrink-0">
-          {PROJECT_PANELS.map((panel) => (
-            <button
-              key={panel.id}
-              onClick={() => setSidebarPanel(panel.id)}
-              className={cn(
-                "w-12 h-12 flex items-center justify-center",
-                "hover:bg-bg-elevated transition-colors",
-                sidebarPanel === panel.id
-                  ? "text-accent-primary border-l-2 border-accent-primary"
-                  : "text-text-secondary"
-              )}
-              title={panel.label}
-            >
-              <panel.icon className="w-5 h-5" />
-            </button>
-          ))}
+          )}
 
           {/* Spacer */}
           <div className="flex-1" />
 
           {/* Settings button at bottom */}
           <button
-            onClick={() => setSidebarPanel("settings")}
+            onClick={() => sidebarCollapsed ? handleCollapsedIconClick("settings") : setSidebarPanel("settings")}
             className={cn(
               "w-12 h-12 flex items-center justify-center",
               "hover:bg-bg-elevated transition-colors",
@@ -233,11 +145,43 @@ export function Sidebar() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <SidebarPanelContent panel={sidebarPanel} />
+        {/* Panel content - hidden when collapsed */}
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-200 ease-out",
+            sidebarCollapsed
+              ? "w-0 opacity-0"
+              : "flex-1 opacity-100"
+          )}
+          style={{
+            transitionDelay: sidebarCollapsed ? "0ms" : "50ms",
+          }}
+        >
+          {selectedProjectId ? (
+            <SidebarPanelContent panel={sidebarPanel} />
+          ) : (
+            sidebarPanel === "settings" ? (
+              <SettingsPanel />
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="px-3 py-2 border-b border-border">
+                  <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+                    Projects
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <ProjectList />
+                </div>
+              </div>
+            )
+          )}
         </div>
       </div>
-      <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
+
+      {/* Resize handle - only when expanded */}
+      {!sidebarCollapsed && (
+        <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
+      )}
     </div>
   );
 }
