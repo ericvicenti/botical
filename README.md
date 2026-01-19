@@ -1,29 +1,34 @@
 # Iris
 
-AI Agent Workspace Server - A headless backend for AI agent operations.
+AI-powered development environment with a Bun backend and React frontend.
 
 ## Quick Start
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) 1.0 or later
-- (Optional) [Resend](https://resend.com/) API key for email in production
-
-### Installation
-
-```bash
-git clone <repository-url>
-cd iris
-bun install
-```
 
 ### Development
 
 ```bash
-bun run dev
+git clone <repository-url>
+cd iris
+bun dev
 ```
 
-The server starts at `http://localhost:4096`.
+The dev script will:
+- Install dependencies automatically (both root and webui)
+- Find available ports (auto-increments if 4096/5173 are in use)
+- Start backend and frontend servers
+- Open browser when ready
+
+You can run multiple instances in parallel - each will find its own ports.
+
+**Individual server commands:**
+```bash
+bun dev:server  # Backend only (port 4096)
+bun dev:webui   # Frontend only (port 5173)
+```
 
 **Dev Mode Features:**
 - Magic link tokens are logged to console (no email provider needed)
@@ -144,12 +149,14 @@ Keys are encrypted at rest using AES-256-GCM.
 ### Commands
 
 ```bash
-bun run dev          # Start with hot reload
-bun run start        # Production start
-bun run typecheck    # TypeScript checking
-bun run test         # Run all tests
-bun run test:unit    # Unit tests only
-bun run test:integration  # Integration tests only
+bun dev              # Start full dev environment
+bun dev:server       # Backend server only
+bun dev:webui        # Frontend only
+bun start            # Production start
+bun typecheck        # TypeScript checking
+bun test             # Run all tests
+bun test:unit        # Unit tests only
+bun test:integration # Integration tests only
 ```
 
 ### Project Structure

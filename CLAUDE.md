@@ -300,14 +300,23 @@ mutation.mutate(params, {
 ## Running the Project
 
 ```bash
-# Install dependencies
-bun install
+# Start full development environment (recommended)
+bun dev
+```
 
-# Start backend server
-bun run src/server/server.ts
+The dev script (`scripts/dev.ts`) handles everything:
+- Auto-installs dependencies if needed (both root and webui)
+- Finds available ports (starts at 4096/5173, auto-increments if in use)
+- Starts backend and frontend servers
+- Opens browser when ready
+- Handles graceful shutdown
 
-# Start frontend dev server
-cd webui && bun run dev
+**Running multiple instances:** You can run `bun dev` in multiple terminals - each instance will find its own available ports.
+
+**Individual commands:**
+```bash
+bun dev:server  # Backend only (default port 4096, uses IRIS_PORT env)
+bun dev:webui   # Frontend only (default port 5173)
 ```
 
 ## File Structure
