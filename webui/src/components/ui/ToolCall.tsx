@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { cn } from "@/lib/utils/cn";
 import {
   Wrench,
   Loader2,
@@ -8,9 +7,28 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
+  FileText,
+  Search,
+  FolderSearch,
+  Pencil,
+  FileOutput,
+  Terminal,
+  Globe,
 } from "lucide-react";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
+
+/** Tool metadata with descriptions and icons */
+const TOOL_INFO: Record<string, { description: string; icon: typeof Wrench }> = {
+  glob: { description: "Search for files by pattern", icon: FolderSearch },
+  grep: { description: "Search file contents", icon: Search },
+  read: { description: "Read file contents", icon: FileText },
+  write: { description: "Write to file", icon: FileOutput },
+  edit: { description: "Edit file", icon: Pencil },
+  bash: { description: "Run shell command", icon: Terminal },
+  webfetch: { description: "Fetch web page", icon: Globe },
+  websearch: { description: "Search the web", icon: Globe },
+};
 
 export interface ToolCallProps {
   /** Tool name */
@@ -31,7 +49,7 @@ export interface ToolCallProps {
 
 /**
  * Unified tool call display component.
- * Shows tool name, status, and collapsible input/output.
+ * Shows tool description, status, and collapsible input/output.
  * Works for both streaming and completed states.
  */
 export function ToolCall({
@@ -45,25 +63,34 @@ export function ToolCall({
   const { openTab } = useTabs();
   const navigate = useNavigate();
 
+  // Get tool info
+  const toolInfo = TOOL_INFO[name.toLowerCase()];
+  const ToolIcon = toolInfo?.icon || Wrench;
+
+  // For bash, prefer the description from args (LLM-provided) over generic
+  const bashDescription = name.toLowerCase() === "bash" && args?.description
+    ? (args.description as string)
+    : null;
+  const toolDescription = bashDescription || toolInfo?.description || name;
+
   const hasArgs = !!(args && typeof args === "object" && Object.keys(args).length > 0);
   const hasResult = result !== undefined && result !== null;
 
   // Extract file path from common tool args
   const filePath = args?.path as string | undefined;
-  const isFileOperation = ["read", "write", "edit", "glob", "grep"].includes(name) && filePath;
+  const filePattern = args?.pattern as string | undefined;
+  const isFileOperation = ["read", "write", "edit"].includes(name.toLowerCase()) && filePath;
 
   // Parse result content
   const resultObj = typeof result === "object" && result !== null ? result as Record<string, unknown> : null;
   const resultTitle = resultObj?.title as string | undefined;
   const resultOutput = resultObj?.output as string | undefined;
+  const resultResult = resultObj?.result as string | undefined;
   const resultMetadata = resultObj?.metadata as Record<string, unknown> | undefined;
   const resultFilePath = resultMetadata?.path as string | undefined;
-  const resultStr = resultOutput || (typeof result === "string" ? result : result ? JSON.stringify(result, null, 2) : "");
 
-  // Truncate very long results for display
-  const maxResultLength = 500;
-  const resultTruncated = resultStr.length > maxResultLength;
-  const displayResult = expanded ? resultStr : resultStr.slice(0, maxResultLength) + (resultTruncated ? "..." : "");
+  // Get the actual result content
+  const rawResult = resultOutput || resultResult || (typeof result === "string" ? result : null);
 
   const handleOpenFile = (path: string) => {
     openTab({
@@ -74,18 +101,101 @@ export function ToolCall({
     navigate({ to: "/files/$", params: { _splat: `${projectId}/${path}` } });
   };
 
+  // Simplified status icons - just icon, no background/text
   const statusIcon = {
-    pending: <Loader2 className="w-3.5 h-3.5 text-yellow-400 animate-spin" />,
-    running: <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />,
-    completed: <Check className="w-3.5 h-3.5 text-green-400" />,
+    pending: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" />,
+    running: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" />,
+    completed: <Check className="w-3.5 h-3.5 text-text-muted" />,
     error: <AlertCircle className="w-3.5 h-3.5 text-red-400" />,
   };
 
-  const statusColors = {
-    pending: "bg-yellow-500/20 text-yellow-400",
-    running: "bg-blue-500/20 text-blue-400",
-    completed: "bg-green-500/20 text-green-400",
-    error: "bg-red-500/20 text-red-400",
+  // Render smart output based on tool type
+  const renderOutput = () => {
+    const toolLower = name.toLowerCase();
+
+    // Glob tool - render file list with links
+    if (toolLower === "glob" && rawResult) {
+      const files = rawResult.split("\n").filter(f => f.trim());
+      if (files.length === 0) {
+        return <div className="text-xs text-text-muted italic">No files found</div>;
+      }
+      return (
+        <div className="space-y-0.5">
+          <div className="text-xs text-text-muted mb-1">{files.length} file{files.length !== 1 ? "s" : ""} found</div>
+          <div className="max-h-60 overflow-auto space-y-0.5">
+            {files.map((file, i) => (
+              <button
+                key={i}
+                onClick={() => handleOpenFile(file)}
+                className="flex items-center gap-1.5 text-xs text-accent-primary hover:underline font-mono w-full text-left py-0.5"
+              >
+                <FileText className="w-3 h-3 shrink-0" />
+                {file}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Grep tool - render file matches with links
+    if (toolLower === "grep" && rawResult) {
+      const lines = rawResult.split("\n").filter(l => l.trim());
+      if (lines.length === 0) {
+        return <div className="text-xs text-text-muted italic">No matches found</div>;
+      }
+      // Parse grep output format: "file:line:content" or just "file"
+      const matches = lines.map(line => {
+        const colonIndex = line.indexOf(":");
+        if (colonIndex > 0) {
+          const file = line.slice(0, colonIndex);
+          const rest = line.slice(colonIndex + 1);
+          return { file, rest };
+        }
+        return { file: line, rest: null };
+      });
+
+      return (
+        <div className="max-h-60 overflow-auto space-y-0.5">
+          <div className="text-xs text-text-muted mb-1">{matches.length} match{matches.length !== 1 ? "es" : ""}</div>
+          {matches.map((match, i) => (
+            <div key={i} className="flex items-start gap-1.5 text-xs py-0.5">
+              <button
+                onClick={() => handleOpenFile(match.file)}
+                className="text-accent-primary hover:underline font-mono shrink-0"
+              >
+                {match.file}
+              </button>
+              {match.rest && (
+                <span className="text-text-secondary truncate">{match.rest}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Default: show raw result or JSON
+    const resultStr = rawResult || (result ? JSON.stringify(result, null, 2) : "");
+    const maxResultLength = 500;
+    const resultTruncated = resultStr.length > maxResultLength;
+    const displayResult = expanded ? resultStr : resultStr.slice(0, maxResultLength) + (resultTruncated ? "..." : "");
+
+    return (
+      <>
+        <pre className="text-xs text-text-secondary overflow-auto max-h-60 bg-bg-primary/50 p-2 rounded whitespace-pre-wrap break-words">
+          {displayResult}
+        </pre>
+        {resultTruncated && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-xs text-accent-primary hover:underline mt-1"
+          >
+            Show full output
+          </button>
+        )}
+      </>
+    );
   };
 
   return (
@@ -103,10 +213,10 @@ export function ToolCall({
         )}
 
         {/* Tool icon */}
-        <Wrench className="w-3.5 h-3.5 text-accent-primary shrink-0" />
+        <ToolIcon className="w-3.5 h-3.5 text-accent-primary shrink-0" />
 
-        {/* Tool name */}
-        <span className="font-mono font-medium text-text-primary">{name}</span>
+        {/* Tool description */}
+        <span className="text-text-primary">{toolDescription}</span>
 
         {/* File path shortcut (for file operations) */}
         {isFileOperation && filePath && (
@@ -122,21 +232,16 @@ export function ToolCall({
           </span>
         )}
 
+        {/* Pattern for glob */}
+        {name.toLowerCase() === "glob" && filePattern && (
+          <span className="font-mono text-xs text-text-secondary">{filePattern}</span>
+        )}
+
         {/* Spacer */}
         <span className="flex-1" />
 
-        {/* Status badge */}
-        {status && (
-          <span
-            className={cn(
-              "px-1.5 py-0.5 rounded text-xs flex items-center gap-1",
-              statusColors[status] || "bg-bg-elevated text-text-muted"
-            )}
-          >
-            {statusIcon[status]}
-            {status}
-          </span>
-        )}
+        {/* Status icon */}
+        {status && statusIcon[status]}
       </button>
 
       {/* Expanded content */}
@@ -145,7 +250,7 @@ export function ToolCall({
           {/* Input/Args section */}
           {hasArgs && (
             <div className="px-3 py-2 border-b border-border/50">
-              <div className="text-xs text-text-muted mb-1 font-medium">Input</div>
+              <div className="text-xs text-text-muted mb-1 font-medium capitalize">{name} arguments</div>
               <pre className="text-xs text-text-secondary overflow-auto max-h-40 bg-bg-primary/50 p-2 rounded whitespace-pre-wrap break-words">
                 {JSON.stringify(args, null, 2)}
               </pre>
@@ -156,7 +261,7 @@ export function ToolCall({
           {hasResult ? (
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-                <span className="font-medium">{resultTitle || "Output"}</span>
+                <span className="font-medium">{resultTitle || "Result"}</span>
                 {resultFilePath && (
                   <button
                     onClick={() => handleOpenFile(resultFilePath)}
@@ -167,17 +272,7 @@ export function ToolCall({
                   </button>
                 )}
               </div>
-              <pre className="text-xs text-text-secondary overflow-auto max-h-60 bg-bg-primary/50 p-2 rounded whitespace-pre-wrap break-words">
-                {displayResult}
-              </pre>
-              {resultTruncated && !expanded && (
-                <button
-                  onClick={() => setExpanded(true)}
-                  className="text-xs text-accent-primary hover:underline mt-1"
-                >
-                  Show full output
-                </button>
-              )}
+              {renderOutput()}
             </div>
           ) : status === "running" || status === "pending" ? (
             <div className="px-3 py-2 text-xs text-text-muted flex items-center gap-2">
