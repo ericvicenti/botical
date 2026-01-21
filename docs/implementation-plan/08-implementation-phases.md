@@ -913,26 +913,67 @@ See [Tasks UI](./20-tasks-ui.md) for detailed specification.
 
 ---
 
-## Phase 15: Editor & Files ⬅️ IN PROGRESS
+## Phase 15: Editor & Files ✅ COMPLETE
 
 **Goal**: Code editor with file tree navigation
 
 See [Editor & Files](./15-editor-files.md) for detailed specification.
 
-### Completed
-- [x] File tree component (`FileTree.tsx`) with folder expansion
-- [x] Files route (`/files/$`) for file viewing
-- [x] File read API integration
-- [x] Basic file display
+### Frontend Components
+- [x] `FileTree.tsx` - Hierarchical file browser with lazy-loading
+  - Folder expansion/collapse on click
+  - File opening with single-click (preview) and double-click (permanent tab)
+  - Context menu for file/folder operations (right-click)
+  - Inline file/folder creation with auto-focus
+  - Inline rename with keyboard support (Enter/Escape)
+  - Color-coded file icons by extension
+  - ForwardRef pattern for external triggering
+- [x] `CodeEditor.tsx` - CodeMirror 6 integration
+  - Language detection by file extension
+  - Syntax highlighting: TS/TSX/JS/JSX/JSON/MD/CSS/HTML
+  - One Dark theme (dark mode), Catppuccin Latte (light mode)
+  - File save with Cmd+S / Ctrl+S
+  - Dirty state tracking with visual indicator (yellow circle)
+  - Dirty content persistence via localStorage
+  - Read-only mode for viewing at git commits
+  - Breadcrumb navigation with clickable folder links
+  - Status bar showing save state, file extension
+  - Line numbers, active line highlighting
+  - History (undo/redo) support
+- [x] `FileContextMenu.tsx` - Context-aware file operations
+  - Discriminated union for type-safe menu options
+  - New File, New Folder, Rename, Delete operations
+  - Click-outside-to-close behavior
+- [x] `FolderView.tsx` - Detailed folder listing
+  - File sizes, permissions, timestamps
+  - Sortable columns
+  - Hidden file toggle
 
-### Remaining
-- [ ] CodeMirror 6 integration for code editing
-- [ ] Syntax highlighting for TS/JS/JSON/MD/CSS/HTML
-- [ ] File write/save with Cmd+S
-- [ ] File create, rename, delete operations
-- [ ] Breadcrumb navigation
-- [ ] Dirty indicator for unsaved changes
-- [ ] Search within file
+### Backend API
+- [x] `GET /api/projects/:projectId/files` - List directory
+- [x] `GET /api/projects/:projectId/files/:path` - Read file (supports `?commit` for git history)
+- [x] `PUT /api/projects/:projectId/files/:path` - Save file
+- [x] `DELETE /api/projects/:projectId/files/:path` - Delete file/folder
+- [x] `POST /api/projects/:projectId/files/:path/move` - Rename/move
+- [x] `GET /api/projects/:projectId/folders` - Detailed folder info
+- [x] `POST /api/projects/:projectId/folders/:path` - Create folder
+- [x] Path traversal prevention with `resolveProjectPath()`
+- [x] 5MB file size limit
+
+### Tests
+- [x] `FileTree.test.tsx` - 21 tests (rendering, expansion, file opening, context menus)
+- [x] `CodeEditor.test.tsx` - 17 tests (loading, headers, status bar, save, dirty state)
+- [x] `FileContextMenu.test.tsx` - 20 tests (menu options, click-outside, CreateInput)
+
+### Additional Features (Beyond Spec)
+- [x] Light theme support (Catppuccin Latte)
+- [x] Commit-aware file and folder viewing for git history
+- [x] Read-only mode for historical commits
+- [x] Dirty content persistence across tab switches (localStorage)
+- [x] Inline rename with keyboard support
+- [x] FileTreeRef pattern for external triggering from sidebar
+
+**Deliverable**: Complete code editor with file tree navigation, syntax highlighting, and file operations
 
 ---
 

@@ -253,6 +253,12 @@ export const handlers = [
       modified: Date.now(),
     });
   }),
+
+  // Folders - create folder
+  http.post("/api/projects/:projectId/folders/:path", ({ params }) => {
+    const path = decodeURIComponent(params.path as string);
+    return HttpResponse.json({ path });
+  }),
 ];
 
 export const server = setupServer(...handlers);

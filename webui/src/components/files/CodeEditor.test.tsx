@@ -72,15 +72,17 @@ describe("CodeEditor", () => {
   });
 
   describe("Header", () => {
-    it("shows full file path in header", async () => {
+    it("shows file path in breadcrumbs", async () => {
       render(<CodeEditor projectId="prj_test" path="src/index.ts" />);
 
       await waitFor(() => {
         expect(screen.queryByText("Loading file...")).not.toBeInTheDocument();
       });
 
-      // Should show full path as title
-      expect(screen.getByText("src/index.ts")).toBeInTheDocument();
+      // Breadcrumbs show path segments separately (Files / src / index.ts)
+      expect(screen.getByText("Files")).toBeInTheDocument();
+      expect(screen.getByText("src")).toBeInTheDocument();
+      expect(screen.getByText("index.ts")).toBeInTheDocument();
     });
 
     it("shows project name in header", async () => {
