@@ -1160,3 +1160,28 @@ export function useAbortRebase() {
     },
   });
 }
+
+// ============================================
+// GIT IDENTITY
+// ============================================
+
+export interface GitIdentity {
+  publicKey: string;
+  fingerprint: string;
+  keyPath: string;
+  instructions: {
+    github: string;
+    gitlab: string;
+  };
+}
+
+export function useGitIdentity() {
+  return useQuery({
+    queryKey: ["git", "identity"],
+    queryFn: async () => {
+      const response = await apiClientRaw<GitIdentity>("/api/git/identity");
+      return response.data;
+    },
+    staleTime: Infinity, // Identity doesn't change during session
+  });
+}

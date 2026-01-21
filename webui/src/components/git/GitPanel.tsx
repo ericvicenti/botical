@@ -5,6 +5,7 @@ import { useTabs } from "@/contexts/tabs";
 import { BranchPicker } from "./BranchPicker";
 import { UncommittedChanges } from "./UncommittedChanges";
 import { CommitList } from "./CommitList";
+import { GitIdentity } from "./GitIdentity";
 import { cn } from "@/lib/utils/cn";
 import { useEffect } from "react";
 
@@ -197,6 +198,9 @@ export function GitPanel({ projectId }: GitPanelProps) {
         </div>
         <CommitList projectId={projectId} />
       </div>
+
+      {/* SSH Identity */}
+      <GitIdentity compact />
     </div>
   );
 }

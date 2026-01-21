@@ -196,6 +196,56 @@ export const ProcessKilledEvent = z.object({
   }),
 });
 
+// Git Events
+export const GitStatusChangedEvent = z.object({
+  type: z.literal("git.status.changed"),
+  payload: z.object({
+    projectId: z.string(),
+  }),
+});
+
+export const GitBranchSwitchedEvent = z.object({
+  type: z.literal("git.branch.switched"),
+  payload: z.object({
+    projectId: z.string(),
+    branch: z.string(),
+  }),
+});
+
+export const GitCommitCreatedEvent = z.object({
+  type: z.literal("git.commit.created"),
+  payload: z.object({
+    projectId: z.string(),
+    hash: z.string(),
+    message: z.string(),
+  }),
+});
+
+export const GitPushedEvent = z.object({
+  type: z.literal("git.pushed"),
+  payload: z.object({
+    projectId: z.string(),
+    remote: z.string(),
+  }),
+});
+
+export const GitPulledEvent = z.object({
+  type: z.literal("git.pulled"),
+  payload: z.object({
+    projectId: z.string(),
+    remote: z.string(),
+    files: z.array(z.string()),
+  }),
+});
+
+export const GitSyncCompletedEvent = z.object({
+  type: z.literal("git.sync.completed"),
+  payload: z.object({
+    projectId: z.string(),
+    state: z.string(),
+  }),
+});
+
 // Union of all event types
 export const IrisEvent = z.discriminatedUnion("type", [
   SessionCreatedEvent,
@@ -217,6 +267,12 @@ export const IrisEvent = z.discriminatedUnion("type", [
   ProcessOutputEvent,
   ProcessExitedEvent,
   ProcessKilledEvent,
+  GitStatusChangedEvent,
+  GitBranchSwitchedEvent,
+  GitCommitCreatedEvent,
+  GitPushedEvent,
+  GitPulledEvent,
+  GitSyncCompletedEvent,
 ]);
 
 export type IrisEvent = z.infer<typeof IrisEvent>;

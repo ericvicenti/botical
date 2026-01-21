@@ -681,17 +681,50 @@ iris/
 
 ---
 
-## Phase 12: Git Integration
+## Phase 12: Git Integration ✅ COMPLETE
 
 **Goal**: Git operations via API with Iris SSH identity
 
 See [Git Integration](./12-git-integration.md) for detailed specification.
 
-- [ ] Git status, diff, log operations
-- [ ] Staging and commit functionality
-- [ ] Branch management
-- [ ] Remote operations with SSH identity
-- [ ] File-level diff viewing
+### GitService (`src/services/git.ts`)
+- [x] Repository management: isRepo, init, clone, remotes, addRemote
+- [x] Status & branches: status, branches, currentBranch, checkout, createBranch, deleteBranch
+- [x] Commits & history: log, getCommit, commit (auto-stages all changes)
+- [x] Diff operations: diff, commitDiff, commitFileDiff
+- [x] Remote operations: fetch, pull, push (with upstream support)
+- [x] File operations: discardChanges, discardAllChanges, showFile, listTree
+- [x] Rebase support: isRebasing, getConflictedFiles, rebase, abortRebase
+- [x] Sync operations: getSyncStatus, sync (fetch → rebase → push)
+
+### SSH Identity System (`src/services/identity.ts`)
+- [x] ED25519 keypair generation on first run
+- [x] Key storage at `~/.iris/id_ed25519` and `~/.iris/id_ed25519.pub`
+- [x] Git configured to use Iris SSH identity for all remote operations
+- [x] `GET /api/git/identity` endpoint for public key and fingerprint
+
+### REST API (`src/server/routes/git.ts`)
+- [x] Status: GET /api/projects/:projectId/git/status
+- [x] Branches: GET/POST/DELETE for branch operations
+- [x] Commits: GET log, GET commit details, POST commit
+- [x] Diff: GET for working tree and commit diffs
+- [x] Remote: POST push, POST pull, POST fetch
+- [x] Sync: GET status, POST sync, POST abort-rebase
+- [x] Clone: POST /api/projects/clone (creates project from URL)
+
+### WebSocket Events
+- [x] git.status.changed - Working tree changed
+- [x] git.branch.switched - Branch checkout
+- [x] git.commit.created - New commit
+- [x] git.pushed, git.pulled - Remote operations
+- [x] git.sync.completed - Sync operation finished
+
+### Create Project from URL
+- [x] Clone from URL UI in create-project page
+- [x] Auto-detect repository name
+- [x] Optional branch selection
+
+**Deliverable**: Complete git integration with SSH identity and real-time events
 
 ---
 
@@ -803,17 +836,62 @@ See [Processes UI](./17-processes-ui.md) for detailed specification.
 
 ---
 
-## Phase 18: Git UI
+## Phase 18: Git UI ✅ COMPLETE
 
 **Goal**: Git panel with staging, commits, and diffs
 
 See [Git UI](./18-git-ui.md) for detailed specification.
 
-- [ ] Git status panel
-- [ ] Staging interface
-- [ ] Commit dialog
-- [ ] Branch switcher
-- [ ] Diff viewer
+### Git Panel (`webui/src/components/git/GitPanel.tsx`)
+- [x] Branch picker with create/switch functionality
+- [x] Sync button with visual feedback (spinner, state)
+- [x] Conflict banner with abort rebase button
+- [x] Error banner for sync errors
+- [x] Upstream status display (ahead/behind)
+- [x] Auto-sync on mount
+
+### Uncommitted Changes (`webui/src/components/git/UncommittedChanges.tsx`)
+- [x] File list with status icons (A, M, D, R, ?)
+- [x] Click to open file in editor
+- [x] Discard individual file changes
+- [x] Commit All button
+
+### Commit List (`webui/src/components/git/CommitList.tsx`)
+- [x] Recent commits display
+- [x] Relative time formatting
+- [x] Click to view commit details
+- [x] Preview/permanent tab support
+
+### Commit View (`webui/src/routes/projects/$projectId/commits.$hash.tsx`)
+- [x] Full commit details (hash, author, date, message)
+- [x] Files changed with status icons
+- [x] Expandable diff viewer per file
+- [x] Hunk headers with line ranges
+- [x] Added/removed/context line highlighting
+- [x] Browse files at commit button
+
+### Create Commit (`webui/src/routes/projects/$projectId/commit.tsx`)
+- [x] Review uncommitted changes with diff
+- [x] Commit message input
+- [x] File selection
+
+### SSH Identity Display (`webui/src/components/git/GitIdentity.tsx`)
+- [x] Compact mode for sidebar
+- [x] Full mode for settings page
+- [x] Copy public key to clipboard
+- [x] Direct links to add key on GitHub/GitLab
+- [x] Fingerprint display
+
+### API Queries & Mutations
+- [x] useGitStatus, useGitBranches, useGitLog, useGitDiff
+- [x] useGitCommit, useGitCommitDiff
+- [x] useGitSyncStatus, useGitSync, useAbortRebase
+- [x] useCheckoutBranch, useCreateBranch, useDeleteBranch
+- [x] useCreateCommit, useGitPush, useGitPull, useGitFetch
+- [x] useDiscardChanges, useCloneProject
+- [x] useGitIdentity
+
+**Deliverable**: Complete Git UI with sync, branching, commits, and SSH identity
 
 ---
 

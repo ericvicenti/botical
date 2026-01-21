@@ -23,6 +23,7 @@ import type {
   GitSyncStatus,
   SyncState,
 } from "./git-types";
+import { getSshCommand, ensureIdentity } from "./identity";
 
 // Default workspace directory for cloned repos
 const DEFAULT_WORKSPACES_DIR = path.join(homedir(), ".iris", "workspaces");
@@ -66,16 +67,25 @@ function mapFileStatus(index: string, workingDir: string): FileStatus {
 
 /**
  * Git Service for version control operations
+ *
+ * Uses Iris SSH identity for remote operations (push, pull, fetch, clone).
+ * See: src/services/identity.ts for SSH key management.
  */
 export class GitService {
   /**
    * Get a SimpleGit instance for a project path
+   * Configures SSH to use Iris identity for remote operations
    */
   private static getGit(projectPath: string): SimpleGit {
+    // Ensure SSH identity exists before any git operation
+    ensureIdentity();
+
     return simpleGit(projectPath, {
       binary: "git",
       maxConcurrentProcesses: 6,
       trimmed: true,
+      // Configure git to use Iris SSH identity for remote operations
+      config: [`core.sshCommand=${getSshCommand()}`],
     });
   }
 
@@ -417,9 +427,11 @@ export class GitService {
 
   /**
    * Clone a repository
+   * Uses Iris SSH identity for authentication
    */
   static async clone(options: CloneOptions): Promise<CloneResult> {
     ensureWorkspacesDir();
+    ensureIdentity();
 
     const repoName = extractRepoName(options.url);
     const targetPath =
@@ -430,7 +442,10 @@ export class GitService {
       throw new Error(`Target path already exists: ${targetPath}`);
     }
 
-    const git = simpleGit();
+    // Configure git with Iris SSH identity for clone operation
+    const git = simpleGit({
+      config: [`core.sshCommand=${getSshCommand()}`],
+    });
 
     const cloneOptions: string[] = [];
     if (options.branch) {

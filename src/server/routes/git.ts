@@ -31,8 +31,10 @@ import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { GitService } from "@/services/git.ts";
+import { getIdentityInfo } from "@/services/identity.ts";
 import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 import { Config } from "@/config/index.ts";
+import { EventBus } from "@/bus/index.ts";
 
 // ============================================
 // PROJECT-SCOPED GIT ROUTES
@@ -129,6 +131,13 @@ projectGit.post("/:projectId/git/checkout", async (c) => {
 
   await GitService.checkout(projectPath, result.data.branch);
   const status = await GitService.status(projectPath);
+
+  // Emit branch switched event
+  EventBus.publish(projectId, {
+    type: "git.branch.switched",
+    payload: { projectId, branch: result.data.branch },
+  });
+
   return c.json({ data: { branch: result.data.branch, status } });
 });
 
@@ -192,6 +201,19 @@ projectGit.post("/:projectId/git/commit", async (c) => {
   }
 
   const commitResult = await GitService.commit(projectPath, result.data.message);
+
+  // Emit commit created event
+  EventBus.publish(projectId, {
+    type: "git.commit.created",
+    payload: { projectId, hash: commitResult.hash, message: commitResult.message },
+  });
+
+  // Emit status changed event (working tree is now clean)
+  EventBus.publish(projectId, {
+    type: "git.status.changed",
+    payload: { projectId },
+  });
+
   return c.json({ data: commitResult }, 201);
 });
 
@@ -271,6 +293,13 @@ projectGit.post("/:projectId/git/push", async (c) => {
     result.data.branch,
     result.data.setUpstream
   );
+
+  // Emit pushed event
+  EventBus.publish(projectId, {
+    type: "git.pushed",
+    payload: { projectId, remote: result.data.remote },
+  });
+
   return c.json({ data: { pushed: true } });
 });
 
@@ -300,6 +329,19 @@ projectGit.post("/:projectId/git/pull", async (c) => {
     result.data.remote,
     result.data.branch
   );
+
+  // Emit pulled event
+  EventBus.publish(projectId, {
+    type: "git.pulled",
+    payload: { projectId, remote: result.data.remote, files: pullResult.files },
+  });
+
+  // Emit status changed event (files may have changed)
+  EventBus.publish(projectId, {
+    type: "git.status.changed",
+    payload: { projectId },
+  });
+
   return c.json({ data: pullResult });
 });
 
@@ -392,6 +434,19 @@ projectGit.post("/:projectId/git/sync", async (c) => {
   const projectPath = await getProjectPath(projectId);
 
   const syncResult = await GitService.sync(projectPath);
+
+  // Emit sync completed event
+  EventBus.publish(projectId, {
+    type: "git.sync.completed",
+    payload: { projectId, state: syncResult.state },
+  });
+
+  // Emit status changed event
+  EventBus.publish(projectId, {
+    type: "git.status.changed",
+    payload: { projectId },
+  });
+
   return c.json({ data: syncResult });
 });
 
@@ -459,4 +514,33 @@ gitClone.post("/clone", async (c) => {
       clone: cloneResult,
     },
   }, 201);
+});
+
+// ============================================
+// GIT IDENTITY ROUTE
+// ============================================
+
+export const gitIdentity = new Hono();
+
+/**
+ * GET /api/git/identity
+ * Get Iris SSH public key for git authentication
+ *
+ * Users should add this public key to GitHub/GitLab to allow
+ * Iris to push/pull via SSH.
+ */
+gitIdentity.get("/identity", (c) => {
+  const identity = getIdentityInfo();
+
+  return c.json({
+    data: {
+      publicKey: identity.publicKey,
+      fingerprint: identity.fingerprint,
+      keyPath: identity.keyPath,
+      instructions: {
+        github: "Go to GitHub → Settings → SSH and GPG keys → New SSH key, paste the public key above",
+        gitlab: "Go to GitLab → Preferences → SSH Keys, paste the public key above",
+      },
+    },
+  });
 });

@@ -40,6 +40,13 @@ function mapEventType(internalType: string): EventType | null {
     "process.output": "process.output",
     "process.exited": "process.exited",
     "process.killed": "process.killed",
+    // Git events
+    "git.status.changed": "git.status.changed",
+    "git.branch.switched": "git.branch.switched",
+    "git.commit.created": "git.commit.created",
+    "git.pushed": "git.pushed",
+    "git.pulled": "git.pulled",
+    "git.sync.completed": "git.sync.completed",
   };
 
   return mappings[internalType] ?? null;
@@ -138,6 +145,19 @@ export function setupBusBridge(): void {
     RoomManager.broadcast(getProjectRoom(projectId), wsEvent);
   });
   subscriptions.push(processSub);
+
+  // Subscribe to git events → broadcast to project room
+  const gitSub = EventBus.subscribe("git.*", (envelope) => {
+    const { projectId, event } = envelope;
+    if (!projectId) return;
+
+    const wsEventType = mapEventType(event.type);
+    if (!wsEventType) return;
+
+    const wsEvent = createEvent(wsEventType, event.payload);
+    RoomManager.broadcast(getProjectRoom(projectId), wsEvent);
+  });
+  subscriptions.push(gitSub);
 
   console.log("[WebSocket] Event bus bridge initialized");
 }

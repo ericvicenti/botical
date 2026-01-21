@@ -7,12 +7,13 @@ import {
   ChevronRight,
   Settings,
   FolderCog,
-  Github,
   ArrowLeft,
   Info,
   X,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { GitIdentity } from "@/components/git";
 
 export const Route = createFileRoute("/projects/$projectId/settings")({
   component: ProjectSettingsPage,
@@ -250,22 +251,12 @@ function ProjectSettingsPage() {
           </div>
         </CollapsibleSection>
 
-        {/* GitHub Section */}
+        {/* Git Section */}
         <CollapsibleSection
-          title="GitHub"
-          icon={<Github className="w-4 h-4" />}
-          badge="Coming Soon"
-          defaultOpen={false}
+          title="Git"
+          icon={<GitBranch className="w-4 h-4" />}
         >
-          <div className="text-text-muted text-sm">
-            <p>Connect this project to a GitHub repository to enable:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Automatic syncing with remote branches</li>
-              <li>Pull request integration</li>
-              <li>Issue tracking</li>
-              <li>Commit history visualization</li>
-            </ul>
-          </div>
+          <GitIdentity />
         </CollapsibleSection>
 
         {/* Danger Zone */}

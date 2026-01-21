@@ -164,6 +164,45 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
       }
       break;
 
+    // Git events - invalidate git-related queries
+    case "git.status.changed":
+    case "git.commit.created":
+    case "git.pushed":
+    case "git.pulled":
+    case "git.sync.completed":
+      log(`Git event: ${event.type}`, event.payload);
+      if (event.payload.projectId) {
+        // Invalidate git status and log
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "git", "status"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "git", "log"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "git", "sync"],
+        });
+        // Also invalidate files since they may have changed
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "files"],
+        });
+      }
+      break;
+
+    case "git.branch.switched":
+      log(`Branch switched: ${event.payload.branch}`, event.payload);
+      if (event.payload.projectId) {
+        // Invalidate all git-related queries
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "git"],
+        });
+        // Invalidate files since branch change affects working tree
+        queryClient.invalidateQueries({
+          queryKey: ["projects", event.payload.projectId, "files"],
+        });
+      }
+      break;
+
     default:
       log(`Unhandled event type: ${event.type}`);
   }

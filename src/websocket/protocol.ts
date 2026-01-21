@@ -230,6 +230,14 @@ export const EventType = z.enum([
   "process.output",
   "process.exited",
   "process.killed",
+
+  // Git events
+  "git.status.changed",
+  "git.branch.switched",
+  "git.commit.created",
+  "git.pushed",
+  "git.pulled",
+  "git.sync.completed",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

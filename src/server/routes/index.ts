@@ -11,4 +11,4 @@ export { sessionTasks as sessionTodos, tasks as todos, projectTasks, tasks } fro
 export { projectProcesses, processes } from "./processes.ts";
 export { projectServices, services } from "./services.ts";
 export { default as files } from "./files.ts";
-export { projectGit, gitClone } from "./git.ts";
+export { projectGit, gitClone, gitIdentity } from "./git.ts";
