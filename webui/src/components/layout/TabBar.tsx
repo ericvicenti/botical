@@ -97,7 +97,7 @@ export function TabBar() {
   return (
     <div className="h-9 bg-bg-secondary border-b border-border flex overflow-x-auto scrollbar-thin">
       {tabs.map((tab) => {
-        const Icon = TAB_ICONS[tab.type];
+        const Icon = TAB_ICONS[tab.type] || FileText; // Fallback to FileText if type not found
         const isActive = tab.id === effectiveActiveId;
         return (
           <div
