@@ -1,8 +1,7 @@
 import { GitCommit } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
 import { useGitLog } from "@/lib/api/queries";
 import type { CommitInfo } from "@/lib/api/types";
-import { useTabs } from "@/contexts/tabs";
+import { usePageOpener } from "@/primitives";
 
 interface CommitListProps {
   projectId: string;
@@ -36,25 +35,16 @@ function CommitItem({
   projectId: string;
   isSelected: boolean;
 }) {
-  const { openPreviewTab, openTab } = useTabs();
-  const navigate = useNavigate();
+  const { openPage } = usePageOpener();
 
+  // Single click opens as preview (default behavior)
   const handleClick = () => {
-    openPreviewTab({
-      type: "commit",
-      projectId,
-      hash: commit.hash,
-    });
-    navigate({ to: "/projects/$projectId/commits/$hash", params: { projectId, hash: commit.hash } });
+    openPage("git.commit-view", { projectId, hash: commit.hash });
   };
 
+  // Double click pins the tab
   const handleDoubleClick = () => {
-    openTab({
-      type: "commit",
-      projectId,
-      hash: commit.hash,
-    });
-    navigate({ to: "/projects/$projectId/commits/$hash", params: { projectId, hash: commit.hash } });
+    openPage("git.commit-view", { projectId, hash: commit.hash }, { pin: true });
   };
 
   return (
