@@ -1,5 +1,6 @@
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate, useLocation } from "@tanstack/react-router";
+import * as LucideIcons from "lucide-react";
 import {
   X,
   Circle,
@@ -33,7 +34,25 @@ const TAB_ICONS = {
   task: MessageSquare,
   commit: GitCommit,
   "review-commit": GitPullRequestCreate,
+  page: FileText, // Default for page tabs, actual icon comes from tab data
 } as const;
+
+/**
+ * Get icon component for a tab, handling dynamic page icons
+ */
+function getTabIcon(tab: Tab): React.ComponentType<{ className?: string }> {
+  if (tab.data.type === "page" && tab.data.icon) {
+    // Convert kebab-case to PascalCase (e.g., "git-commit" -> "GitCommit")
+    const iconName = tab.data.icon
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Icon = (LucideIcons as any)[iconName];
+    if (Icon) return Icon;
+  }
+  return TAB_ICONS[tab.type] || FileText;
+}
 
 export function TabBar() {
   const { tabs, setActiveTab, closeTab, openTab, pinTab } = useTabs();
@@ -97,7 +116,7 @@ export function TabBar() {
   return (
     <div className="h-9 bg-bg-secondary border-b border-border flex overflow-x-auto scrollbar-thin">
       {tabs.map((tab) => {
-        const Icon = TAB_ICONS[tab.type] || FileText; // Fallback to FileText if type not found
+        const Icon = getTabIcon(tab);
         const isActive = tab.id === effectiveActiveId;
         return (
           <div

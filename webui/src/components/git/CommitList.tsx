@@ -42,9 +42,9 @@ function CommitItem({
     openPage("git.commit-view", { projectId, hash: commit.hash });
   };
 
-  // Double click pins the tab
+  // Double click pins the tab (opens as permanent, not preview)
   const handleDoubleClick = () => {
-    openPage("git.commit-view", { projectId, hash: commit.hash }, { pin: true });
+    openPage("git.commit-view", { projectId, hash: commit.hash }, { preview: false });
   };
 
   return (

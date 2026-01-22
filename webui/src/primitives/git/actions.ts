@@ -6,11 +6,11 @@ import type { CommitResult } from "@/lib/api/types";
 /**
  * Action: Create a git commit
  *
- * Creates a commit with all staged and unstaged changes.
- * On success, opens the commit view page.
+ * Creates a commit with all changes (staged and unstaged).
+ * On success, navigates to the commit view page.
  */
 export const createCommitAction = defineAction({
-  id: "git.createCommit",
+  id: "git.create-commit",
   label: "Create Commit",
   description: "Create a git commit with all changes",
 
@@ -19,7 +19,7 @@ export const createCommitAction = defineAction({
     message: z.string().min(1).describe("The commit message"),
   }),
 
-  execute: async (params, _ctx) => {
+  execute: async (params) => {
     try {
       const result = await apiClient<CommitResult>(
         `/api/projects/${params.projectId}/git/commit`,
@@ -30,7 +30,7 @@ export const createCommitAction = defineAction({
       );
 
       return {
-        type: "page",
+        type: "navigate",
         pageId: "git.commit-view",
         params: {
           projectId: params.projectId,
@@ -43,32 +43,5 @@ export const createCommitAction = defineAction({
         message: error instanceof Error ? error.message : "Failed to create commit",
       };
     }
-  },
-});
-
-/**
- * Action: View a commit
- *
- * Opens the commit view page for a specific commit hash.
- */
-export const viewCommitAction = defineAction({
-  id: "git.viewCommit",
-  label: "View Commit",
-  description: "Open the commit details page",
-
-  params: z.object({
-    projectId: z.string().describe("The project ID"),
-    hash: z.string().describe("The commit hash"),
-  }),
-
-  execute: async (params, _ctx) => {
-    return {
-      type: "page",
-      pageId: "git.commit-view",
-      params: {
-        projectId: params.projectId,
-        hash: params.hash,
-      },
-    };
   },
 });

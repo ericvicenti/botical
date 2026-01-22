@@ -1,4 +1,5 @@
 import type { Tab, TabData, TabType, SettingsPage } from "@/types/tabs";
+import { getPageUrl } from "@/primitives/registry";
 
 const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
   "api-keys": "API Keys",
@@ -39,6 +40,9 @@ export function generateTabId(data: TabData): string {
       return `commit:${data.projectId}:${data.hash}`;
     case "review-commit":
       return `review-commit:${data.projectId}`;
+    case "page":
+      // Generate stable ID from pageId and params
+      return `page:${data.pageId}:${JSON.stringify(data.params)}`;
   }
 }
 
@@ -73,6 +77,8 @@ export function generateTabLabel(data: TabData): string {
       return data.hash.substring(0, 7);
     case "review-commit":
       return "Review Commit";
+    case "page":
+      return data.label;
   }
 }
 
@@ -105,6 +111,15 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
       return { to: "/projects/$projectId/commits/$hash", params: { projectId: tab.data.projectId, hash: tab.data.hash } };
     case "review-commit":
       return { to: "/projects/$projectId/commit", params: { projectId: tab.data.projectId } };
+    case "page": {
+      // Get URL from page primitive
+      try {
+        const url = getPageUrl(tab.data.pageId, tab.data.params);
+        return { to: url };
+      } catch {
+        return { to: "/" };
+      }
+    }
     default:
       return { to: "/" };
   }

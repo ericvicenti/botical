@@ -120,22 +120,65 @@ export function CommandPalette() {
   );
 
   const renderArgInput = (arg: CommandArg) => {
+    const inputClasses = "w-full px-3 py-2 bg-bg-tertiary border border-border rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-primary";
+
     return (
       <div className="p-2 border-t border-border">
         <label className="block text-xs text-text-secondary mb-1">
           {arg.label}
           {arg.required && <span className="text-accent-error ml-1">*</span>}
         </label>
-        <input
-          type={arg.type === "number" ? "number" : "text"}
-          value={argValues[arg.name] || ""}
-          onChange={(e) =>
-            setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
-          }
-          placeholder={arg.placeholder}
-          className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-primary"
-          autoFocus
-        />
+        {arg.type === "textarea" ? (
+          <textarea
+            value={argValues[arg.name] || ""}
+            onChange={(e) =>
+              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+            }
+            placeholder={arg.placeholder}
+            className={cn(inputClasses, "resize-none")}
+            rows={3}
+            autoFocus
+            onKeyDown={(e) => {
+              // Allow Cmd+Enter to submit
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleArgSubmit();
+              }
+            }}
+          />
+        ) : arg.type === "select" && arg.options ? (
+          <select
+            value={argValues[arg.name] || ""}
+            onChange={(e) =>
+              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+            }
+            className={inputClasses}
+            autoFocus
+          >
+            <option value="">Select...</option>
+            {arg.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={arg.type === "number" ? "number" : "text"}
+            value={argValues[arg.name] || ""}
+            onChange={(e) =>
+              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+            }
+            placeholder={arg.placeholder}
+            className={inputClasses}
+            autoFocus
+          />
+        )}
+        {arg.type === "textarea" && (
+          <div className="text-xs text-text-muted mt-1">
+            Press ⌘+Enter to submit
+          </div>
+        )}
       </div>
     );
   };
@@ -187,10 +230,10 @@ export function CommandPalette() {
                   onClick={() => handleSelectCommand(command)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className={cn(
-                    "w-full px-4 py-2 flex items-center justify-between text-left transition-colors",
+                    "w-full px-4 py-2 flex items-center justify-between text-left transition-colors border-l-2",
                     index === selectedIndex
-                      ? "bg-bg-tertiary"
-                      : "hover:bg-bg-tertiary/50"
+                      ? "bg-accent-primary/10 border-l-accent-primary"
+                      : "border-l-transparent hover:bg-bg-tertiary/50"
                   )}
                 >
                   <div className="flex-1 min-w-0">

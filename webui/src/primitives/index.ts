@@ -1,5 +1,9 @@
-// Iris Primitives
-// A unified interface for GUI, Agent, and Testing
+/**
+ * Iris Primitives
+ *
+ * A unified interface for Pages (UI surfaces) and Actions (operations).
+ * Pages and Actions can be used from GUI, Agents, and Tests.
+ */
 
 // Types
 export type {
@@ -7,8 +11,6 @@ export type {
   ActionContext,
   ActionDefinition,
   PageDefinition,
-  ActionRegistry,
-  PageRegistry,
 } from "./types";
 
 // Registry functions
@@ -20,7 +22,7 @@ export {
   getAllActions,
   getAllPages,
   executeAction,
-  getPageByRoute,
+  matchPageRoute,
   getPageUrl,
 } from "./registry";
 

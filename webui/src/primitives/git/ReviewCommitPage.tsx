@@ -180,7 +180,7 @@ export default function ReviewCommitPage({ params }: ReviewCommitPageProps) {
 
     setIsCommitting(true);
     try {
-      await execute("git.createCommit", {
+      await execute("git.create-commit", {
         projectId,
         message: commitMessage.trim(),
       });

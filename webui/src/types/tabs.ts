@@ -11,7 +11,8 @@ export type TabType =
   | "create-project"
   | "task"
   | "commit"
-  | "review-commit";
+  | "review-commit"
+  | "page"; // Generic page primitive type
 
 export type SettingsPage = "api-keys" | "theme" | "shortcuts" | "about";
 
@@ -39,4 +40,5 @@ export type TabData =
   | { type: "create-project" }
   | { type: "task"; sessionId: string; projectId: string; title: string }
   | { type: "commit"; hash: string; projectId: string }
-  | { type: "review-commit"; projectId: string };
+  | { type: "review-commit"; projectId: string }
+  | { type: "page"; pageId: string; params: Record<string, unknown>; label: string; icon: string };

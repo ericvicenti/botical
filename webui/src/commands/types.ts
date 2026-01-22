@@ -10,7 +10,9 @@ export type CommandCategory =
   | "tab"
   | "view"
   | "mission"
-  | "process";
+  | "process"
+  | "git"
+  | "action";
 
 export interface CommandShortcut {
   key: string;
@@ -22,7 +24,7 @@ export interface CommandShortcut {
 
 export interface CommandArg {
   name: string;
-  type: "string" | "number" | "select";
+  type: "string" | "number" | "select" | "textarea";
   label: string;
   placeholder?: string;
   required?: boolean;

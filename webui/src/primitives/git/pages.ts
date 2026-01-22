@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { definePage } from "../registry";
-
-// Import the page components (we'll refactor these)
 import ReviewCommitPageComponent from "./ReviewCommitPage";
 import CommitViewPageComponent from "./CommitViewPage";
 
@@ -13,8 +11,8 @@ import CommitViewPageComponent from "./CommitViewPage";
 export const reviewCommitPage = definePage({
   id: "git.review-commit",
   icon: "git-commit",
-  label: (_params) => "Review Commit",
-  description: "Review changes and create a commit",
+
+  getLabel: () => "Review Commit",
 
   params: z.object({
     projectId: z.string(),
@@ -22,15 +20,13 @@ export const reviewCommitPage = definePage({
 
   route: "/projects/$projectId/commit",
 
-  getRouteParams: (params) => ({
-    projectId: params.projectId,
-  }),
-
-  parseRouteParams: (routeParams) => ({
+  parseParams: (routeParams) => ({
     projectId: routeParams.projectId,
   }),
 
-  actions: ["git.createCommit"],
+  getRouteParams: (params) => ({
+    projectId: params.projectId,
+  }),
 
   component: ReviewCommitPageComponent,
 });
@@ -43,8 +39,8 @@ export const reviewCommitPage = definePage({
 export const commitViewPage = definePage({
   id: "git.commit-view",
   icon: "git-commit",
-  label: (params) => params.hash.substring(0, 7),
-  description: "View commit details and changes",
+
+  getLabel: (params) => params.hash.substring(0, 7),
 
   params: z.object({
     projectId: z.string(),
@@ -53,14 +49,14 @@ export const commitViewPage = definePage({
 
   route: "/projects/$projectId/commits/$hash",
 
+  parseParams: (routeParams) => ({
+    projectId: routeParams.projectId,
+    hash: routeParams.hash,
+  }),
+
   getRouteParams: (params) => ({
     projectId: params.projectId,
     hash: params.hash,
-  }),
-
-  parseRouteParams: (routeParams) => ({
-    projectId: routeParams.projectId,
-    hash: routeParams.hash,
   }),
 
   component: CommitViewPageComponent,

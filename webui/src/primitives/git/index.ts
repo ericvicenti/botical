@@ -2,7 +2,7 @@
 // Actions and Pages for version control
 
 // Actions
-export { createCommitAction, viewCommitAction } from "./actions";
+export { createCommitAction } from "./actions";
 
 // Pages
 export { reviewCommitPage, commitViewPage } from "./pages";

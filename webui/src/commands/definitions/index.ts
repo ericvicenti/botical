@@ -4,6 +4,10 @@ import { tabCommands } from "./tab.commands";
 import { fileCommands } from "./file.commands";
 import { projectCommands } from "./project.commands";
 
+// Ensure primitives are registered before we generate commands from them
+import "@/primitives/init";
+import { getPrimitiveCommands } from "./primitive.commands";
+
 let registered = false;
 
 export function registerAllCommands() {
@@ -15,6 +19,7 @@ export function registerAllCommands() {
     ...tabCommands,
     ...fileCommands,
     ...projectCommands,
+    ...getPrimitiveCommands(),
   ];
 
   for (const command of allCommands) {
