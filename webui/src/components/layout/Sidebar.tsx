@@ -141,6 +141,7 @@ export function Sidebar() {
                 : "text-text-secondary"
             )}
             title="Settings"
+            data-testid="settings-button"
           >
             <Settings className="w-5 h-5" />
           </button>

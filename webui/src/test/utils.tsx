@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, createContext, useContext } from "react";
 import { render as rtlRender, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -25,9 +25,40 @@ function createTestQueryClient() {
   });
 }
 
-// Mock WebSocket context that doesn't actually connect
+// Mock WebSocket context value
+type WSStatus = "connecting" | "connected" | "disconnected";
+
+interface WebSocketContextValue {
+  status: WSStatus;
+  send: (message: object) => void;
+  subscribe: (room: string) => void;
+  unsubscribe: (room: string) => void;
+}
+
+const MockWebSocketContext = createContext<WebSocketContextValue | null>(null);
+
+// Re-export the useWebSocket hook that uses our mock context
+export function useWebSocket() {
+  const context = useContext(MockWebSocketContext);
+  if (!context) {
+    throw new Error("useWebSocket must be used within WebSocketProvider");
+  }
+  return context;
+}
+
+// Mock WebSocket provider that provides a mock context
 function MockWebSocketProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  const mockValue: WebSocketContextValue = {
+    status: "connected",
+    send: () => {},
+    subscribe: () => {},
+    unsubscribe: () => {},
+  };
+  return (
+    <MockWebSocketContext.Provider value={mockValue}>
+      {children}
+    </MockWebSocketContext.Provider>
+  );
 }
 
 // Wrapper for testing without router (for isolated component tests)

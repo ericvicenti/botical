@@ -103,10 +103,10 @@ export function ToolCall({
 
   // Simplified status icons - just icon, no background/text
   const statusIcon = {
-    pending: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" />,
-    running: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" />,
-    completed: <Check className="w-3.5 h-3.5 text-text-muted" />,
-    error: <AlertCircle className="w-3.5 h-3.5 text-red-400" />,
+    pending: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" data-testid="tool-status-pending" />,
+    running: <Loader2 className="w-3.5 h-3.5 text-text-muted animate-spin" data-testid="tool-status-running" />,
+    completed: <Check className="w-3.5 h-3.5 text-text-muted" data-testid="tool-status-completed" />,
+    error: <AlertCircle className="w-3.5 h-3.5 text-red-400" data-testid="tool-status-error" />,
   };
 
   // Render smart output based on tool type

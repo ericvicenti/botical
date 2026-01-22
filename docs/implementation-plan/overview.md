@@ -101,14 +101,33 @@ Use descending/ascending identifiers for natural ordering:
 
 ## Document Index
 
-1. [Database Schema](./01-database-schema.md) - SQLite structure for root and project databases
-2. [Server Architecture](./02-server-architecture.md) - Hono server, routing, middleware
-3. [Agent System](./03-agent-system.md) - AI SDK integration, tool execution
-4. [Project Workspace](./04-project-workspace.md) - Project management, isolation
-5. [Real-time Communication](./05-realtime-communication.md) - WebSocket protocol
-6. [Multi-User Collaboration](./06-multi-user-collaboration.md) - Auth, sharing, presence
-7. [File Management](./07-file-management.md) - Per-project file operations
-8. [Implementation Phases](./08-implementation-phases.md) - Development roadmap
+### Core Documentation
+- [Implementation Status](./status.md) - Progress tracking
+- [Testing Strategy](./testing.md) - Test infrastructure and requirements
+
+### Completed Phases
+- [Database](./completed/database.md) - SQLite structure for root and project databases
+- [Server](./completed/server.md) - Hono server, routing, middleware
+- [Agent](./completed/agent.md) - AI SDK integration, tool execution
+- [Workspace](./completed/workspace.md) - Project management, isolation
+- [Realtime](./completed/realtime.md) - WebSocket protocol
+- [Files](./completed/files.md) - Per-project file operations
+- [Missions & Tasks](./completed/missions-tasks.md) - Mission lifecycle, task tracking
+- [Processes](./completed/processes.md) - PTY management, process streaming
+- [Git](./completed/git.md) - Git operations, SSH identity
+- [WebUI Foundation](./completed/webui-foundation.md) - React app foundation
+- [WebUI Shell](./completed/webui-shell.md) - Tabs, sidebar, shortcuts
+- [Editor](./completed/editor.md) - CodeMirror, file tree
+- [Git UI](./completed/git-ui.md) - Git panel, commits, sync
+- [Tasks UI](./completed/tasks-ui.md) - Chat interface, streaming
+
+### Planned Phases
+- [Multi-User](./planned/multiuser.md) - Auth, sharing, collaboration
+- [Processes UI](./planned/processes-ui.md) - Terminal emulation
+- [Polish](./planned/polish.md) - Performance, accessibility, E2E
+
+### Abandoned
+- [Missions UI](./abandoned/missions-ui.md) - Mission planning interface (scope reduced)
 
 ## Sources
 

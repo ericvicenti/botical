@@ -40,27 +40,19 @@ test.describe("Tasks", () => {
   test.beforeEach(async ({ page }) => {
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
-      if (route.request().method() === "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ data: [mockProject], meta: { total: 1 } }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [mockProject], meta: { total: 1 } }),
+      });
     });
 
     await page.route("**/api/sessions?projectId=*", async (route) => {
-      if (route.request().method() === "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ data: [], meta: { total: 0 } }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [], meta: { total: 0 } }),
+      });
     });
 
     await page.route("**/api/sessions", async (route) => {
@@ -71,7 +63,11 @@ test.describe("Tasks", () => {
           body: JSON.stringify({ data: mockSession }),
         });
       } else {
-        await route.continue();
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [], meta: { total: 0 } }),
+        });
       }
     });
 

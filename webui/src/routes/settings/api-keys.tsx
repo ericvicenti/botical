@@ -80,6 +80,7 @@ function ApiKeysPage() {
                 "focus:outline-none focus:border-accent-primary",
                 "font-mono text-sm"
               )}
+              data-testid="anthropic-api-key-input"
             />
             <button
               type="button"
@@ -114,6 +115,7 @@ function ApiKeysPage() {
                 "focus:outline-none focus:border-accent-primary",
                 "font-mono text-sm"
               )}
+              data-testid="openai-api-key-input"
             />
             <button
               type="button"
@@ -169,6 +171,7 @@ function ApiKeysPage() {
                     ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
                     : "border-border text-text-secondary hover:border-text-muted"
                 )}
+                data-testid={`provider-${provider}`}
               >
                 {provider}
               </button>
@@ -198,6 +201,7 @@ function ApiKeysPage() {
               "bg-accent-primary text-white hover:bg-accent-primary/90",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
+            data-testid="save-settings-button"
           >
             {saveSettings.isPending ? (
               <>Saving...</>

@@ -104,10 +104,14 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
 
         case "message.text.delta":
           // Append text delta as a part to maintain order with tool calls
+          // Also update the aggregate content field for easy access
           setStreamingMessage((prev) => {
             if (!prev || prev.id !== event.payload.messageId) return prev;
             const partId = event.payload.partId as string;
             const delta = event.payload.delta as string;
+
+            // Update the aggregate content
+            const newContent = prev.content + delta;
 
             // Find if we already have this text part
             const existingPartIndex = prev.parts.findIndex(p => p.id === partId);
@@ -121,7 +125,7 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
                 content: { text: ((existingPart.content as { text: string }).text || "") + delta },
               };
               log("streaming", "Updating text part", { partId, newLength: ((updatedParts[existingPartIndex].content as { text: string }).text || "").length });
-              return { ...prev, parts: updatedParts };
+              return { ...prev, content: newContent, parts: updatedParts };
             } else {
               // Create new text part
               const textPart: MessagePart = {
@@ -137,7 +141,7 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
                 updatedAt: Date.now(),
               };
               log("streaming", "Adding new text part", { partId });
-              return { ...prev, parts: [...prev.parts, textPart] };
+              return { ...prev, content: newContent, parts: [...prev.parts, textPart] };
             }
           });
           break;

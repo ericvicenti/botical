@@ -138,7 +138,8 @@ describe("MessageBubble", () => {
     await waitFor(() => {
       expect(screen.getByText("read_file")).toBeInTheDocument();
     });
-    expect(screen.getByText("running")).toBeInTheDocument();
+    // Status is shown as an icon with testid, not text
+    expect(screen.getByTestId("tool-status-running")).toBeInTheDocument();
   });
 
   it("renders error message", () => {

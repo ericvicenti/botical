@@ -560,7 +560,8 @@ describe("useTaskMessages streaming", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.streamingMessage?.parts).toHaveLength(1);
+      // Should have 2 parts: text part + tool call part
+      expect(result.current.streamingMessage?.parts).toHaveLength(2);
     });
 
     // 4. Tool result
@@ -578,7 +579,9 @@ describe("useTaskMessages streaming", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.streamingMessage?.parts[0]?.toolStatus).toBe("completed");
+      // Tool call part is at index 1 (text part is at index 0)
+      const toolCallPart = result.current.streamingMessage?.parts.find(p => p.type === "tool-call");
+      expect(toolCallPart?.toolStatus).toBe("completed");
     });
 
     // 5. More text after tool

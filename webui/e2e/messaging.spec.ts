@@ -300,7 +300,14 @@ test.describe("Messaging", () => {
     await page.route("**/api/messages", async (route) => {
       if (route.request().method() === "POST") {
         messageSent = true;
-        await route.continue();
+        // Fulfill with empty response - we just want to detect if the POST was triggered
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: { message: mockAssistantMessage, parts: [] },
+          }),
+        });
       }
     });
 
@@ -396,11 +403,15 @@ test.describe("Messaging", () => {
 
     await page.goto("/tasks/session-1");
 
-    // Tool call should be visible - the tool name appears in the tool call header
-    await expect(page.locator('[class*="text-text-primary"]').filter({ hasText: /^read_file$/ })).toBeVisible();
-    await expect(page.getByText("completed")).toBeVisible();
+    // Tool call should be visible - the tool name appears in the header
+    await expect(page.getByRole("button", { name: /read_file/ })).toBeVisible();
 
-    // Tool result should be visible
+    // Tool status should show completed (check icon with testid)
+    await expect(page.getByTestId("tool-status-completed")).toBeVisible();
+
+    // Tool result should be visible (need to expand first)
+    // Click to expand the tool call
+    await page.getByRole("button", { name: /read_file/ }).click();
     await expect(page.getByText("File contents here")).toBeVisible();
 
     // Text should be visible

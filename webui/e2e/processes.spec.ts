@@ -40,15 +40,11 @@ test.describe("Process Spawning", () => {
   test.beforeEach(async ({ page }) => {
     // Set up API mocks for projects
     await page.route("**/api/projects", async (route) => {
-      if (route.request().method() === "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ data: [mockProject], meta: { total: 1 } }),
-        });
-      } else {
-        await route.continue();
-      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [mockProject], meta: { total: 1 } }),
+      });
     });
 
     // Mock processes list (empty initially)
@@ -70,7 +66,11 @@ test.describe("Process Spawning", () => {
           body: JSON.stringify({ data: mockProcess }),
         });
       } else {
-        await route.continue();
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [] }),
+        });
       }
     });
 
@@ -194,7 +194,11 @@ test.describe("Process Spawning", () => {
           body: JSON.stringify({ data: mockProcess }),
         });
       } else {
-        await route.continue();
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [] }),
+        });
       }
     });
 
