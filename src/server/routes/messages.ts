@@ -48,6 +48,8 @@ const SendMessageSchema = z.object({
   modelId: z.string().nullable().optional(),
   agentName: z.string().optional(),
   canExecuteCode: z.boolean().default(false),
+  // Optional list of enabled tool names (if not provided, uses all available)
+  enabledTools: z.array(z.string()).optional(),
   // Allow API key to be passed directly (for frontend localStorage storage)
   apiKey: z.string().optional(),
 });
@@ -76,6 +78,7 @@ messages.post("/", async (c) => {
     modelId,
     agentName,
     canExecuteCode,
+    enabledTools,
     apiKey: requestApiKey,
   } = result.data;
 
@@ -115,6 +118,7 @@ messages.post("/", async (c) => {
       sessionId,
       userId,
       canExecuteCode,
+      enabledTools,
       content,
       apiKey,
       providerId: providerId as ProviderId,

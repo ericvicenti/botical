@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientRaw } from "./client";
-import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails } from "./types";
+import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails, CoreTool } from "./types";
 
 // Projects
 export function useProjects() {
@@ -1183,5 +1183,20 @@ export function useGitIdentity() {
       return response.data;
     },
     staleTime: Infinity, // Identity doesn't change during session
+  });
+}
+
+// ============================================================================
+// Tools
+// ============================================================================
+
+export function useCoreTools() {
+  return useQuery({
+    queryKey: ["tools", "core"],
+    queryFn: async () => {
+      const response = await apiClientRaw<CoreTool[]>("/api/tools/core");
+      return response.data;
+    },
+    staleTime: Infinity, // Core tools don't change during runtime
   });
 }

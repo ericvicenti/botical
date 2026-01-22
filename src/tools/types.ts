@@ -136,6 +136,7 @@ export type ToolCategory =
   | "execution"
   | "search"
   | "agent"
+  | "action"
   | "other";
 
 /**

@@ -253,3 +253,14 @@ export interface GitSyncStatus {
   conflictedFiles?: string[];
   lastSyncTime?: number;
 }
+
+// Tool types
+
+export type ToolCategory = "filesystem" | "execution" | "search" | "agent" | "action" | "other";
+
+export interface CoreTool {
+  name: string;
+  description: string;
+  category: ToolCategory;
+  requiresCodeExecution: boolean;
+}

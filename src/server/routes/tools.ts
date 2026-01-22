@@ -28,8 +28,28 @@ import {
   type ToolType,
 } from "@/services/tools.ts";
 import { ValidationError } from "@/utils/errors.ts";
+import { ToolRegistry } from "@/tools/registry.ts";
 
 const tools = new Hono();
+
+/**
+ * GET /api/tools/core
+ * List built-in/core tools from the registry
+ */
+tools.get("/core", async (c) => {
+  const registeredTools = ToolRegistry.getAll();
+
+  const coreTools = registeredTools.map(tool => ({
+    name: tool.definition.name,
+    description: tool.definition.description,
+    category: tool.category,
+    requiresCodeExecution: tool.requiresCodeExecution,
+  }));
+
+  return c.json({
+    data: coreTools,
+  });
+});
 
 /**
  * Query parameters for listing tools

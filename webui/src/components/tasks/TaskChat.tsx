@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useSession, useSettings, useProject } from "@/lib/api/queries";
+import { useSession, useSettings, useProject, useCoreTools } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
 import { ToolCall } from "@/components/ui/ToolCall";
 import { ContentHeader } from "@/components/layout/ContentHeader";
+import { ToolsPanel } from "./ToolsPanel";
 
 interface TaskChatProps {
   sessionId: string;
@@ -52,11 +53,60 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
 
   const [input, setInput] = useState("");
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [canExecuteCode, setCanExecuteCode] = useState(false);
+  const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load core tools to initialize enabled tools
+  const { data: coreTools } = useCoreTools();
+
+  // Initialize enabled tools when core tools load (enable all safe tools by default)
+  useEffect(() => {
+    if (coreTools && enabledTools.size === 0) {
+      const defaultEnabled = new Set(
+        coreTools
+          .filter(t => !t.requiresCodeExecution)
+          .map(t => t.name)
+      );
+      setEnabledTools(defaultEnabled);
+    }
+  }, [coreTools, enabledTools.size]);
+
+  const handleToggleTool = (toolName: string) => {
+    setEnabledTools(prev => {
+      const next = new Set(prev);
+      if (next.has(toolName)) {
+        next.delete(toolName);
+      } else {
+        next.add(toolName);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleCodeExecution = () => {
+    setCanExecuteCode(prev => {
+      const newValue = !prev;
+      // When enabling code execution, also enable execution tools
+      if (newValue && coreTools) {
+        setEnabledTools(currentEnabled => {
+          const next = new Set(currentEnabled);
+          for (const tool of coreTools) {
+            if (tool.requiresCodeExecution) {
+              next.add(tool.name);
+            }
+          }
+          return next;
+        });
+      }
+      return newValue;
+    });
+  };
 
   // Filter models based on which API keys are configured
   const availableModels = useMemo(() => {
@@ -159,6 +209,8 @@ You have access to tools for reading, writing, and editing files, as well as exe
     await sendMessage(content, {
       providerId: currentModel.providerId,
       modelId: currentModel.id,
+      canExecuteCode,
+      enabledTools: Array.from(enabledTools),
     });
   };
 
@@ -202,6 +254,18 @@ You have access to tools for reading, writing, and editing files, as well as exe
         }
       >
         <button
+          onClick={() => setShowToolsPanel(!showToolsPanel)}
+          className={cn(
+            "p-2 rounded-lg transition-colors",
+            showToolsPanel
+              ? "bg-accent-primary/20 text-accent-primary"
+              : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
+          )}
+          title="Configure agent tools"
+        >
+          <Wrench className="w-5 h-5" />
+        </button>
+        <button
           onClick={() => setShowSystemPrompt(true)}
           className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
           title="View system prompt"
@@ -238,6 +302,18 @@ You have access to tools for reading, writing, and editing files, as well as exe
               This is the system prompt sent to the AI model at the start of each conversation turn.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tools Panel */}
+      {showToolsPanel && (
+        <div className="px-4 py-3 border-b border-border bg-bg-secondary">
+          <ToolsPanel
+            enabledTools={enabledTools}
+            onToggleTool={handleToggleTool}
+            canExecuteCode={canExecuteCode}
+            onToggleCodeExecution={handleToggleCodeExecution}
+          />
         </div>
       )}
 

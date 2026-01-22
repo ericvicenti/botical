@@ -57,6 +57,8 @@ export interface OrchestratorRunOptions {
   maxSteps?: number;
   /** Temperature for the model (overrides agent config) */
   temperature?: number;
+  /** Optional list of enabled tool names (filters available tools) */
+  enabledTools?: string[];
   /** Abort signal for cancellation */
   abortSignal?: AbortSignal;
   /** Callback for processed events */
@@ -78,6 +80,7 @@ export class AgentOrchestrator {
       sessionId,
       userId,
       canExecuteCode,
+      enabledTools,
       content,
       apiKey,
       providerId,
@@ -148,10 +151,17 @@ export class AgentOrchestrator {
     const messages = this.buildMessages(db, sessionId, content);
 
     // Resolve tools for this agent
-    const availableToolNames = AgentRegistry.resolveTools(
+    let availableToolNames = AgentRegistry.resolveTools(
       agentConfig,
       ToolRegistry.getNames()
     );
+
+    // Filter by explicitly enabled tools if provided
+    if (enabledTools && enabledTools.length > 0) {
+      availableToolNames = availableToolNames.filter((name) =>
+        enabledTools.includes(name)
+      );
+    }
 
     // Create tool execution context with task handler
     const toolContext = this.createToolContext({

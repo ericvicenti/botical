@@ -18,6 +18,7 @@ import { serviceTool } from "./service.ts";
 import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
+import { actionTool } from "./action.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -67,6 +68,12 @@ export function registerCoreTools(): void {
     category: "agent",
     requiresCodeExecution: false, // Task tool itself doesn't execute code
   });
+
+  // Action tools (execute high-level actions/primitives)
+  ToolRegistry.register(actionTool, {
+    category: "action",
+    requiresCodeExecution: false, // Action tool manages its own execution
+  });
 }
 
 // Export individual tools for direct use
@@ -78,3 +85,4 @@ export { serviceTool } from "./service.ts";
 export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";
+export { actionTool } from "./action.ts";
