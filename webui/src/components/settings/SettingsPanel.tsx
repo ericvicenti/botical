@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 import { useNavigate, useLocation } from "@tanstack/react-router";
-import { Key, Palette, Keyboard, Info } from "lucide-react";
+import { Key, Palette, Keyboard, Beaker, Info } from "lucide-react";
 import type { SettingsPage } from "@/types/tabs";
 
 interface SettingsItem {
@@ -14,6 +14,7 @@ const SETTINGS_ITEMS: SettingsItem[] = [
   { id: "api-keys", label: "API Keys", icon: Key, path: "/settings/api-keys" },
   { id: "theme", label: "Theme", icon: Palette, path: "/settings/theme" },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard, path: "/settings/shortcuts" },
+  { id: "experiments", label: "Experiments", icon: Beaker, path: "/settings/experiments" },
   { id: "about", label: "About", icon: Info, path: "/settings/about" },
 ];
 

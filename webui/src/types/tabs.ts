@@ -14,7 +14,7 @@ export type TabType =
   | "review-commit"
   | "page"; // Generic page primitive type
 
-export type SettingsPage = "api-keys" | "theme" | "shortcuts" | "about";
+export type SettingsPage = "api-keys" | "theme" | "shortcuts" | "experiments" | "about";
 
 export interface Tab {
   id: string;

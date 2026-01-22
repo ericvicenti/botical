@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, ChevronDown, ChevronRight, ChevronsUpDown, Sparkles, Loader2 } from "lucide-react";
+import { AlertCircle, GitCommit, Plus, Minus, Edit, ArrowRight, HelpCircle, Copy, ChevronDown, ChevronRight, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useGitStatus, useGitDiff, useCreateCommit, useGenerateCommitMessage, useSettings } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import type { FileStatus } from "@/lib/api/types";

@@ -18,6 +18,7 @@ import { Route as WorkflowRunsExecutionIdRouteImport } from './routes/workflow-r
 import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
 import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
 import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
+import { Route as SettingsExperimentsRouteImport } from './routes/settings/experiments'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
@@ -72,6 +73,11 @@ const SettingsThemeRoute = SettingsThemeRouteImport.update({
 const SettingsShortcutsRoute = SettingsShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsExperimentsRoute = SettingsExperimentsRouteImport.update({
+  id: '/experiments',
+  path: '/experiments',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/settings/about'
     | '/settings/api-keys'
+    | '/settings/experiments'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/processes/$processId'
     | '/settings/about'
     | '/settings/api-keys'
+    | '/settings/experiments'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/settings/about'
     | '/settings/api-keys'
+    | '/settings/experiments'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -331,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsShortcutsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/experiments': {
+      id: '/settings/experiments'
+      path: '/experiments'
+      fullPath: '/settings/experiments'
+      preLoaderRoute: typeof SettingsExperimentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/api-keys': {
       id: '/settings/api-keys'
       path: '/api-keys'
@@ -407,6 +426,7 @@ declare module '@tanstack/react-router' {
 interface SettingsRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
+  SettingsExperimentsRoute: typeof SettingsExperimentsRoute
   SettingsShortcutsRoute: typeof SettingsShortcutsRoute
   SettingsThemeRoute: typeof SettingsThemeRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -415,6 +435,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsApiKeysRoute: SettingsApiKeysRoute,
+  SettingsExperimentsRoute: SettingsExperimentsRoute,
   SettingsShortcutsRoute: SettingsShortcutsRoute,
   SettingsThemeRoute: SettingsThemeRoute,
   SettingsIndexRoute: SettingsIndexRoute,

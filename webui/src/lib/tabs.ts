@@ -5,6 +5,7 @@ const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
   "api-keys": "API Keys",
   "theme": "Theme",
   "shortcuts": "Keyboard Shortcuts",
+  "experiments": "Experiments",
   "about": "About",
 };
 
@@ -224,7 +225,7 @@ export function parseUrlToTabData(
   const settingsMatch = pathname.match(/^\/settings\/([^/]+)$/);
   if (settingsMatch) {
     const page = settingsMatch[1] as SettingsPage;
-    if (["api-keys", "theme", "shortcuts", "about"].includes(page)) {
+    if (["api-keys", "theme", "shortcuts", "experiments", "about"].includes(page)) {
       return {
         type: "settings",
         data: { type: "settings", page },

@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -10,10 +10,11 @@ import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
 import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GitPanel as GitPanelComponent } from "@/components/git/GitPanel";
-import { useProjects, useWorkflows, useCreateWorkflow } from "@/lib/api/queries";
+import { ExePanel } from "@/components/exe/ExePanel";
+import { useProjects, useWorkflows, useCreateWorkflow, useSettings } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
-const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
+const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
   { id: "tasks", icon: MessageSquare, label: "Tasks" },
   { id: "files", icon: Files, label: "Files" },
   { id: "git", icon: GitBranch, label: "Git" },
@@ -21,6 +22,8 @@ const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label:
   { id: "services", icon: Radio, label: "Services" },
   { id: "workflows", icon: Workflow, label: "Workflows" },
 ];
+
+const EXE_PANEL = { id: "exe" as SidebarPanelType, icon: Server, label: "Exe VMs" };
 
 export function Sidebar() {
   const {
@@ -32,6 +35,17 @@ export function Sidebar() {
     toggleSidebar,
     selectedProjectId,
   } = useUI();
+
+  const { data: settings } = useSettings();
+
+  // Build panel list based on enabled experiments
+  const PROJECT_PANELS = useMemo(() => {
+    const panels = [...BASE_PROJECT_PANELS];
+    if (settings?.exeEnabled) {
+      panels.push(EXE_PANEL);
+    }
+    return panels;
+  }, [settings?.exeEnabled]);
 
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -294,6 +308,8 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       return <ServicesPanelWrapper selectedProjectId={selectedProjectId} />;
     case "workflows":
       return <WorkflowsPanel selectedProjectId={selectedProjectId} />;
+    case "exe":
+      return <ExePanel />;
     case "settings":
       return <SettingsPanel />;
     default:
