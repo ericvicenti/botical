@@ -10,17 +10,12 @@ import {
   Zap,
   ChevronDown,
   ChevronRight,
-  ToggleLeft,
-  ToggleRight,
-  AlertTriangle,
 } from "lucide-react";
 import type { ToolCategory } from "@/lib/api/types";
 
 interface ToolsPanelProps {
   enabledTools: Set<string>;
   onToggleTool: (toolName: string) => void;
-  canExecuteCode: boolean;
-  onToggleCodeExecution: () => void;
 }
 
 const CATEGORY_INFO: Record<ToolCategory, { label: string; icon: typeof Wrench; description: string }> = {
@@ -59,12 +54,10 @@ const CATEGORY_INFO: Record<ToolCategory, { label: string; icon: typeof Wrench; 
 export function ToolsPanel({
   enabledTools,
   onToggleTool,
-  canExecuteCode,
-  onToggleCodeExecution,
 }: ToolsPanelProps) {
   const { data: coreTools, isLoading } = useCoreTools();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(["filesystem", "search"])
+    new Set(["filesystem", "search", "execution", "action"])
   );
 
   const toggleCategory = (category: string) => {
@@ -103,29 +96,13 @@ export function ToolsPanel({
 
   return (
     <div className="border border-border rounded-lg bg-bg-secondary overflow-hidden">
-      {/* Header with code execution toggle */}
-      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wrench className="w-4 h-4 text-text-muted" />
-          <span className="text-sm font-medium text-text-primary">Agent Tools</span>
-        </div>
-        <button
-          onClick={onToggleCodeExecution}
-          className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors",
-            canExecuteCode
-              ? "bg-accent-primary/20 text-accent-primary"
-              : "bg-bg-primary text-text-muted hover:text-text-secondary"
-          )}
-          title={canExecuteCode ? "Code execution enabled" : "Code execution disabled"}
-        >
-          {canExecuteCode ? (
-            <ToggleRight className="w-4 h-4" />
-          ) : (
-            <ToggleLeft className="w-4 h-4" />
-          )}
-          <span>Code Exec</span>
-        </button>
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center gap-2">
+        <Wrench className="w-4 h-4 text-text-muted" />
+        <span className="text-sm font-medium text-text-primary">Agent Tools</span>
+        <span className="text-xs text-text-muted ml-auto">
+          {enabledTools.size} enabled
+        </span>
       </div>
 
       {/* Tool categories */}
@@ -163,22 +140,18 @@ export function ToolsPanel({
                 <div className="px-3 pb-2 space-y-1">
                   {tools.map((tool) => {
                     const isEnabled = enabledTools.has(tool.name);
-                    const isBlocked = tool.requiresCodeExecution && !canExecuteCode;
 
                     return (
                       <button
                         key={tool.name}
-                        onClick={() => !isBlocked && onToggleTool(tool.name)}
-                        disabled={isBlocked}
+                        onClick={() => onToggleTool(tool.name)}
                         className={cn(
                           "w-full px-2 py-1.5 rounded text-left flex items-start gap-2 transition-colors",
-                          isBlocked
-                            ? "opacity-50 cursor-not-allowed"
-                            : isEnabled
+                          isEnabled
                             ? "bg-accent-primary/10 hover:bg-accent-primary/20"
                             : "hover:bg-bg-tertiary"
                         )}
-                        title={isBlocked ? "Enable code execution to use this tool" : tool.description}
+                        title={tool.description}
                       >
                         <div
                           className={cn(
@@ -205,19 +178,14 @@ export function ToolsPanel({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={cn(
-                                "text-sm font-mono",
-                                isEnabled ? "text-text-primary" : "text-text-secondary"
-                              )}
-                            >
-                              {tool.name}
-                            </span>
-                            {tool.requiresCodeExecution && (
-                              <AlertTriangle className="w-3 h-3 text-accent-warning" />
+                          <span
+                            className={cn(
+                              "text-sm font-mono",
+                              isEnabled ? "text-text-primary" : "text-text-secondary"
                             )}
-                          </div>
+                          >
+                            {tool.name}
+                          </span>
                           <p className="text-xs text-text-muted truncate">
                             {tool.description}
                           </p>

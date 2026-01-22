@@ -18,7 +18,7 @@ import { serviceTool } from "./service.ts";
 import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
-import { actionTool } from "./action.ts";
+import { gitActionTools } from "./action.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -69,11 +69,13 @@ export function registerCoreTools(): void {
     requiresCodeExecution: false, // Task tool itself doesn't execute code
   });
 
-  // Action tools (execute high-level actions/primitives)
-  ToolRegistry.register(actionTool, {
-    category: "action",
-    requiresCodeExecution: false, // Action tool manages its own execution
-  });
+  // Git action tools (high-level git operations)
+  for (const tool of gitActionTools) {
+    ToolRegistry.register(tool, {
+      category: "action",
+      requiresCodeExecution: false,
+    });
+  }
 }
 
 // Export individual tools for direct use
@@ -85,4 +87,4 @@ export { serviceTool } from "./service.ts";
 export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";
-export { actionTool } from "./action.ts";
+export { gitCommitTool, gitStatusTool, gitDiffTool, gitLogTool, gitActionTools } from "./action.ts";

@@ -56,8 +56,8 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [canExecuteCode, setCanExecuteCode] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
+  const [toolsInitialized, setToolsInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -65,17 +65,14 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   // Load core tools to initialize enabled tools
   const { data: coreTools } = useCoreTools();
 
-  // Initialize enabled tools when core tools load (enable all safe tools by default)
+  // Initialize enabled tools when core tools load (enable ALL tools by default)
   useEffect(() => {
-    if (coreTools && enabledTools.size === 0) {
-      const defaultEnabled = new Set(
-        coreTools
-          .filter(t => !t.requiresCodeExecution)
-          .map(t => t.name)
-      );
-      setEnabledTools(defaultEnabled);
+    if (coreTools && !toolsInitialized) {
+      const allTools = new Set(coreTools.map(t => t.name));
+      setEnabledTools(allTools);
+      setToolsInitialized(true);
     }
-  }, [coreTools, enabledTools.size]);
+  }, [coreTools, toolsInitialized]);
 
   const handleToggleTool = (toolName: string) => {
     setEnabledTools(prev => {
@@ -86,25 +83,6 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
         next.add(toolName);
       }
       return next;
-    });
-  };
-
-  const handleToggleCodeExecution = () => {
-    setCanExecuteCode(prev => {
-      const newValue = !prev;
-      // When enabling code execution, also enable execution tools
-      if (newValue && coreTools) {
-        setEnabledTools(currentEnabled => {
-          const next = new Set(currentEnabled);
-          for (const tool of coreTools) {
-            if (tool.requiresCodeExecution) {
-              next.add(tool.name);
-            }
-          }
-          return next;
-        });
-      }
-      return newValue;
     });
   };
 
@@ -209,7 +187,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
     await sendMessage(content, {
       providerId: currentModel.providerId,
       modelId: currentModel.id,
-      canExecuteCode,
+      canExecuteCode: true, // Always allow code execution
       enabledTools: Array.from(enabledTools),
     });
   };
@@ -311,8 +289,6 @@ You have access to tools for reading, writing, and editing files, as well as exe
           <ToolsPanel
             enabledTools={enabledTools}
             onToggleTool={handleToggleTool}
-            canExecuteCode={canExecuteCode}
-            onToggleCodeExecution={handleToggleCodeExecution}
           />
         </div>
       )}
