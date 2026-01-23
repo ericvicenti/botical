@@ -153,6 +153,7 @@ function WorkflowEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflows", workflowId] });
+      queryClient.invalidateQueries({ queryKey: ["projects", selectedProjectId, "workflows"] });
       setIsDirty(false);
     },
     onError: (err) => {
