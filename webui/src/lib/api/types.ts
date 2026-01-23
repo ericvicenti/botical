@@ -283,3 +283,28 @@ export interface BackendAction {
   icon?: string;
   params: BackendActionParam[];
 }
+
+// Workflow types
+
+export interface WorkflowInputField {
+  name: string;
+  type: "string" | "number" | "boolean" | "enum";
+  label: string;
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+  options?: string[];
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  category: string;
+  icon?: string;
+  inputSchema: {
+    fields: WorkflowInputField[];
+  };
+  steps: unknown[];
+}

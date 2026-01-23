@@ -47,6 +47,11 @@ export function useAgentActions() {
             navigate({ to: `/projects/${payload.params.projectId}` });
           }
           break;
+        case "workflow":
+          if (payload.params.workflowId) {
+            navigate({ to: `/workflows/${payload.params.workflowId}` });
+          }
+          break;
         default:
           console.warn("[useAgentActions] Unknown page:", payload.pageId);
       }

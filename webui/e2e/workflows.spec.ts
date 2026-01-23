@@ -1,0 +1,249 @@
+import { test, expect } from "@playwright/test";
+
+test.describe("Workflows", () => {
+  // Mock data
+  const mockProject = {
+    id: "project-1",
+    name: "Test Project",
+    description: null,
+    ownerId: "user-1",
+    type: "local",
+    path: "/test/project",
+    gitRemote: null,
+    iconUrl: null,
+    color: null,
+    settings: {},
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    archivedAt: null,
+  };
+
+  const mockWorkflow = {
+    id: "wf_test-workflow-1",
+    name: "test-workflow",
+    label: "Test Workflow",
+    description: "A test workflow",
+    category: "other",
+    icon: null,
+    inputSchema: { fields: [] },
+    steps: [],
+  };
+
+  test.beforeEach(async ({ page }) => {
+    // Set up API mocks
+    await page.route("**/api/projects", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [mockProject], meta: { total: 1 } }),
+      });
+    });
+
+    // Mock empty workflows list initially
+    await page.route("**/api/workflows?projectId=*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [], meta: { total: 0, limit: 50, offset: 0, hasMore: false } }),
+      });
+    });
+
+    // Mock sessions (needed for sidebar)
+    await page.route("**/api/sessions?projectId=*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [], meta: { total: 0 } }),
+      });
+    });
+
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+
+  test("should show workflows panel in sidebar", async ({ page }) => {
+    await page.goto("/");
+
+    // Select project
+    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+
+    // Workflows button should be visible in sidebar
+    const workflowsButton = page.getByRole("button", { name: "Workflows" });
+    await expect(workflowsButton).toBeVisible();
+  });
+
+  test("should show empty state when no workflows exist", async ({ page }) => {
+    await page.goto("/");
+
+    // Select project
+    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+
+    // Click workflows button
+    await page.getByRole("button", { name: "Workflows" }).click();
+
+    // Should show empty state
+    await expect(page.getByTestId("no-workflows-message")).toBeVisible();
+    await expect(page.getByText("No workflows yet")).toBeVisible();
+  });
+
+  test("should create new workflow when clicking create button", async ({ page }) => {
+    // Mock the create workflow endpoint
+    await page.route("**/api/workflows", async (route) => {
+      if (route.request().method() === "POST") {
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({ data: mockWorkflow }),
+        });
+      }
+    });
+
+    // Mock the workflow fetch for the editor
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    await page.goto("/");
+
+    // Select project
+    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+
+    // Go to workflows panel
+    await page.getByRole("button", { name: "Workflows" }).click();
+
+    // Click create workflow button
+    const createButton = page.getByTestId("new-workflow-button");
+    await createButton.click();
+
+    // Should navigate to workflow editor
+    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+
+    // Workflow editor should be visible
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+    await expect(page.getByTestId("workflow-label")).toContainText("Test Workflow");
+  });
+
+  test("should open existing workflow when clicking on it", async ({ page }) => {
+    // Mock workflows list with existing workflow
+    await page.route("**/api/workflows?projectId=*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [mockWorkflow], meta: { total: 1, limit: 50, offset: 0, hasMore: false } }),
+      });
+    });
+
+    // Mock the workflow fetch for the editor
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    await page.goto("/");
+
+    // Select project
+    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+
+    // Go to workflows panel
+    await page.getByRole("button", { name: "Workflows" }).click();
+
+    // Click on the existing workflow
+    await page.getByTestId(`workflow-item-${mockWorkflow.id}`).click();
+
+    // Should navigate to workflow editor
+    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+
+    // Workflow editor should show the workflow
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+    await expect(page.getByTestId("workflow-label")).toContainText("Test Workflow");
+    await expect(page.getByTestId("workflow-name")).toContainText("test-workflow");
+  });
+
+  test("should show error when workflow fails to load", async ({ page }) => {
+    // Mock a failed workflow fetch
+    await page.route(`**/api/workflows/wf_nonexistent?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Workflow not found" } }),
+      });
+    });
+
+    // Set up localStorage with selected project
+    await page.goto("/");
+    await page.evaluate((projectId) => {
+      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+    }, mockProject.id);
+
+    // Navigate directly to a non-existent workflow
+    await page.goto("/workflows/wf_nonexistent");
+
+    // Should show error state
+    await expect(page.getByTestId("workflow-error")).toBeVisible();
+    await expect(page.getByText(/Error loading workflow/)).toBeVisible();
+  });
+
+  test("should show save button disabled when no changes", async ({ page }) => {
+    // Mock the workflow fetch
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    // Set up localStorage with selected project
+    await page.goto("/");
+    await page.evaluate((projectId) => {
+      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+    }, mockProject.id);
+
+    await page.goto(`/workflows/${mockWorkflow.id}`);
+
+    // Wait for editor to load
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+
+    // Save button should be disabled (no changes)
+    const saveButton = page.getByTestId("workflow-save-button");
+    await expect(saveButton).toBeDisabled();
+
+    // Dirty indicator should not be visible
+    await expect(page.getByTestId("workflow-dirty-indicator")).not.toBeVisible();
+  });
+});

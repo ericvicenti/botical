@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -10,7 +10,7 @@ import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
 import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GitPanel as GitPanelComponent } from "@/components/git/GitPanel";
-import { useProjects } from "@/lib/api/queries";
+import { useProjects, useWorkflows, useCreateWorkflow } from "@/lib/api/queries";
 import { useNavigate } from "@tanstack/react-router";
 
 const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
@@ -19,6 +19,7 @@ const PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label:
   { id: "git", icon: GitBranch, label: "Git" },
   { id: "run", icon: Play, label: "Run" },
   { id: "services", icon: Radio, label: "Services" },
+  { id: "workflows", icon: Workflow, label: "Workflows" },
 ];
 
 export function Sidebar() {
@@ -291,6 +292,8 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       return <RunPanel selectedProjectId={selectedProjectId} />;
     case "services":
       return <ServicesPanelWrapper selectedProjectId={selectedProjectId} />;
+    case "workflows":
+      return <WorkflowsPanel selectedProjectId={selectedProjectId} />;
     case "settings":
       return <SettingsPanel />;
     default:
@@ -437,5 +440,86 @@ function ServicesPanelWrapper({ selectedProjectId }: { selectedProjectId: string
   }
 
   return <ServicesPanel projectId={selectedProjectId} />;
+}
+
+function WorkflowsPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
+  const navigate = useNavigate();
+  const { data: workflows, isLoading } = useWorkflows(selectedProjectId || "");
+  const createWorkflow = useCreateWorkflow();
+
+  const handleCreateWorkflow = async () => {
+    if (!selectedProjectId) return;
+
+    try {
+      const workflow = await createWorkflow.mutateAsync({
+        projectId: selectedProjectId,
+        name: `workflow-${Date.now()}`,
+        label: "New Workflow",
+      });
+      navigate({ to: `/workflows/${workflow.id}` });
+    } catch (err) {
+      console.error("Failed to create workflow:", err);
+      alert(`Failed to create workflow: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  if (!selectedProjectId) {
+    return (
+      <div className="p-2">
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-2">
+          Workflows
+        </div>
+        <div className="text-sm text-text-muted">Select a project to manage workflows</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col" data-testid="workflows-panel">
+      <div className="px-2 py-1 border-b border-border flex items-center justify-between">
+        <div className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+          Workflows
+        </div>
+        <button
+          onClick={handleCreateWorkflow}
+          disabled={createWorkflow.isPending}
+          className={cn(
+            "p-0.5 rounded hover:bg-bg-elevated transition-colors",
+            "text-text-secondary hover:text-text-primary",
+            createWorkflow.isPending && "opacity-50"
+          )}
+          title="New Workflow"
+          data-testid="new-workflow-button"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-auto py-1">
+        {isLoading ? (
+          <div className="px-3 py-2 text-sm text-text-muted">Loading...</div>
+        ) : workflows && workflows.length > 0 ? (
+          workflows.map((workflow) => (
+            <button
+              key={workflow.id}
+              onClick={() => navigate({ to: `/workflows/${workflow.id}` })}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 text-left",
+                "hover:bg-bg-elevated transition-colors",
+                "text-sm text-text-primary"
+              )}
+              data-testid={`workflow-item-${workflow.id}`}
+            >
+              <Workflow className="w-4 h-4 text-accent-primary shrink-0" />
+              <span className="truncate">{workflow.label}</span>
+            </button>
+          ))
+        ) : (
+          <div className="px-3 py-2 text-sm text-text-muted" data-testid="no-workflows-message">
+            No workflows yet
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 

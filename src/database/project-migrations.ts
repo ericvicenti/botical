@@ -428,4 +428,34 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 6,
+    name: "workflows",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- WORKFLOWS
+        -- Composable action sequences with DAG execution
+        -- ============================================
+
+        CREATE TABLE workflows (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          label TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          category TEXT NOT NULL DEFAULT 'other',
+          icon TEXT,
+          input_schema TEXT NOT NULL DEFAULT '{"fields":[]}',
+          steps TEXT NOT NULL DEFAULT '[]',
+          created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          UNIQUE(project_id, name)
+        );
+
+        CREATE INDEX idx_workflows_project ON workflows(project_id);
+        CREATE INDEX idx_workflows_name ON workflows(project_id, name);
+      `);
+    },
+  },
 ];

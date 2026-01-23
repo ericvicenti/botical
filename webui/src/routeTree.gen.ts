@@ -13,6 +13,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CreateProjectRouteImport } from './routes/create-project'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows/$workflowId'
 import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
 import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
 import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
@@ -46,6 +47,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRoute,
+} as any)
+const WorkflowsWorkflowIdRoute = WorkflowsWorkflowIdRouteImport.update({
+  id: '/workflows/$workflowId',
+  path: '/workflows/$workflowId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TasksSessionIdRoute = TasksSessionIdRouteImport.update({
   id: '/tasks/$sessionId',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
+  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/workflows/$workflowId'
     | '/settings/'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/workflows/$workflowId'
     | '/settings'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
+    | '/workflows/$workflowId'
     | '/settings/'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   ProcessesProcessIdRoute: typeof ProcessesProcessIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
   TasksSessionIdRoute: typeof TasksSessionIdRoute
+  WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -269,6 +282,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
+    }
+    '/workflows/$workflowId': {
+      id: '/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/workflows/$workflowId'
+      preLoaderRoute: typeof WorkflowsWorkflowIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/tasks/$sessionId': {
       id: '/tasks/$sessionId'
@@ -410,6 +430,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProcessesProcessIdRoute: ProcessesProcessIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
   TasksSessionIdRoute: TasksSessionIdRoute,
+  WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

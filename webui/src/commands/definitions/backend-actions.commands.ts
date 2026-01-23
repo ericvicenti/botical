@@ -144,6 +144,8 @@ export function backendActionToCommand(action: BackendAction): Command {
             ctx.navigate({ to: "/settings" });
           } else if (pageId === "project") {
             ctx.navigate({ to: `/projects/${params.projectId}` });
+          } else if (pageId === "workflow") {
+            ctx.navigate({ to: `/workflows/${params.workflowId}` });
           }
         } else if (result.type === "ui") {
           // Handle UI actions with toast feedback

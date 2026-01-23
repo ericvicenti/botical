@@ -1202,7 +1202,7 @@ export function useCoreTools() {
 }
 
 // Backend Actions (for command palette)
-import type { BackendAction } from "./types";
+import type { BackendAction, Workflow } from "./types";
 
 export function useBackendActions() {
   return useQuery({
@@ -1212,5 +1212,90 @@ export function useBackendActions() {
       return response.data;
     },
     staleTime: Infinity, // Actions don't change during runtime
+  });
+}
+
+// ============================================
+// WORKFLOWS
+// ============================================
+
+export function useWorkflows(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "workflows"],
+    queryFn: async () => {
+      const response = await apiClientRaw<Workflow[]>(
+        `/api/workflows?projectId=${encodeURIComponent(projectId)}`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useWorkflow(workflowId: string, projectId: string) {
+  return useQuery({
+    queryKey: ["workflows", workflowId],
+    queryFn: async () => {
+      const response = await apiClient<Workflow>(
+        `/api/workflows/${workflowId}?projectId=${encodeURIComponent(projectId)}`
+      );
+      return response;
+    },
+    enabled: !!workflowId && !!projectId,
+  });
+}
+
+export function useCreateWorkflow() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      label,
+      description,
+    }: {
+      projectId: string;
+      name: string;
+      label: string;
+      description?: string;
+    }) =>
+      apiClient<Workflow>("/api/workflows", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId,
+          name,
+          label,
+          description: description || "",
+        }),
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", variables.projectId, "workflows"],
+      });
+    },
+  });
+}
+
+export function useDeleteWorkflow() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      workflowId,
+      projectId,
+    }: {
+      workflowId: string;
+      projectId: string;
+    }) =>
+      apiClient<{ deleted: boolean }>(
+        `/api/workflows/${workflowId}?projectId=${encodeURIComponent(projectId)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "workflows"],
+      });
+    },
   });
 }
