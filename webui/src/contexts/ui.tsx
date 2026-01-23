@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { subscribeToUIActionEvents, type UIActionPayload } from "@/lib/websocket/events";
 
 const STORAGE_KEY = "iris:ui";
 
@@ -136,11 +137,45 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, theme, resolvedTheme }));
   }, []);
 
+  const toggleSidebar = useCallback(() => {
+    setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }));
+  }, []);
+
+  const setSidebarPanel = useCallback((panel: SidebarPanel) => {
+    setState((s) => ({ ...s, sidebarPanel: panel }));
+  }, []);
+
+  // Subscribe to UI action events from WebSocket (AI agent tools)
+  useEffect(() => {
+    const handleUIAction = (payload: UIActionPayload) => {
+      console.log("[UIProvider] Received UI action from WebSocket:", payload);
+
+      switch (payload.action) {
+        case "setTheme":
+          if (typeof payload.value === "string") {
+            setTheme(payload.value as ThemePreference);
+          }
+          break;
+        case "toggleSidebar":
+          toggleSidebar();
+          break;
+        case "setSidebarPanel":
+          if (typeof payload.value === "string") {
+            setSidebarPanel(payload.value as SidebarPanel);
+          }
+          break;
+        default:
+          console.warn("[UIProvider] Unknown UI action:", payload.action);
+      }
+    };
+
+    return subscribeToUIActionEvents(handleUIAction);
+  }, [setTheme, toggleSidebar, setSidebarPanel]);
+
   const value: UIContextValue = {
     ...state,
-    toggleSidebar: () =>
-      setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed })),
-    setSidebarPanel: (panel) => setState((s) => ({ ...s, sidebarPanel: panel })),
+    toggleSidebar,
+    setSidebarPanel,
     setSidebarWidth: (width) => {
       const clampedWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
       setState((s) => ({ ...s, sidebarWidth: clampedWidth }));

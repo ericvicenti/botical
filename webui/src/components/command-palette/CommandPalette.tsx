@@ -11,8 +11,8 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [argValues, setArgValues] = useState<Record<string, string>>({});
-  const [currentArgIndex, setCurrentArgIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const filteredCommands = searchCommands(query);
@@ -24,7 +24,6 @@ export function CommandPalette() {
       setSelectedIndex(0);
       setSelectedCommand(null);
       setArgValues({});
-      setCurrentArgIndex(0);
     }
   }, [isPaletteOpen]);
 
@@ -32,6 +31,17 @@ export function CommandPalette() {
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
+
+  // Focus first input when command is selected
+  useEffect(() => {
+    if (selectedCommand?.args && selectedCommand.args.length > 0) {
+      // Small delay to let the DOM update
+      setTimeout(() => {
+        const firstInput = formRef.current?.querySelector('input, textarea, select') as HTMLElement;
+        firstInput?.focus();
+      }, 50);
+    }
+  }, [selectedCommand]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -55,9 +65,16 @@ export function CommandPalette() {
   const handleSelectCommand = useCallback(
     (command: Command) => {
       if (command.args && command.args.length > 0) {
-        setSelectedCommand(command);
-        setArgValues({});
-        setCurrentArgIndex(0);
+        // Check if all args are optional - if so, can execute immediately
+        const hasRequiredArgs = command.args.some(arg => arg.required);
+        if (!hasRequiredArgs) {
+          // All args optional - show form but allow immediate execution
+          setSelectedCommand(command);
+          setArgValues({});
+        } else {
+          setSelectedCommand(command);
+          setArgValues({});
+        }
       } else {
         executeCommand(command);
       }
@@ -65,33 +82,35 @@ export function CommandPalette() {
     [executeCommand]
   );
 
-  const handleArgSubmit = useCallback(() => {
-    if (!selectedCommand?.args) return;
+  const handleFormSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCommand) return;
 
-    const currentArg = selectedCommand.args[currentArgIndex];
-    if (currentArg.required && !argValues[currentArg.name]) {
+    // Check required fields
+    const missingRequired = selectedCommand.args?.filter(
+      arg => arg.required && !argValues[arg.name]?.trim()
+    );
+
+    if (missingRequired && missingRequired.length > 0) {
+      // Focus the first missing required field
+      const firstMissing = missingRequired[0];
+      const input = formRef.current?.querySelector(`[name="${firstMissing.name}"]`) as HTMLElement;
+      input?.focus();
       return;
     }
 
-    if (currentArgIndex < selectedCommand.args.length - 1) {
-      setCurrentArgIndex(currentArgIndex + 1);
-    } else {
-      executeCommand(selectedCommand, argValues);
-    }
-  }, [selectedCommand, currentArgIndex, argValues, executeCommand]);
+    executeCommand(selectedCommand, argValues);
+  }, [selectedCommand, argValues, executeCommand]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (selectedCommand) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleArgSubmit();
-        } else if (e.key === "Escape") {
+        if (e.key === "Escape") {
           e.preventDefault();
           setSelectedCommand(null);
           setArgValues({});
-          setCurrentArgIndex(0);
         }
+        // Enter is handled by form submit
         return;
       }
 
@@ -116,70 +135,115 @@ export function CommandPalette() {
           break;
       }
     },
-    [filteredCommands, selectedIndex, selectedCommand, handleSelectCommand, handleArgSubmit]
+    [filteredCommands, selectedIndex, selectedCommand, handleSelectCommand]
   );
 
-  const renderArgInput = (arg: CommandArg) => {
+  const renderArgInput = (arg: CommandArg, autoFocus: boolean) => {
     const inputClasses = "w-full px-3 py-2 bg-bg-tertiary border border-border rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-primary";
 
+    if (arg.type === "textarea") {
+      return (
+        <textarea
+          name={arg.name}
+          value={argValues[arg.name] || ""}
+          onChange={(e) =>
+            setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+          }
+          placeholder={arg.placeholder}
+          className={cn(inputClasses, "resize-none")}
+          rows={3}
+          autoFocus={autoFocus}
+        />
+      );
+    }
+
+    if (arg.type === "select" && arg.options) {
+      return (
+        <select
+          name={arg.name}
+          value={argValues[arg.name] || ""}
+          onChange={(e) =>
+            setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+          }
+          className={inputClasses}
+          autoFocus={autoFocus}
+        >
+          <option value="">Select...</option>
+          {arg.options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     return (
-      <div className="p-2 border-t border-border">
-        <label className="block text-xs text-text-secondary mb-1">
-          {arg.label}
-          {arg.required && <span className="text-accent-error ml-1">*</span>}
-        </label>
-        {arg.type === "textarea" ? (
-          <textarea
-            value={argValues[arg.name] || ""}
-            onChange={(e) =>
-              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
-            }
-            placeholder={arg.placeholder}
-            className={cn(inputClasses, "resize-none")}
-            rows={3}
-            autoFocus
-            onKeyDown={(e) => {
-              // Allow Cmd+Enter to submit
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                handleArgSubmit();
-              }
-            }}
-          />
-        ) : arg.type === "select" && arg.options ? (
-          <select
-            value={argValues[arg.name] || ""}
-            onChange={(e) =>
-              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
-            }
-            className={inputClasses}
-            autoFocus
+      <input
+        name={arg.name}
+        type={arg.type === "number" ? "number" : "text"}
+        value={argValues[arg.name] || ""}
+        onChange={(e) =>
+          setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
+        }
+        placeholder={arg.placeholder}
+        className={inputClasses}
+        autoFocus={autoFocus}
+      />
+    );
+  };
+
+  const renderArgsForm = () => {
+    if (!selectedCommand?.args) return null;
+
+    const requiredArgs = selectedCommand.args.filter(arg => arg.required);
+    const optionalArgs = selectedCommand.args.filter(arg => !arg.required);
+
+    return (
+      <form ref={formRef} onSubmit={handleFormSubmit} className="border-t border-border">
+        <div className="p-3 space-y-3">
+          {/* Required args first */}
+          {requiredArgs.map((arg, index) => (
+            <div key={arg.name}>
+              <label className="block text-xs text-text-secondary mb-1">
+                {arg.label}
+                <span className="text-accent-error ml-1">*</span>
+              </label>
+              {renderArgInput(arg, index === 0)}
+            </div>
+          ))}
+
+          {/* Optional args */}
+          {optionalArgs.length > 0 && (
+            <>
+              {requiredArgs.length > 0 && optionalArgs.length > 0 && (
+                <div className="text-xs text-text-muted pt-1">Optional</div>
+              )}
+              {optionalArgs.map((arg, index) => (
+                <div key={arg.name}>
+                  <label className="block text-xs text-text-secondary mb-1">
+                    {arg.label}
+                  </label>
+                  {renderArgInput(arg, requiredArgs.length === 0 && index === 0)}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Submit button */}
+        <div className="px-3 pb-3 flex justify-between items-center">
+          <span className="text-xs text-text-muted">
+            Press Enter to run
+          </span>
+          <button
+            type="submit"
+            className="px-3 py-1.5 text-sm bg-accent-primary text-white rounded hover:bg-accent-primary/90 transition-colors"
           >
-            <option value="">Select...</option>
-            {arg.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            type={arg.type === "number" ? "number" : "text"}
-            value={argValues[arg.name] || ""}
-            onChange={(e) =>
-              setArgValues((prev) => ({ ...prev, [arg.name]: e.target.value }))
-            }
-            placeholder={arg.placeholder}
-            className={inputClasses}
-            autoFocus
-          />
-        )}
-        {arg.type === "textarea" && (
-          <div className="text-xs text-text-muted mt-1">
-            Press ⌘+Enter to submit
-          </div>
-        )}
-      </div>
+            Run
+          </button>
+        </div>
+      </form>
     );
   };
 
@@ -188,36 +252,52 @@ export function CommandPalette() {
       isOpen={isPaletteOpen}
       onClose={closePalette}
       position="top"
-      className="w-[500px] max-h-[400px] overflow-hidden"
+      className="w-[500px] max-h-[500px] overflow-hidden"
     >
       <div onKeyDown={handleKeyDown}>
-        {/* Search input */}
+        {/* Search input / Command header */}
         <div className="p-2 border-b border-border">
-          <input
-            ref={inputRef}
-            type="text"
-            value={selectedCommand ? selectedCommand.label : query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command..."
-            disabled={!!selectedCommand}
-            className={cn(
-              "w-full px-3 py-2 bg-bg-tertiary border border-border rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-primary",
-              selectedCommand && "opacity-50"
-            )}
-            autoFocus
-          />
+          {selectedCommand ? (
+            <div className="flex items-center gap-2 px-1">
+              <button
+                onClick={() => {
+                  setSelectedCommand(null);
+                  setArgValues({});
+                }}
+                className="p-1 hover:bg-bg-tertiary rounded text-text-secondary"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div>
+                <div className="text-text-primary font-medium">{selectedCommand.label}</div>
+                {selectedCommand.description && (
+                  <div className="text-xs text-text-secondary">{selectedCommand.description}</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Type a command..."
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-primary"
+              autoFocus
+            />
+          )}
         </div>
 
-        {/* Arg input */}
-        {selectedCommand?.args && selectedCommand.args[currentArgIndex] && (
-          renderArgInput(selectedCommand.args[currentArgIndex])
-        )}
+        {/* Args form */}
+        {selectedCommand && renderArgsForm()}
 
         {/* Command list */}
         {!selectedCommand && (
           <div
             ref={listRef}
-            className="max-h-[320px] overflow-y-auto scrollbar-thin"
+            className="max-h-[400px] overflow-y-auto scrollbar-thin"
           >
             {filteredCommands.length === 0 ? (
               <div className="px-4 py-8 text-center text-text-secondary">

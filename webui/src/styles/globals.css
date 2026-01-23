@@ -7,6 +7,7 @@
   :root {
     --color-bg-primary: #1e1e2e;
     --color-bg-secondary: #181825;
+    --color-bg-tertiary: #252536;
     --color-bg-elevated: #313244;
     --color-bg-surface: #45475a;
     --color-text-primary: #cdd6f4;
@@ -23,6 +24,7 @@
   .light {
     --color-bg-primary: #eff1f5;
     --color-bg-secondary: #e6e9ef;
+    --color-bg-tertiary: #e1e4ec;
     --color-bg-elevated: #dce0e8;
     --color-bg-surface: #ccd0da;
     --color-text-primary: #4c4f69;
@@ -37,6 +39,11 @@
 
   html {
     @apply bg-bg-primary text-text-primary;
+    color-scheme: dark;
+  }
+
+  .light {
+    color-scheme: light;
   }
 
   body {
@@ -45,6 +52,24 @@
 
   * {
     @apply border-border;
+  }
+
+  /* Reset form elements for dark mode */
+  input,
+  textarea,
+  select,
+  button {
+    color-scheme: inherit;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    @apply bg-transparent;
   }
 }
 

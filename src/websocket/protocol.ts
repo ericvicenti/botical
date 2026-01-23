@@ -238,6 +238,10 @@ export const EventType = z.enum([
   "git.pushed",
   "git.pulled",
   "git.sync.completed",
+
+  // UI action events (from AI agent tools)
+  "ui.action",
+  "ui.navigate",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

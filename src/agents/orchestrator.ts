@@ -17,6 +17,8 @@ import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ToolRegistry } from "@/tools/registry.ts";
 import type { ToolExecutionContext, ToolMetadataUpdate } from "@/tools/types.ts";
+import { ActionRegistry } from "@/actions/index.ts";
+import type { ActionContext } from "@/actions/types.ts";
 import { LLM } from "./llm.ts";
 import { StreamProcessor, type ProcessedEvent } from "./stream-processor.ts";
 import type { ProviderId, AgentRunResult, AgentConfig } from "./types.ts";
@@ -196,6 +198,22 @@ export class AgentOrchestrator {
         canExecuteCode &&
         agentConfig.tools.some((t) => ["bash", "service"].includes(t)),
     });
+
+    // Create action context and merge action tools
+    const actionContext: ActionContext = {
+      projectId,
+      projectPath,
+      sessionId,
+      messageId: assistantMessage.id,
+      userId,
+      abortSignal,
+    };
+
+    // Get action tools and merge with tool registry tools
+    const actionTools = ActionRegistry.toAITools(actionContext);
+
+    // Merge action tools into tools (actions take precedence for naming conflicts)
+    Object.assign(tools, actionTools);
 
     // Override task tool execute if it exists
     if (tools.task) {

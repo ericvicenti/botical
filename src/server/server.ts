@@ -4,6 +4,7 @@ import { DatabaseManager } from "../database/index.ts";
 import { setupBusBridge, teardownBusBridge } from "../websocket/index.ts";
 import { websocket } from "hono/bun";
 import { registerCoreTools } from "../tools/index.ts";
+import { registerAllActions } from "../actions/index.ts";
 import { ServiceRunner } from "../services/service-runner.ts";
 
 export interface ServerOptions {
@@ -31,6 +32,9 @@ export async function createServer(
 
   // Register core tools for agent use
   registerCoreTools();
+
+  // Register actions (unified tool/command system)
+  registerAllActions();
 
   // Create app with WebSocket route
   const app = createApp();

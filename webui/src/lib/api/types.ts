@@ -264,3 +264,22 @@ export interface CoreTool {
   category: ToolCategory;
   requiresCodeExecution: boolean;
 }
+
+// Backend Action types (from /api/actions)
+
+export interface BackendActionParam {
+  name: string;
+  type: "string" | "number" | "boolean" | "enum";
+  required: boolean;
+  description?: string;
+  options?: string[];
+}
+
+export interface BackendAction {
+  id: string;
+  label: string;
+  description?: string;
+  category: string;
+  icon?: string;
+  params: BackendActionParam[];
+}

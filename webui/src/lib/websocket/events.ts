@@ -43,6 +43,45 @@ function emitProcessEvent(event: WSEvent) {
   }
 }
 
+// Custom event emitter for UI action events (from AI agent tools)
+export interface UIActionPayload {
+  action: string;
+  value: unknown;
+  message?: string;
+}
+type UIActionEventHandler = (payload: UIActionPayload) => void;
+const uiActionHandlers = new Set<UIActionEventHandler>();
+
+export function subscribeToUIActionEvents(handler: UIActionEventHandler): () => void {
+  uiActionHandlers.add(handler);
+  return () => uiActionHandlers.delete(handler);
+}
+
+function emitUIActionEvent(payload: UIActionPayload) {
+  for (const handler of uiActionHandlers) {
+    handler(payload);
+  }
+}
+
+// Custom event emitter for navigation events (from AI agent tools)
+export interface NavigatePayload {
+  pageId: string;
+  params: Record<string, unknown>;
+}
+type NavigateEventHandler = (payload: NavigatePayload) => void;
+const navigateHandlers = new Set<NavigateEventHandler>();
+
+export function subscribeToNavigateEvents(handler: NavigateEventHandler): () => void {
+  navigateHandlers.add(handler);
+  return () => navigateHandlers.delete(handler);
+}
+
+function emitNavigateEvent(payload: NavigatePayload) {
+  for (const handler of navigateHandlers) {
+    handler(payload);
+  }
+}
+
 export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
   log(`Received event: ${event.type}`, event.payload);
 
@@ -201,6 +240,18 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
           queryKey: ["projects", event.payload.projectId, "files"],
         });
       }
+      break;
+
+    // UI action events from AI agent tools
+    case "ui.action":
+      log(`UI action: ${event.payload.action}`, event.payload);
+      emitUIActionEvent(event.payload as unknown as UIActionPayload);
+      break;
+
+    // Navigation events from AI agent tools
+    case "ui.navigate":
+      log(`Navigate: ${event.payload.pageId}`, event.payload);
+      emitNavigateEvent(event.payload as unknown as NavigatePayload);
       break;
 
     default:

@@ -31,12 +31,18 @@ export interface CommandArg {
   options?: { value: string; label: string }[];
 }
 
+export interface FeedbackActions {
+  showToast: (message: string, type?: "success" | "error" | "info") => void;
+  showResult: (title: string, content: string, type?: "success" | "error" | "info") => void;
+}
+
 export interface ExecutionContext {
   selectedProjectId: string | null;
   activeTabId: string | null;
   tabs: Tab[];
   ui: UIActions;
   tabActions: TabActions;
+  feedback: FeedbackActions;
   navigate: NavigateFunction;
   queryClient: QueryClient;
 }

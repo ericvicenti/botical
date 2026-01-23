@@ -10,6 +10,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
+import { useToast } from "@/components/ui/Toast";
+import { useResultDialog } from "@/components/ui/ResultDialog";
 import { commandRegistry } from "./registry";
 import type { Command, ExecutionContext } from "./types";
 
@@ -44,6 +46,8 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const ui = useUI();
   const tabContext = useTabs();
+  const { showToast } = useToast();
+  const { showResult } = useResultDialog();
 
   const getExecutionContext = useCallback((): ExecutionContext => {
     return {
@@ -67,10 +71,14 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         closeAllTabs: tabContext.closeAllTabs,
         closeTabsToRight: tabContext.closeTabsToRight,
       },
+      feedback: {
+        showToast,
+        showResult,
+      },
       navigate,
       queryClient,
     };
-  }, [ui, tabContext, navigate, queryClient]);
+  }, [ui, tabContext, navigate, queryClient, showToast, showResult]);
 
   const execute = useCallback(
     async (commandId: string, args: Record<string, unknown> = {}) => {

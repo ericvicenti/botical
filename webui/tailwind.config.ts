@@ -9,6 +9,7 @@ export default {
         bg: {
           primary: "var(--color-bg-primary)",
           secondary: "var(--color-bg-secondary)",
+          tertiary: "var(--color-bg-tertiary)",
           elevated: "var(--color-bg-elevated)",
           surface: "var(--color-bg-surface)",
         },

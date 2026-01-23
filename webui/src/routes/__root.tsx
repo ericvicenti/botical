@@ -1,10 +1,14 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useAgentActions } from "@/hooks/useAgentActions";
 import { TabBar } from "@/components/layout/TabBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomPanel } from "@/components/layout/BottomPanel";
 import { CommandProvider } from "@/commands/context";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
+import { BackendActionsLoader } from "@/commands/BackendActionsLoader";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ResultDialogProvider } from "@/components/ui/ResultDialog";
 import { registerAllCommands } from "@/commands/definitions";
 
 // Register commands on app load
@@ -16,6 +20,7 @@ export const Route = createRootRoute({
 
 function RootLayoutInner() {
   useKeyboardShortcuts();
+  useAgentActions();
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
@@ -43,8 +48,13 @@ function RootLayoutInner() {
 
 function RootLayout() {
   return (
-    <CommandProvider>
-      <RootLayoutInner />
-    </CommandProvider>
+    <ToastProvider>
+      <ResultDialogProvider>
+        <CommandProvider>
+          <BackendActionsLoader />
+          <RootLayoutInner />
+        </CommandProvider>
+      </ResultDialogProvider>
+    </ToastProvider>
   );
 }

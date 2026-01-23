@@ -1200,3 +1200,17 @@ export function useCoreTools() {
     staleTime: Infinity, // Core tools don't change during runtime
   });
 }
+
+// Backend Actions (for command palette)
+import type { BackendAction } from "./types";
+
+export function useBackendActions() {
+  return useQuery({
+    queryKey: ["actions", "backend"],
+    queryFn: async () => {
+      const response = await apiClientRaw<BackendAction[]>("/api/tools/actions");
+      return response.data;
+    },
+    staleTime: Infinity, // Actions don't change during runtime
+  });
+}

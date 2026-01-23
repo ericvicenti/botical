@@ -29,15 +29,17 @@ import {
 } from "@/services/tools.ts";
 import { ValidationError } from "@/utils/errors.ts";
 import { ToolRegistry } from "@/tools/registry.ts";
+import { ActionRegistry } from "@/actions/index.ts";
 
 const tools = new Hono();
 
 /**
  * GET /api/tools/core
- * List built-in/core tools from the registry
+ * List built-in/core tools from the registry (including actions)
  */
 tools.get("/core", async (c) => {
   const registeredTools = ToolRegistry.getAll();
+  const registeredActions = ActionRegistry.getAll();
 
   const coreTools = registeredTools.map(tool => ({
     name: tool.definition.name,
@@ -46,9 +48,78 @@ tools.get("/core", async (c) => {
     requiresCodeExecution: tool.requiresCodeExecution,
   }));
 
+  // Add actions as tools (actions are always safe - no code execution)
+  const actionTools = registeredActions.map(action => ({
+    name: action.definition.id.replace(/\./g, "_"),
+    description: action.definition.description,
+    category: action.definition.category,
+    requiresCodeExecution: false,
+  }));
+
   return c.json({
-    data: coreTools,
+    data: [...coreTools, ...actionTools],
   });
+});
+
+/**
+ * GET /api/actions
+ * List all registered actions with full metadata for command palette
+ */
+tools.get("/actions", async (c) => {
+  const registeredActions = ActionRegistry.getAll();
+
+  const actions = registeredActions.map(action => {
+    const def = action.definition;
+
+    // Extract param info from Zod schema
+    const shape = def.params._def?.shape?.();
+    const params: Array<{
+      name: string;
+      type: string;
+      required: boolean;
+      description?: string;
+      options?: string[];
+    }> = [];
+
+    if (shape) {
+      for (const [name, fieldSchema] of Object.entries(shape)) {
+        const field = fieldSchema as any;
+        const typeName = field._def?.typeName;
+        const isOptional = typeName === "ZodOptional" || typeName === "ZodDefault";
+        const innerType = isOptional ? field._def?.innerType : field;
+        const innerTypeName = innerType?._def?.typeName;
+
+        let type = "string";
+        if (innerTypeName === "ZodNumber") type = "number";
+        else if (innerTypeName === "ZodBoolean") type = "boolean";
+        else if (innerTypeName === "ZodEnum") type = "enum";
+
+        const param: any = {
+          name,
+          type,
+          required: !isOptional,
+          description: field._def?.description || field.description,
+        };
+
+        if (innerTypeName === "ZodEnum" && innerType._def?.values) {
+          param.options = innerType._def.values;
+        }
+
+        params.push(param);
+      }
+    }
+
+    return {
+      id: def.id,
+      label: def.label,
+      description: def.description,
+      category: def.category,
+      icon: def.icon,
+      params,
+    };
+  });
+
+  return c.json({ data: actions });
 });
 
 /**
@@ -210,6 +281,49 @@ tools.delete("/:id", async (c) => {
   return c.json({
     data: { deleted: true },
   });
+});
+
+/**
+ * POST /api/tools/actions/execute
+ * Execute a backend action (for command palette)
+ */
+tools.post("/actions/execute", async (c) => {
+  const body = await c.req.json();
+  const { actionId, params } = body;
+
+  if (!actionId) {
+    throw new ValidationError("actionId is required");
+  }
+
+  const action = ActionRegistry.get(actionId);
+  if (!action) {
+    return c.json({ type: "error", message: `Action "${actionId}" not found` }, 404);
+  }
+
+  // Build context
+  let projectPath = process.cwd();
+
+  if (params?.projectId) {
+    try {
+      const { ProjectService } = await import("@/services/projects.ts");
+      const rootDb = DatabaseManager.getRootDb();
+      const project = ProjectService.getById(rootDb, params.projectId);
+      if (project?.path) {
+        projectPath = project.path;
+      }
+    } catch {
+      // Project not found, use cwd
+    }
+  }
+
+  const context = {
+    projectPath,
+    projectId: params?.projectId,
+  };
+
+  const result = await ActionRegistry.execute(actionId, params || {}, context);
+
+  return c.json(result);
 });
 
 export { tools };
