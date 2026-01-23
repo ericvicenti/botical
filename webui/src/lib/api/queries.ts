@@ -1270,7 +1270,8 @@ export function useCreateWorkflow() {
         }),
       }),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
+      // Use refetchQueries to force immediate refetch
+      queryClient.refetchQueries({
         queryKey: ["projects", variables.projectId, "workflows"],
       });
     },
@@ -1293,7 +1294,8 @@ export function useDeleteWorkflow() {
         { method: "DELETE" }
       ),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({
+      // Use refetchQueries to force immediate refetch
+      queryClient.refetchQueries({
         queryKey: ["projects", projectId, "workflows"],
       });
     },

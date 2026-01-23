@@ -152,8 +152,9 @@ function WorkflowEditor() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workflows", workflowId] });
-      queryClient.invalidateQueries({ queryKey: ["projects", selectedProjectId, "workflows"] });
+      // Refetch both the individual workflow and the list
+      queryClient.refetchQueries({ queryKey: ["workflows", workflowId] });
+      queryClient.refetchQueries({ queryKey: ["projects", selectedProjectId, "workflows"] });
       setIsDirty(false);
     },
     onError: (err) => {

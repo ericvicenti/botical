@@ -209,6 +209,178 @@ test.describe("Workflows", () => {
     await expect(page.getByText(/Error loading workflow/)).toBeVisible();
   });
 
+  test("should show workflow in sidebar after creation", async ({ page }) => {
+    // Track whether workflow has been created and how many times list is fetched
+    let workflowCreated = false;
+    let listFetchCount = 0;
+
+    // Mock workflows list - returns empty initially, then the workflow after creation
+    await page.route("**/api/workflows?projectId=*", async (route) => {
+      listFetchCount++;
+      if (workflowCreated) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [mockWorkflow], meta: { total: 1, limit: 50, offset: 0, hasMore: false } }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [], meta: { total: 0, limit: 50, offset: 0, hasMore: false } }),
+        });
+      }
+    });
+
+    // Mock the create workflow endpoint
+    await page.route("**/api/workflows", async (route) => {
+      if (route.request().method() === "POST") {
+        workflowCreated = true;
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({ data: mockWorkflow }),
+        });
+      }
+    });
+
+    // Mock the workflow fetch for the editor
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    await page.goto("/");
+
+    // Select project
+    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+
+    // Go to workflows panel
+    await page.getByRole("button", { name: "Workflows" }).click();
+
+    // Should show empty state initially
+    await expect(page.getByTestId("no-workflows-message")).toBeVisible();
+
+    // Record initial fetch count
+    const initialFetchCount = listFetchCount;
+
+    // Click create workflow button
+    await page.getByTestId("new-workflow-button").click();
+
+    // Should navigate to workflow editor
+    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+
+    // Wait a bit for the invalidation to trigger a refetch
+    await page.waitForTimeout(500);
+
+    // The list should have been refetched after creation
+    expect(listFetchCount).toBeGreaterThan(initialFetchCount);
+
+    // The workflow should now appear in the list (sidebar should still be showing workflows panel)
+    await expect(page.getByTestId(`workflow-item-${mockWorkflow.id}`)).toBeVisible();
+    await expect(page.getByTestId("no-workflows-message")).not.toBeVisible();
+  });
+
+  test("should update workflow label in sidebar after saving changes", async ({ page }) => {
+    const updatedWorkflow = {
+      ...mockWorkflow,
+      label: "Updated Workflow Label",
+    };
+
+    let saveCount = 0;
+
+    // Mock workflows list - returns the workflow (updated version after save)
+    await page.route("**/api/workflows?projectId=*", async (route) => {
+      if (saveCount > 0) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [updatedWorkflow], meta: { total: 1, limit: 50, offset: 0, hasMore: false } }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [mockWorkflow], meta: { total: 1, limit: 50, offset: 0, hasMore: false } }),
+        });
+      }
+    });
+
+    // Mock the workflow fetch for the editor
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: saveCount > 0 ? updatedWorkflow : mockWorkflow }),
+        });
+      }
+    });
+
+    // Mock the workflow update (PUT) endpoint
+    await page.route(`**/api/workflows/${mockWorkflow.id}`, async (route) => {
+      if (route.request().method() === "PUT") {
+        saveCount++;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: updatedWorkflow }),
+        });
+      }
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    // Set up localStorage with selected project
+    await page.goto("/");
+    await page.evaluate((projectId) => {
+      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+    }, mockProject.id);
+
+    await page.goto(`/workflows/${mockWorkflow.id}`);
+
+    // Wait for editor to load
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+    await expect(page.getByTestId("workflow-label")).toContainText("Test Workflow");
+
+    // Make a change (update description)
+    const descInput = page.locator('input[placeholder="What this workflow does..."]');
+    await descInput.fill("Updated description");
+
+    // Save button should now be enabled
+    await expect(page.getByTestId("workflow-save-button")).toBeEnabled();
+
+    // Click save
+    await page.getByTestId("workflow-save-button").click();
+
+    // Wait for save to complete
+    await page.waitForTimeout(500);
+
+    // Now check the sidebar - the workflow should show the updated label
+    await page.getByRole("button", { name: "Workflows" }).click();
+    await expect(page.getByTestId(`workflow-item-${mockWorkflow.id}`)).toContainText("Updated Workflow Label");
+  });
+
   test("should show save button disabled when no changes", async ({ page }) => {
     // Mock the workflow fetch
     await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
