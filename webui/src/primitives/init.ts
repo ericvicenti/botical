@@ -27,8 +27,7 @@ import "./git/pages";
 // Workflow primitives
 import "./workflow/pages";
 
-// Future primitives will be imported here:
-// import "./settings/pages";
-// etc.
+// Settings primitives
+import "./settings/pages";
 
 console.log("[Iris Primitives] Initialized");
