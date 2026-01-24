@@ -11,14 +11,20 @@ import "./home/pages";
 // Project primitives
 import "./project/pages";
 
+// Task primitives
+import "./task/pages";
+
+// Process primitives
+import "./process/pages";
+
 // Git primitives
 import "./git/actions";
 import "./git/pages";
 
 // Future primitives will be imported here:
 // import "./file/pages";
-// import "./task/pages";
-// import "./process/pages";
+// import "./workflow/pages";
+// import "./settings/pages";
 // etc.
 
 console.log("[Iris Primitives] Initialized");
