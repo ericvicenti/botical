@@ -82,6 +82,26 @@ function emitNavigateEvent(payload: NavigatePayload) {
   }
 }
 
+// Custom event emitter for workflow notifications
+export interface WorkflowNotifyPayload {
+  message: string;
+  variant: "info" | "success" | "warning" | "error";
+  executionId?: string;
+}
+type WorkflowNotifyHandler = (payload: WorkflowNotifyPayload) => void;
+const workflowNotifyHandlers = new Set<WorkflowNotifyHandler>();
+
+export function subscribeToWorkflowNotify(handler: WorkflowNotifyHandler): () => void {
+  workflowNotifyHandlers.add(handler);
+  return () => workflowNotifyHandlers.delete(handler);
+}
+
+function emitWorkflowNotify(payload: WorkflowNotifyPayload) {
+  for (const handler of workflowNotifyHandlers) {
+    handler(payload);
+  }
+}
+
 export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
   log(`Received event: ${event.type}`, event.payload);
 
@@ -252,6 +272,23 @@ export function handleWebSocketEvent(event: WSEvent, queryClient: QueryClient) {
     case "ui.navigate":
       log(`Navigate: ${event.payload.pageId}`, event.payload);
       emitNavigateEvent(event.payload as unknown as NavigatePayload);
+      break;
+
+    // Workflow notification events
+    case "workflow.notify":
+      log(`Workflow notify: ${event.payload.message}`, event.payload);
+      emitWorkflowNotify(event.payload as unknown as WorkflowNotifyPayload);
+      break;
+
+    // Workflow execution events - invalidate queries
+    case "workflow.execution":
+    case "workflow.step":
+      log(`Workflow event: ${event.type}`, event.payload);
+      if (event.payload.executionId) {
+        queryClient.invalidateQueries({
+          queryKey: ["workflow-executions", event.payload.executionId],
+        });
+      }
       break;
 
     default:

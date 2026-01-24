@@ -35,6 +35,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectDelayRef = useRef(RECONNECT_DELAY);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track intentional cleanup to prevent reconnect attempts during unmount
+  const isCleaningUpRef = useRef(false);
   const queryClient = useQueryClient();
 
   const connect = useCallback(() => {
@@ -56,6 +58,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     socket.onclose = () => {
       setStatus("disconnected");
       wsRef.current = null;
+
+      // Don't reconnect if we're cleaning up (component unmounting)
+      if (isCleaningUpRef.current) {
+        return;
+      }
 
       // Reconnect with exponential backoff
       reconnectTimeoutRef.current = setTimeout(() => {
@@ -86,9 +93,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useEffect(() => {
+    isCleaningUpRef.current = false;
     connect();
 
     return () => {
+      isCleaningUpRef.current = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }

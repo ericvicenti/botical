@@ -458,4 +458,50 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 7,
+    name: "workflow_executions",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- WORKFLOW EXECUTIONS
+        -- Tracks execution of workflows
+        -- ============================================
+
+        CREATE TABLE workflow_executions (
+          id TEXT PRIMARY KEY,
+          workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+          project_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          input TEXT NOT NULL DEFAULT '{}',
+          output TEXT,
+          error TEXT,
+          started_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          completed_at INTEGER
+        );
+
+        CREATE INDEX idx_workflow_executions_workflow ON workflow_executions(workflow_id);
+        CREATE INDEX idx_workflow_executions_status ON workflow_executions(status);
+
+        -- ============================================
+        -- STEP EXECUTIONS
+        -- Tracks execution of individual workflow steps
+        -- ============================================
+
+        CREATE TABLE step_executions (
+          id TEXT PRIMARY KEY,
+          execution_id TEXT NOT NULL REFERENCES workflow_executions(id) ON DELETE CASCADE,
+          step_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          resolved_args TEXT,
+          output TEXT,
+          error TEXT,
+          started_at INTEGER,
+          completed_at INTEGER
+        );
+
+        CREATE INDEX idx_step_executions_execution ON step_executions(execution_id);
+      `);
+    },
+  },
 ];

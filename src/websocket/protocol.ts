@@ -242,6 +242,11 @@ export const EventType = z.enum([
   // UI action events (from AI agent tools)
   "ui.action",
   "ui.navigate",
+
+  // Workflow events
+  "workflow.execution",
+  "workflow.step",
+  "workflow.notify",
 ]);
 
 export type EventType = z.infer<typeof EventType>;

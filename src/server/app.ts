@@ -15,7 +15,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleError, logger, requestId } from "./middleware/index.ts";
-import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -75,6 +75,7 @@ export function createApp() {
   app.route("/api/projects", gitClone); // Clone repository route
   app.route("/api/git", gitIdentity); // Git identity (SSH key) route
   app.route("/api/workflows", workflows); // Workflow routes
+  app.route("/api", workflowExecutions); // Workflow execution routes
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

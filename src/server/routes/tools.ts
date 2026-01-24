@@ -71,8 +71,8 @@ tools.get("/actions", async (c) => {
   const actions = registeredActions.map(action => {
     const def = action.definition;
 
-    // Extract param info from Zod schema
-    const shape = def.params._def?.shape?.();
+    // Extract param info from Zod schema (casting to access internal Zod structure)
+    const shape = (def.params as any)._def?.shape?.();
     const params: Array<{
       name: string;
       type: string;

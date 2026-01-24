@@ -12,7 +12,8 @@ export type CommandCategory =
   | "mission"
   | "process"
   | "git"
-  | "action";
+  | "action"
+  | "query";
 
 export interface CommandShortcut {
   key: string;

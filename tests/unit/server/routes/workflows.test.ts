@@ -259,13 +259,15 @@ describe("Workflows API Routes", () => {
       expect(body.error.code).toBe("NOT_FOUND");
     });
 
-    it("requires projectId parameter", async () => {
-      const response = await app.request("/api/workflows/wf_123");
+    it("returns 404 for non-existent workflow without projectId", async () => {
+      // When projectId is not provided, API searches all projects
+      // For a non-existent workflow, it should return 404
+      const response = await app.request("/api/workflows/wf_nonexistent");
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
 
       const body = (await response.json()) as ErrorResponse;
-      expect(body.error.code).toBe("VALIDATION_ERROR");
+      expect(body.error.code).toBe("NOT_FOUND");
     });
   });
 

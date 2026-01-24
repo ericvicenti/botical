@@ -3,6 +3,7 @@ import { viewCommands } from "./view.commands";
 import { tabCommands } from "./tab.commands";
 import { fileCommands } from "./file.commands";
 import { projectCommands } from "./project.commands";
+import { getQueryCommands, runCustomQueryCommand } from "./query.commands";
 
 // Ensure primitives are registered before we generate commands from them
 import "@/primitives/init";
@@ -20,6 +21,8 @@ export function registerAllCommands() {
     ...fileCommands,
     ...projectCommands,
     ...getPrimitiveCommands(),
+    ...getQueryCommands(),
+    runCustomQueryCommand,
   ];
 
   for (const command of allCommands) {

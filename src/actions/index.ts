@@ -21,6 +21,7 @@ import { viewActions } from "./view.ts";
 import { shellActions } from "./shell.ts";
 import { agentActions } from "./agent.ts";
 import { workflowActions } from "./workflow.ts";
+import { projectActions } from "./project.ts";
 import { ActionRegistry } from "./registry.ts";
 
 /**
@@ -64,6 +65,11 @@ export function registerAllActions(): void {
 
   // Workflow actions
   for (const action of workflowActions) {
+    ActionRegistry.register(action);
+  }
+
+  // Project actions
+  for (const action of projectActions) {
     ActionRegistry.register(action);
   }
 }
@@ -125,3 +131,9 @@ export {
   workflowDelete,
   workflowActions,
 } from "./workflow.ts";
+
+export {
+  projectDelete,
+  projectOpen,
+  projectActions,
+} from "./project.ts";

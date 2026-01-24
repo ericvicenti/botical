@@ -19,7 +19,8 @@ import {
   WorkflowCreateSchema,
   WorkflowUpdateSchema,
 } from "@/services/workflows.ts";
-import { ValidationError } from "@/utils/errors.ts";
+import { ValidationError, NotFoundError } from "@/utils/errors.ts";
+import { ProjectService } from "@/services/projects.ts";
 
 const workflows = new Hono();
 
@@ -105,19 +106,38 @@ workflows.post("/", async (c) => {
 /**
  * GET /api/workflows/:id
  * Get workflow by ID
+ *
+ * If projectId is provided, looks in that project's database.
+ * Otherwise, searches all projects to find the workflow.
  */
 workflows.get("/:id", async (c) => {
   const workflowId = c.req.param("id");
   const projectId = c.req.query("projectId");
 
-  if (!projectId) {
-    throw new ValidationError("projectId query parameter is required");
+  if (projectId) {
+    // Fast path: projectId is known
+    const db = DatabaseManager.getProjectDb(projectId);
+    const workflow = WorkflowService.getByIdOrThrow(db, workflowId);
+    return c.json({ data: workflow });
   }
 
-  const db = DatabaseManager.getProjectDb(projectId);
-  const workflow = WorkflowService.getByIdOrThrow(db, workflowId);
+  // Slow path: search all projects for this workflow
+  const rootDb = DatabaseManager.getRootDb();
+  const projects = ProjectService.list(rootDb, { limit: 100 });
 
-  return c.json({ data: workflow });
+  for (const project of projects) {
+    try {
+      const db = DatabaseManager.getProjectDb(project.id);
+      const workflow = WorkflowService.getById(db, workflowId);
+      if (workflow) {
+        return c.json({ data: workflow });
+      }
+    } catch {
+      // Project database might not exist, skip
+    }
+  }
+
+  throw new NotFoundError("Workflow", workflowId);
 });
 
 /**

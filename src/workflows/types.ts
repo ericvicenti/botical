@@ -185,6 +185,7 @@ export type WorkflowStep =
 export interface WorkflowDefinition {
   // Identity
   id: string; // UUID
+  projectId: string; // Project this workflow belongs to
   name: string; // Unique name within project (e.g., "deploy-staging")
   label: string; // Human-readable label
   description: string;
@@ -295,6 +296,7 @@ export interface WorkflowRecord {
 export function recordToWorkflow(record: WorkflowRecord): WorkflowDefinition {
   return {
     id: record.id,
+    projectId: record.project_id,
     name: record.name,
     label: record.label,
     description: record.description,

@@ -190,7 +190,7 @@ export const tasksGetQuery: Query<TaskQueryResult, TasksGetParams> = {
 };
 
 export const tasksCountBySessionQuery: Query<{ count: number }, TasksCountBySessionParams> = {
-  name: ""tasks.countbysession", "tasks.countbymission"bysession",
+  name: "tasks.countbysession",
   endpoint: (params) => `/api/projects/${params.projectId}/sessions/${params.sessionId}/tasks/count`,
   method: "GET",
   params: (params) => ({
@@ -200,7 +200,7 @@ export const tasksCountBySessionQuery: Query<{ count: number }, TasksCountBySess
     ttl: 5_000,
     scope: "project",
     key: (params) => {
-      const keyParts = [""tasks.countbysession", "tasks.countbymission"bysession", params.projectId, params.sessionId];
+      const keyParts = ["tasks.countbysession", params.projectId, params.sessionId];
       if (params.status) keyParts.push(`status:${params.status}`);
       return keyParts;
     },
@@ -209,7 +209,7 @@ export const tasksCountBySessionQuery: Query<{ count: number }, TasksCountBySess
 };
 
 export const tasksCountByMissionQuery: Query<{ count: number }, TasksCountByMissionParams> = {
-  name: ""tasks.countbysession", "tasks.countbymission"bymission",
+  name: "tasks.countbymission",
   endpoint: (params) => `/api/projects/${params.projectId}/missions/${params.missionId}/tasks/count`,
   method: "GET",
   params: (params) => ({
@@ -219,7 +219,7 @@ export const tasksCountByMissionQuery: Query<{ count: number }, TasksCountByMiss
     ttl: 5_000,
     scope: "project",
     key: (params) => {
-      const keyParts = [""tasks.countbysession", "tasks.countbymission"bymission", params.projectId, params.missionId];
+      const keyParts = ["tasks.countbymission", params.projectId, params.missionId];
       if (params.status) keyParts.push(`status:${params.status}`);
       return keyParts;
     },
