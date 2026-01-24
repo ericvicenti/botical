@@ -22,6 +22,7 @@ import { shellActions } from "./shell.ts";
 import { agentActions } from "./agent.ts";
 import { workflowActions } from "./workflow.ts";
 import { projectActions } from "./project.ts";
+import { utilityActions } from "./utility.ts";
 import { ActionRegistry } from "./registry.ts";
 
 /**
@@ -70,6 +71,11 @@ export function registerAllActions(): void {
 
   // Project actions
   for (const action of projectActions) {
+    ActionRegistry.register(action);
+  }
+
+  // Utility actions
+  for (const action of utilityActions) {
     ActionRegistry.register(action);
   }
 }
@@ -137,3 +143,8 @@ export {
   projectOpen,
   projectActions,
 } from "./project.ts";
+
+export {
+  utilityWait,
+  utilityActions,
+} from "./utility.ts";
