@@ -17,12 +17,14 @@ import "./task/pages";
 // Process primitives
 import "./process/pages";
 
+// File primitives
+import "./file/pages";
+
 // Git primitives
 import "./git/actions";
 import "./git/pages";
 
 // Future primitives will be imported here:
-// import "./file/pages";
 // import "./workflow/pages";
 // import "./settings/pages";
 // etc.

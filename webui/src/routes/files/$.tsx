@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { CodeEditor } from "@/components/files/CodeEditor";
+import { FileViewPage } from "@/primitives/file";
 
 const fileSearchSchema = z.object({
   commit: z.string().optional(),
 });
 
 export const Route = createFileRoute("/files/$")({
-  component: FileView,
+  component: FileViewRoute,
   validateSearch: fileSearchSchema,
 });
 
-function FileView() {
+function FileViewRoute() {
   const params = Route.useParams();
-  const { commit } = Route.useSearch();
+  const search = Route.useSearch();
   const splatPath = params._splat || "";
 
   // Path format: projectId/path/to/file.ts
@@ -21,17 +21,10 @@ function FileView() {
   const projectId = parts[0] || "";
   const filePath = parts.slice(1).join("/");
 
-  if (!projectId || !filePath) {
-    return (
-      <div className="h-full flex items-center justify-center text-text-muted">
-        Invalid file path
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full">
-      <CodeEditor projectId={projectId} path={filePath} commit={commit} />
-    </div>
+    <FileViewPage
+      params={{ projectId, path: filePath }}
+      search={{ commit: search.commit }}
+    />
   );
 }
