@@ -4,7 +4,8 @@ import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
 import { resolve } from "path";
 
 // Allow dynamic backend port via environment variable (set by scripts/dev.ts)
-const apiPort = process.env.VITE_API_PORT || "4096";
+// Default to 6001 (first port in XX01/XX02 scheme starting at 60)
+const apiPort = process.env.VITE_API_PORT || "6001";
 
 export default defineConfig({
   plugins: [react(), TanStackRouterVite()],
@@ -14,7 +15,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 6002, // Default to XX02 scheme (can be overridden with --port)
     proxy: {
       "/api": {
         target: `http://localhost:${apiPort}`,

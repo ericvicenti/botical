@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, FolderTree, LayoutList, Plus } from "lucide-react";
+import { ChevronDown, FolderTree, LayoutList, Plus, FolderOpen } from "lucide-react";
 import { useProjects } from "@/lib/api/queries";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
+import { OpenProjectModal } from "./OpenProjectModal";
 
 export function ProjectSelector() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isOpenProjectModalOpen, setIsOpenProjectModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: projects, isLoading } = useProjects();
   const { selectedProjectId, setSelectedProject } = useUI();
@@ -45,6 +47,21 @@ export function ProjectSelector() {
     openTab({ type: "create-project" });
     navigate({ to: "/create-project" });
     setIsOpen(false);
+  };
+
+  const handleOpenProject = () => {
+    setIsOpen(false);
+    setIsOpenProjectModalOpen(true);
+  };
+
+  const handleProjectOpened = (project: { id: string; name: string }) => {
+    setSelectedProject(project.id);
+    openPreviewTab({
+      type: "project",
+      projectId: project.id,
+      projectName: project.name,
+    });
+    navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
   };
 
   const handleViewAllProjects = () => {
@@ -117,6 +134,17 @@ export function ProjectSelector() {
                 <span>View All Projects</span>
               </button>
               <button
+                onClick={handleOpenProject}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 text-left",
+                  "hover:bg-bg-secondary transition-colors",
+                  "text-sm text-text-secondary"
+                )}
+              >
+                <FolderOpen className="w-4 h-4 shrink-0" />
+                <span>Open Project</span>
+              </button>
+              <button
                 onClick={handleCreateProject}
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-2 text-left",
@@ -131,6 +159,12 @@ export function ProjectSelector() {
           )}
         </div>
       )}
+
+      <OpenProjectModal
+        isOpen={isOpenProjectModalOpen}
+        onClose={() => setIsOpenProjectModalOpen(false)}
+        onProjectOpened={handleProjectOpened}
+      />
     </div>
   );
 }

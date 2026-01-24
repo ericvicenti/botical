@@ -1304,6 +1304,56 @@ export function useDeleteWorkflow() {
   });
 }
 
+// Filesystem browsing
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  isHidden: boolean;
+  isGitRepo?: boolean;
+  hasPackageJson?: boolean;
+}
+
+export interface BrowseResponse {
+  path: string;
+  parent: string | null;
+  entries: DirectoryEntry[];
+  isGitRepo: boolean;
+  hasPackageJson: boolean;
+}
+
+export interface ValidatePathResponse {
+  valid: boolean;
+  path: string;
+  suggestedName?: string;
+  isGitRepo?: boolean;
+  hasPackageJson?: boolean;
+  error?: string;
+}
+
+export function useBrowseDirectory(dirPath?: string) {
+  return useQuery({
+    queryKey: ["filesystem", "browse", dirPath],
+    queryFn: async () => {
+      const params = dirPath ? `?path=${encodeURIComponent(dirPath)}` : "";
+      const response = await apiClientRaw<BrowseResponse>(
+        `/api/filesystem/browse${params}`
+      );
+      return response.data;
+    },
+  });
+}
+
+export function useValidatePath() {
+  return useMutation({
+    mutationFn: ({ path }: { path: string }) =>
+      apiClient<ValidatePathResponse>("/api/filesystem/validate", {
+        method: "POST",
+        body: JSON.stringify({ path }),
+      }),
+  });
+}
+
 export function useGenerateCommitMessage() {
   return useMutation({
     mutationFn: ({

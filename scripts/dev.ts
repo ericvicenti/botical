@@ -4,6 +4,11 @@
  *
  * Starts backend and frontend dev servers with auto-port selection.
  * Run with: bun dev
+ *
+ * Port scheme: XX01 (backend) and XX02 (frontend)
+ * - First instance: 6001 (backend), 6002 (frontend)
+ * - Second instance: 6101 (backend), 6102 (frontend)
+ * - Third instance: 6201 (backend), 6202 (frontend)
  */
 
 import { spawn, type Subprocess } from "bun";
@@ -28,15 +33,29 @@ async function isPortAvailable(port: number): Promise<boolean> {
   });
 }
 
-async function findAvailablePort(startPort: number): Promise<number> {
-  let port = startPort;
-  while (port < startPort + 100) {
-    if (await isPortAvailable(port)) {
-      return port;
+/**
+ * Find an available port pair for backend (XX01) and frontend (XX02).
+ * Starts at base 60 (6001/6002) and increments (6101/6102, 6201/6202, etc.)
+ */
+async function findAvailablePortPair(): Promise<{ backend: number; frontend: number }> {
+  let base = 60;
+  const maxBase = 99;
+
+  while (base <= maxBase) {
+    const backendPort = base * 100 + 1;  // XX01
+    const frontendPort = base * 100 + 2; // XX02
+
+    const backendAvailable = await isPortAvailable(backendPort);
+    const frontendAvailable = await isPortAvailable(frontendPort);
+
+    if (backendAvailable && frontendAvailable) {
+      return { backend: backendPort, frontend: frontendPort };
     }
-    port++;
+
+    base++;
   }
-  throw new Error(`No available port found starting from ${startPort}`);
+
+  throw new Error("No available port pair found (tried 6001-9901)");
 }
 
 async function ensureDependencies(): Promise<void> {
@@ -65,13 +84,11 @@ async function main(): Promise<void> {
 
   await ensureDependencies();
 
-  const backendPort = await findAvailablePort(4096);
-  const frontendPort = await findAvailablePort(5173);
+  const ports = await findAvailablePortPair();
+  const backendPort = ports.backend;
+  const frontendPort = ports.frontend;
 
-  if (backendPort !== 4096) console.log(`Backend port 4096 in use, using ${backendPort}`);
-  if (frontendPort !== 5173) console.log(`Frontend port 5173 in use, using ${frontendPort}`);
-
-  console.log(`\nBackend:  http://localhost:${backendPort}`);
+  console.log(`Backend:  http://localhost:${backendPort}`);
   console.log(`Frontend: http://localhost:${frontendPort}\n`);
 
   process.on("SIGINT", shutdown);

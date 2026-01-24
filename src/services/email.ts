@@ -15,7 +15,7 @@ import { z } from "zod";
 const EmailConfigSchema = z.object({
   resendApiKey: z.string().optional(),
   fromEmail: z.string().email().default("noreply@iris.local"),
-  appUrl: z.string().url().default("http://localhost:4096"),
+  appUrl: z.string().url().default("http://localhost:6001"),
 });
 
 type EmailConfig = z.infer<typeof EmailConfigSchema>;

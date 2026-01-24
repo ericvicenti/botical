@@ -23,7 +23,7 @@ import { z } from "zod";
 const ConfigSchema = z.object({
   // Server settings
   dataDir: z.string(),
-  port: z.number().default(4096),
+  port: z.number().default(6001), // Default to XX01 scheme (first instance)
   host: z.string().default("localhost"),
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
@@ -31,7 +31,7 @@ const ConfigSchema = z.object({
   nodeEnv: z.enum(["development", "production", "test"]).default("development"),
 
   // Auth & Email settings
-  appUrl: z.string().url().default("http://localhost:4096"),
+  appUrl: z.string().url().default("http://localhost:6001"),
   resendApiKey: z.string().optional(),
   emailFrom: z.string().email().optional(),
 
