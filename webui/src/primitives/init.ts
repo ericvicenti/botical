@@ -24,8 +24,10 @@ import "./file/pages";
 import "./git/actions";
 import "./git/pages";
 
+// Workflow primitives
+import "./workflow/pages";
+
 // Future primitives will be imported here:
-// import "./workflow/pages";
 // import "./settings/pages";
 // etc.
 
