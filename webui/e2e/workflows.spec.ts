@@ -418,4 +418,197 @@ test.describe("Workflows", () => {
     // Dirty indicator should not be visible
     await expect(page.getByTestId("workflow-dirty-indicator")).not.toBeVisible();
   });
+
+  test("should execute a workflow with wait action and show notification", async ({ page }) => {
+    const workflowWithWait = {
+      id: "wf_wait-workflow",
+      name: "wait-workflow",
+      label: "Wait Workflow",
+      description: "A workflow with wait and notify",
+      category: "other",
+      icon: null,
+      inputSchema: { fields: [] },
+      steps: [
+        {
+          id: "notify-start",
+          type: "notify",
+          message: { type: "literal", value: "Starting wait..." },
+          variant: "info",
+        },
+        {
+          id: "wait-step",
+          type: "action",
+          action: "utility.wait",
+          args: { ms: { type: "literal", value: 500 } },
+          dependsOn: ["notify-start"],
+        },
+        {
+          id: "notify-end",
+          type: "notify",
+          message: { type: "literal", value: "Wait complete!" },
+          variant: "success",
+          dependsOn: ["wait-step"],
+        },
+      ],
+    };
+
+    const mockExecution = {
+      id: "wfexec_test-exec",
+      workflowId: workflowWithWait.id,
+      projectId: mockProject.id,
+      status: "completed",
+      input: {},
+      output: {},
+      steps: JSON.stringify([
+        { id: "notify-start", status: "completed" },
+        { id: "wait-step", status: "completed", output: { durationMs: 500 } },
+        { id: "notify-end", status: "completed" },
+      ]),
+      startedAt: Date.now(),
+      completedAt: Date.now() + 600,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    // Mock workflows list with our wait workflow
+    await page.route("**/api/workflows?projectId=*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [workflowWithWait], meta: { total: 1, limit: 50, offset: 0, hasMore: false } }),
+      });
+    });
+
+    // Mock the workflow fetch
+    await page.route(`**/api/workflows/${workflowWithWait.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: workflowWithWait }),
+      });
+    });
+
+    // Mock execute endpoint
+    await page.route(`**/api/workflows/${workflowWithWait.id}/execute`, async (route) => {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { executionId: mockExecution.id, workflowId: workflowWithWait.id, status: "pending" } }),
+      });
+    });
+
+    // Mock execution status endpoint
+    await page.route(`**/api/workflow-executions/${mockExecution.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockExecution }),
+      });
+    });
+
+    // Mock actions endpoint
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [
+            {
+              id: "utility.wait",
+              label: "Wait",
+              description: "Pause execution for a specified duration",
+              category: "other",
+              params: {
+                type: "object",
+                properties: {
+                  ms: { type: "number", description: "Duration in milliseconds" },
+                  seconds: { type: "number", description: "Duration in seconds" },
+                },
+              },
+            },
+          ],
+        }),
+      });
+    });
+
+    // Set up localStorage with selected project
+    await page.goto("/");
+    await page.evaluate((projectId) => {
+      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+    }, mockProject.id);
+
+    await page.goto(`/workflows/${workflowWithWait.id}`);
+
+    // Wait for editor to load
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+
+    // Run button should be visible
+    const runButton = page.getByTestId("workflow-run-button");
+    await expect(runButton).toBeVisible();
+
+    // Click run button
+    await runButton.click();
+
+    // Should navigate to execution page
+    await expect(page).toHaveURL(new RegExp(`/workflow-runs/${mockExecution.id}`));
+  });
+
+  test("should display utility.wait action in action picker", async ({ page }) => {
+    const waitAction = {
+      id: "utility.wait",
+      label: "Wait",
+      description: "Pause execution for a specified duration",
+      category: "other",
+      icon: "clock",
+      params: {
+        type: "object",
+        properties: {
+          ms: { type: "number", description: "Duration in milliseconds" },
+          seconds: { type: "number", description: "Duration in seconds" },
+        },
+      },
+    };
+
+    // Mock the workflow fetch
+    await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    // Mock actions endpoint with utility.wait
+    await page.route("**/api/tools/actions", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [waitAction] }),
+      });
+    });
+
+    // Set up localStorage with selected project
+    await page.goto("/");
+    await page.evaluate((projectId) => {
+      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+    }, mockProject.id);
+
+    await page.goto(`/workflows/${mockWorkflow.id}`);
+
+    // Wait for editor to load
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+
+    // Click add step button
+    const addStepButton = page.getByTestId("add-step-button");
+    await addStepButton.click();
+
+    // Action step type should be available
+    const actionOption = page.getByTestId("step-type-action");
+    await expect(actionOption).toBeVisible();
+    await actionOption.click();
+
+    // Wait action should be listed in the action picker
+    await expect(page.getByText("utility.wait")).toBeVisible();
+    await expect(page.getByText("Pause execution")).toBeVisible();
+  });
 });
