@@ -52,3 +52,30 @@ export {
   type ExecuteQueryOptions,
   type ExecuteMutationOptions,
 } from "./executor.ts";
+
+// ============================================
+// Query Definitions
+// ============================================
+
+// Agent queries
+export {
+  agentsListQuery,
+  agentsGetQuery,
+  type AgentQueryResult,
+  type AgentsListParams,
+  type AgentsGetParams,
+} from "./agents.ts";
+
+// Tool queries
+export {
+  toolsCoreQuery,
+  toolsActionsQuery,
+  type CoreTool,
+  type BackendAction,
+} from "./tools.ts";
+
+// Git queries
+export {
+  gitIdentityQuery,
+  type GitIdentity,
+} from "./git.ts";

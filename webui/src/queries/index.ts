@@ -31,3 +31,27 @@ export {
 // Hooks
 export { useIrisQuery, prefetchIrisQuery } from "./useIrisQuery";
 export { useIrisMutation } from "./useIrisMutation";
+
+// ============================================
+// Query Definitions
+// ============================================
+
+// Agent queries
+export {
+  agentsListQuery,
+  agentsGetQuery,
+  type AgentQueryResult,
+  type AgentsListParams,
+  type AgentsGetParams,
+} from "./agents";
+
+// Tool queries
+export {
+  toolsCoreQuery,
+  toolsActionsQuery,
+  type CoreTool,
+  type BackendAction,
+} from "./tools";
+
+// Git queries
+export { gitIdentityQuery, type GitIdentity } from "./git";
