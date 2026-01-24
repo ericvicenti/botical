@@ -25,6 +25,30 @@ import type { WorkflowStep } from "@/workflows/types";
 
 const app = createApp();
 
+// Helper type for API responses
+interface ExecuteResponse {
+  data: {
+    executionId: string;
+    workflowId: string;
+    status: string;
+  };
+}
+
+interface ExecutionResponse {
+  data: {
+    id: string;
+    workflowId: string;
+    status: string;
+  };
+}
+
+// Default workflow fields for tests
+const defaultWorkflowFields = {
+  description: "",
+  category: "other" as const,
+  inputSchema: { fields: [] },
+};
+
 describe("Workflow Execution Integration", () => {
   const testDataDir = path.join(
     import.meta.dirname,
@@ -82,6 +106,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with a log step
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "log-test",
         label: "Log Test Workflow",
         steps: [
@@ -104,7 +129,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
       expect(data.data.executionId).toMatch(/^wfx_/);
       expect(data.data.status).toBe("pending");
 
@@ -122,6 +147,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with a wait action
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "wait-test",
         label: "Wait Test Workflow",
         steps: [
@@ -148,7 +174,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete (should take at least 50ms)
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -176,6 +202,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with a wait action using seconds
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "wait-seconds-test",
         label: "Wait Seconds Test Workflow",
         steps: [
@@ -202,7 +229,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -220,6 +247,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with multiple sequential wait steps
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "multi-wait-test",
         label: "Multi Wait Test Workflow",
         steps: [
@@ -251,7 +279,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -274,6 +302,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with parallel wait steps (no dependsOn)
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "parallel-wait-test",
         label: "Parallel Wait Test Workflow",
         steps: [
@@ -303,7 +332,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -322,6 +351,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with notify, wait, notify sequence
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "wait-notify-test",
         label: "Wait Notify Test Workflow",
         steps: [
@@ -359,7 +389,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -379,6 +409,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create a workflow with wait duration from input
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "wait-input-test",
         label: "Wait Input Test Workflow",
         steps: [
@@ -405,7 +436,7 @@ describe("Workflow Execution Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ExecuteResponse;
 
       // Wait for execution to complete
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -425,6 +456,7 @@ describe("Workflow Execution Integration", () => {
 
       // Create and execute a workflow
       const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
         name: "get-exec-test",
         label: "Get Execution Test",
         steps: [
@@ -443,7 +475,7 @@ describe("Workflow Execution Integration", () => {
         body: JSON.stringify({ projectId, input: {} }),
       });
 
-      const execData = await execResponse.json();
+      const execData = (await execResponse.json()) as ExecuteResponse;
       const executionId = execData.data.executionId;
 
       // Wait for completion
@@ -455,7 +487,7 @@ describe("Workflow Execution Integration", () => {
       );
 
       expect(getResponse.status).toBe(200);
-      const getData = await getResponse.json();
+      const getData = (await getResponse.json()) as ExecutionResponse;
 
       expect(getData.data.id).toBe(executionId);
       expect(getData.data.status).toBe("completed");
