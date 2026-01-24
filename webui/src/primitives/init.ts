@@ -5,14 +5,20 @@
  * Import this file once at app startup.
  */
 
+// Home primitives
+import "./home/pages";
+
+// Project primitives
+import "./project/pages";
+
 // Git primitives
 import "./git/actions";
 import "./git/pages";
 
 // Future primitives will be imported here:
-// import "./file/actions";
 // import "./file/pages";
-// import "./project/actions";
+// import "./task/pages";
+// import "./process/pages";
 // etc.
 
 console.log("[Iris Primitives] Initialized");
