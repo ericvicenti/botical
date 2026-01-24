@@ -106,3 +106,62 @@ export {
   type ServicesUpdateParams,
   type ServicesDeleteParams,
 } from "./services";
+
+// Session queries
+export {
+  sessionsListQuery,
+  sessionsGetQuery,
+  sessionsCountQuery,
+  sessionsCreateMutation,
+  sessionsUpdateMutation,
+  sessionsDeleteMutation,
+  type SessionQueryResult,
+  type SessionsListParams,
+  type SessionsGetParams,
+  type SessionsCountParams,
+  type SessionsCreateParams,
+  type SessionsUpdateParams,
+  type SessionsDeleteParams,
+} from "./sessions";
+
+// Message queries
+export {
+  messagesListQuery,
+  messagesGetQuery,
+  messagePartsListQuery,
+  messagesCreateMutation,
+  messagesDeleteMutation,
+  type MessageQueryResult,
+  type MessagePartQueryResult,
+  type MessageWithPartsQueryResult,
+  type MessagesListParams,
+  type MessagesGetParams,
+  type MessagePartsListParams,
+  type MessagesCreateParams,
+  type MessagesDeleteParams,
+} from "./messages";
+
+// Task queries
+export {
+  tasksListBySessionQuery,
+  tasksListByMissionQuery,
+  tasksGetQuery,
+  tasksCountBySessionQuery,
+  tasksCountByMissionQuery,
+  tasksCreateMutation,
+  tasksUpdateMutation,
+  tasksDeleteMutation,
+  tasksBatchReplaceMutation,
+  type TaskQueryResult,
+  type TaskStatus,
+  type TaskActor,
+  type TasksListBySessionParams,
+  type TasksListByMissionParams,
+  type TasksGetParams,
+  type TasksCountBySessionParams,
+  type TasksCountByMissionParams,
+  type TasksCreateParams,
+  type TasksUpdateParams,
+  type TasksDeleteParams,
+  type TasksBatchReplaceParams,
+} from "./tasks";
