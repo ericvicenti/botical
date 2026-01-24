@@ -218,12 +218,6 @@ describe("executeMutation", () => {
   });
 
   it("invalidates related queries by name", async () => {
-    const targetQuery = defineQuery({
-      name: "target.query",
-      fetch: async () => "data",
-      cache: { ttl: 60000 },
-    });
-
     // Populate cache
     cache.set(["target.query"], "cached", 60000);
     cache.set(["target.query", "id:1"], "cached-1", 60000);
@@ -231,7 +225,7 @@ describe("executeMutation", () => {
     const mutation = defineMutation({
       name: "test.invalidate",
       execute: async () => {},
-      invalidates: [targetQuery],
+      invalidates: ["target.query"],
     });
 
     await executeMutation(mutation, {}, context, { cache });

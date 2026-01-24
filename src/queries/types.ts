@@ -95,22 +95,22 @@ export interface Query<T, P = void> {
 
 /**
  * A Mutation definition
+ *
+ * TParams: The input parameters for the mutation
+ * TResult: The result returned by the mutation (defaults to void)
  */
-export interface Mutation<TData, TParams, TResult = void> {
+export interface Mutation<TParams, TResult = void> {
   /** Unique name for this mutation */
   name: string;
 
   /** Function to execute the mutation */
   execute: (params: TParams, context: MutationContext) => Promise<TResult>;
 
-  /** Queries to invalidate after successful mutation */
-  invalidates?: Array<Query<unknown, unknown>>;
+  /** Query names to invalidate after successful mutation */
+  invalidates?: string[];
 
   /** Function to generate specific query keys to invalidate */
   invalidateKeys?: (params: TParams, result: TResult) => string[][];
-
-  /** Optimistic update function */
-  optimisticUpdate?: (params: TParams, currentData: TData) => TData;
 
   /** Description for documentation */
   description?: string;
@@ -206,5 +206,5 @@ export interface QueryRegistry {
  * Registry of all mutations for type-safe access
  */
 export interface MutationRegistry {
-  [key: string]: Mutation<unknown, unknown, unknown>;
+  [key: string]: Mutation<unknown, unknown>;
 }

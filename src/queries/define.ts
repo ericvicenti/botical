@@ -66,9 +66,9 @@ export function defineQuery<T, P = void>(
 /**
  * Define a mutation with type safety
  */
-export function defineMutation<TData, TParams, TResult = void>(
-  definition: Mutation<TData, TParams, TResult>
-): Mutation<TData, TParams, TResult> {
+export function defineMutation<TParams, TResult = void>(
+  definition: Mutation<TParams, TResult>
+): Mutation<TParams, TResult> {
   validateQueryName(definition.name);
 
   return definition;

@@ -76,8 +76,8 @@ export interface ExecuteMutationOptions {
 /**
  * Execute a mutation
  */
-export async function executeMutation<TData, TParams, TResult>(
-  mutation: Mutation<TData, TParams, TResult>,
+export async function executeMutation<TParams, TResult>(
+  mutation: Mutation<TParams, TResult>,
   params: TParams,
   context: MutationContext,
   options: ExecuteMutationOptions = {}
@@ -87,11 +87,11 @@ export async function executeMutation<TData, TParams, TResult>(
   // Execute the mutation
   const result = await mutation.execute(params, context);
 
-  // Invalidate related queries
+  // Invalidate related queries by name
   if (mutation.invalidates) {
-    for (const query of mutation.invalidates) {
+    for (const queryName of mutation.invalidates) {
       // Invalidate all entries for this query
-      cache.invalidatePrefix([query.name]);
+      cache.invalidatePrefix([queryName]);
     }
   }
 
