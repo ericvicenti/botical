@@ -5,6 +5,16 @@ import { getPage, getPageUrl, executeAction } from "./registry";
 import type { ActionContext, ActionResult } from "./types";
 
 /**
+ * Options for opening a page
+ */
+interface OpenPageOptions {
+  /** Whether to open as preview tab (default: true) */
+  preview?: boolean;
+  /** Search/query params to include in URL */
+  search?: Record<string, unknown>;
+}
+
+/**
  * Hook to open pages using the primitives system
  *
  * Pages open as preview (italic) by default.
@@ -18,7 +28,7 @@ export function usePageOpener() {
     <TParams extends Record<string, unknown>>(
       pageId: string,
       params: TParams,
-      options: { preview?: boolean } = { preview: true }
+      options: OpenPageOptions = { preview: true }
     ) => {
       const page = getPage(pageId);
       if (!page) {
@@ -33,27 +43,35 @@ export function usePageOpener() {
         return;
       }
 
-      // Generate the URL
-      const url = getPageUrl(pageId, parsed.data);
-      const label = page.getLabel(parsed.data);
+      // Validate search params if provided
+      let validatedSearch: Record<string, unknown> | undefined;
+      if (options.search && page.searchParams) {
+        const searchParsed = page.searchParams.safeParse(options.search);
+        if (searchParsed.success) {
+          validatedSearch = searchParsed.data;
+        } else {
+          console.warn(`Invalid search params for page "${pageId}":`, searchParsed.error);
+        }
+      }
 
-      // Open tab
+      // Generate the URL with search params
+      const url = getPageUrl(pageId, parsed.data, validatedSearch);
+      const label = page.getLabel(parsed.data, validatedSearch);
+
+      // Open tab with search params
+      const tabData = {
+        type: "page" as const,
+        pageId,
+        params: parsed.data,
+        search: validatedSearch,
+        label,
+        icon: page.icon,
+      };
+
       if (options.preview !== false) {
-        openPreviewTab({
-          type: "page" as const,
-          pageId,
-          params: parsed.data,
-          label,
-          icon: page.icon,
-        });
+        openPreviewTab(tabData);
       } else {
-        openTab({
-          type: "page" as const,
-          pageId,
-          params: parsed.data,
-          label,
-          icon: page.icon,
-        });
+        openTab(tabData);
       }
 
       // Navigate

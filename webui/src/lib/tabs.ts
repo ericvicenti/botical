@@ -1,5 +1,5 @@
 import type { Tab, TabData, TabType, SettingsPage } from "@/types/tabs";
-import { getPageUrl } from "@/primitives/registry";
+import { getPageUrl, matchPageRoute } from "@/primitives/registry";
 
 const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
   "api-keys": "API Keys",
@@ -40,9 +40,11 @@ export function generateTabId(data: TabData): string {
       return `commit:${data.projectId}:${data.hash}`;
     case "review-commit":
       return `review-commit:${data.projectId}`;
-    case "page":
-      // Generate stable ID from pageId and params
-      return `page:${data.pageId}:${JSON.stringify(data.params)}`;
+    case "page": {
+      // Generate stable ID from pageId, params, and search
+      const searchPart = data.search ? `:${JSON.stringify(data.search)}` : "";
+      return `page:${data.pageId}:${JSON.stringify(data.params)}${searchPart}`;
+    }
   }
 }
 
@@ -112,9 +114,9 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
     case "review-commit":
       return { to: "/projects/$projectId/commit", params: { projectId: tab.data.projectId } };
     case "page": {
-      // Get URL from page primitive
+      // Get URL from page primitive, including search params
       try {
-        const url = getPageUrl(tab.data.pageId, tab.data.params);
+        const url = getPageUrl(tab.data.pageId, tab.data.params, tab.data.search);
         return { to: url };
       } catch {
         return { to: "/" };
@@ -129,26 +131,32 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
  * Parse a URL pathname into tab data. Used for creating preview tabs
  * when navigating to a URL that doesn't have an open tab.
  */
-export function parseUrlToTabData(pathname: string): { data: TabData; label: string; type: TabType } | null {
-  // /projects/:projectId/commits/:hash
-  const commitMatch = pathname.match(/^\/projects\/([^/]+)\/commits\/([^/]+)$/);
-  if (commitMatch) {
+export function parseUrlToTabData(
+  pathname: string,
+  search?: string
+): { data: TabData; label: string; type: TabType } | null {
+  // First, try to match against the page registry
+  const searchParams = search ? new URLSearchParams(search) : undefined;
+  const pageMatch = matchPageRoute(pathname, searchParams);
+
+  if (pageMatch && pageMatch.parsedParams) {
+    const { page, parsedParams, parsedSearch } = pageMatch;
+    const label = page.getLabel(parsedParams, parsedSearch ?? undefined);
     return {
-      type: "commit",
-      data: { type: "commit", projectId: commitMatch[1], hash: commitMatch[2] },
-      label: commitMatch[2].substring(0, 7),
+      type: "page",
+      data: {
+        type: "page",
+        pageId: page.id,
+        params: parsedParams,
+        search: parsedSearch ?? undefined,
+        label,
+        icon: page.icon,
+      },
+      label,
     };
   }
 
-  // /projects/:projectId/commit (review commit)
-  const reviewCommitMatch = pathname.match(/^\/projects\/([^/]+)\/commit$/);
-  if (reviewCommitMatch) {
-    return {
-      type: "review-commit",
-      data: { type: "review-commit", projectId: reviewCommitMatch[1] },
-      label: "Review Commit",
-    };
-  }
+  // Fall back to legacy route parsing for routes not yet migrated to page primitives
 
   // /projects/:projectId/settings
   const projectSettingsMatch = pathname.match(/^\/projects\/([^/]+)\/settings$/);

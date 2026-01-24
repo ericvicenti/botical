@@ -1,6 +1,8 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAgentActions } from "@/hooks/useAgentActions";
+import { useWorkflowNotifications } from "@/hooks/useWorkflowNotifications";
+import { useAutoDocumentTitle } from "@/hooks/useDocumentTitle";
 import { TabBar } from "@/components/layout/TabBar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomPanel } from "@/components/layout/BottomPanel";
@@ -21,6 +23,8 @@ export const Route = createRootRoute({
 function RootLayoutInner() {
   useKeyboardShortcuts();
   useAgentActions();
+  useWorkflowNotifications();
+  useAutoDocumentTitle();
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">

@@ -11,6 +11,7 @@ export type {
   ActionContext,
   ActionDefinition,
   PageDefinition,
+  PageCategory,
 } from "./types";
 
 // Registry functions
@@ -21,6 +22,7 @@ export {
   getPage,
   getAllActions,
   getAllPages,
+  getPagesByCategory,
   executeAction,
   matchPageRoute,
   getPageUrl,

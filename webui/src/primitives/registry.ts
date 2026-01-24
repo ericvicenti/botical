@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   ActionDefinition,
   PageDefinition,
+  PageCategory,
   ActionContext,
   ActionResult,
 } from "./types";
@@ -15,9 +16,10 @@ const pageRegistry = new Map<string, PageDefinition>();
 /**
  * Define and register a page
  */
-export function definePage<TParams extends z.ZodTypeAny>(
-  page: PageDefinition<TParams>
-): PageDefinition<TParams> {
+export function definePage<
+  TParams extends z.ZodTypeAny,
+  TSearch extends z.ZodTypeAny = z.ZodTypeAny
+>(page: PageDefinition<TParams, TSearch>): PageDefinition<TParams, TSearch> {
   pageRegistry.set(page.id, page as unknown as PageDefinition);
   return page;
 }
@@ -37,15 +39,50 @@ export function getAllPages(): PageDefinition[] {
 }
 
 /**
- * Match a URL pathname to a page
+ * Get pages filtered by category
+ */
+export function getPagesByCategory(category: PageCategory): PageDefinition[] {
+  return Array.from(pageRegistry.values()).filter(
+    (page) => page.category === category
+  );
+}
+
+/**
+ * Match a URL pathname to a page, optionally parsing search params
  */
 export function matchPageRoute(
-  pathname: string
-): { page: PageDefinition; routeParams: Record<string, string> } | null {
+  pathname: string,
+  searchParams?: URLSearchParams
+): {
+  page: PageDefinition;
+  routeParams: Record<string, string>;
+  parsedParams: Record<string, unknown> | null;
+  parsedSearch: Record<string, unknown> | null;
+} | null {
   for (const page of pageRegistry.values()) {
-    const params = matchRoute(page.route, pathname);
-    if (params) {
-      return { page, routeParams: params };
+    const routeParams = matchRoute(page.route, pathname);
+    if (routeParams) {
+      // Parse path params
+      const parsedParams = page.parseParams(routeParams);
+
+      // Parse search params if the page supports them
+      let parsedSearch: Record<string, unknown> | null = null;
+      if (searchParams && page.parseSearchParams && page.searchParams) {
+        const searchObj: Record<string, string | string[] | undefined> = {};
+        for (const [key, value] of searchParams.entries()) {
+          const existing = searchObj[key];
+          if (existing === undefined) {
+            searchObj[key] = value;
+          } else if (Array.isArray(existing)) {
+            existing.push(value);
+          } else {
+            searchObj[key] = [existing, value];
+          }
+        }
+        parsedSearch = page.parseSearchParams(searchObj);
+      }
+
+      return { page, routeParams, parsedParams, parsedSearch };
     }
   }
   return null;
@@ -82,9 +119,13 @@ function matchRoute(
 }
 
 /**
- * Generate a URL for a page with params
+ * Generate a URL for a page with params and optional search params
  */
-export function getPageUrl(pageId: string, params: Record<string, unknown>): string {
+export function getPageUrl(
+  pageId: string,
+  params: Record<string, unknown>,
+  search?: Record<string, unknown>
+): string {
   const page = pageRegistry.get(pageId);
   if (!page) {
     throw new Error(`Page "${pageId}" not found`);
@@ -95,6 +136,15 @@ export function getPageUrl(pageId: string, params: Record<string, unknown>): str
 
   for (const [key, value] of Object.entries(routeParams)) {
     url = url.replace(`$${key}`, value);
+  }
+
+  // Add search params if provided and page supports them
+  if (search && page.getSearchParams) {
+    const searchParams = page.getSearchParams(search);
+    const searchString = new URLSearchParams(searchParams).toString();
+    if (searchString) {
+      url += `?${searchString}`;
+    }
   }
 
   return url;

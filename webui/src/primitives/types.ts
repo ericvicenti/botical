@@ -11,19 +11,39 @@ import { z } from "zod";
 // ============================================================================
 
 /**
- * Page definition - an addressable UI surface with typed parameters
+ * Page categories for organization and extension discovery
  */
-export interface PageDefinition<TParams extends z.ZodTypeAny = z.ZodTypeAny> {
+export type PageCategory =
+  | "home"
+  | "project"
+  | "git"
+  | "file"
+  | "process"
+  | "workflow"
+  | "task"
+  | "settings"
+  | "other";
+
+/**
+ * Page definition - an addressable UI surface with typed parameters
+ *
+ * @template TParams - Zod schema for path parameters
+ * @template TSearch - Zod schema for search/query parameters (defaults to empty object)
+ */
+export interface PageDefinition<
+  TParams extends z.ZodTypeAny = z.ZodTypeAny,
+  TSearch extends z.ZodTypeAny = z.ZodTypeAny
+> {
   /** Unique identifier (e.g., "git.commit-view") */
   id: string;
 
   /** Icon name (lucide icon) */
   icon: string;
 
-  /** Generate label from params */
-  getLabel: (params: z.infer<TParams>) => string;
+  /** Generate label from params (used for tabs) */
+  getLabel: (params: z.infer<TParams>, search?: unknown) => string;
 
-  /** Zod schema for page parameters */
+  /** Zod schema for path parameters */
   params: TParams;
 
   /** Route path pattern (e.g., "/projects/$projectId/commits/$hash") */
@@ -36,7 +56,32 @@ export interface PageDefinition<TParams extends z.ZodTypeAny = z.ZodTypeAny> {
   getRouteParams: (params: z.infer<TParams>) => Record<string, string>;
 
   /** React component for rendering */
-  component: React.ComponentType<{ params: z.infer<TParams> }>;
+  component: React.ComponentType<{
+    params: z.infer<TParams>;
+    search?: unknown;
+  }>;
+
+  // ---- New fields for enhanced functionality ----
+
+  /** Optional description for extension discovery */
+  description?: string;
+
+  /** Category for organization in extension UI */
+  category?: PageCategory;
+
+  /** Generate document title (defaults to getLabel if not provided) */
+  getTitle?: (params: z.infer<TParams>, search?: unknown) => string;
+
+  /** Zod schema for search/query parameters */
+  searchParams?: TSearch;
+
+  /** Parse URL search params to typed search object */
+  parseSearchParams?: (
+    search: Record<string, string | string[] | undefined>
+  ) => z.infer<TSearch>;
+
+  /** Generate URL search params from typed search object */
+  getSearchParams?: (search: unknown) => Record<string, string>;
 }
 
 // ============================================================================

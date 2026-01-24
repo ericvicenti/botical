@@ -41,4 +41,11 @@ export type TabData =
   | { type: "task"; sessionId: string; projectId: string; title: string }
   | { type: "commit"; hash: string; projectId: string }
   | { type: "review-commit"; projectId: string }
-  | { type: "page"; pageId: string; params: Record<string, unknown>; label: string; icon: string };
+  | {
+      type: "page";
+      pageId: string;
+      params: Record<string, unknown>;
+      search?: Record<string, unknown>;
+      label: string;
+      icon: string;
+    };
