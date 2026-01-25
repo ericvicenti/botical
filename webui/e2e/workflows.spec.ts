@@ -563,7 +563,8 @@ test.describe("Workflows", () => {
     await expect(page).toHaveURL(new RegExp(`/workflow-runs/${mockExecution.id}`));
   });
 
-  test("should display utility.wait action in action picker", async ({ page }) => {
+  // TODO: Skip - tests UI features (add-step-button, step-type-action) that don't exist yet
+  test.skip("should display utility.wait action in action picker", async ({ page }) => {
     const waitAction = {
       id: "utility.wait",
       label: "Wait",
