@@ -155,7 +155,14 @@ async function deploy(host: string): Promise<void> {
 
   const bunPath = `${homeDir}/.bun/bin/bun`;
 
-  // Step 3: Clone or update repository
+  // Step 3: Setup GitHub SSH host key (avoid host key verification failure)
+  console.log("🔑 Setting up GitHub SSH host key...");
+  await runRemote(
+    host,
+    `mkdir -p ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null`
+  );
+
+  // Step 4: Clone or update repository
   console.log("📥 Updating repository...");
   const repoCheck = await runRemote(host, `test -d ${remoteDir}/.git && echo 'exists'`);
   if (repoCheck.output.includes("exists")) {
