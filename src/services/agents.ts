@@ -41,7 +41,6 @@ export const AgentCreateSchema = z.object({
   maxSteps: z.number().positive().nullable().optional(),
   prompt: z.string().nullable().optional(),
   tools: z.array(z.string()).default([]),
-  permissions: z.string().nullable().optional(), // JSON string of permission rules
   options: z.record(z.unknown()).default({}),
   color: z.string().nullable().optional(),
 });
@@ -71,7 +70,6 @@ export const AgentUpdateSchema = z.object({
   maxSteps: z.number().positive().nullable().optional(),
   prompt: z.string().nullable().optional(),
   tools: z.array(z.string()).optional(),
-  permissions: z.string().nullable().optional(),
   options: z.record(z.unknown()).optional(),
   color: z.string().nullable().optional(),
 });
@@ -94,7 +92,6 @@ export interface CustomAgent {
   maxSteps: number | null;
   prompt: string | null;
   tools: string[];
-  permissions: string | null;
   options: Record<string, unknown>;
   color: string | null;
   isBuiltin: boolean;
@@ -117,7 +114,6 @@ interface AgentRow {
   top_p: number | null;
   max_steps: number | null;
   prompt: string | null;
-  permissions: string | null;
   options: string;
   color: string | null;
   is_builtin: number;
@@ -143,7 +139,6 @@ function rowToAgent(row: AgentRow): CustomAgent {
     maxSteps: row.max_steps,
     prompt: row.prompt,
     tools: options.tools || [],
-    permissions: row.permissions,
     options,
     color: row.color,
     isBuiltin: row.is_builtin === 1,
@@ -216,9 +211,9 @@ export class AgentService {
       `
       INSERT INTO agents (
         id, name, description, mode, hidden, provider_id, model_id,
-        temperature, top_p, max_steps, prompt, permissions, options, color,
+        temperature, top_p, max_steps, prompt, options, color,
         is_builtin, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     ).run(
       id,
@@ -232,7 +227,6 @@ export class AgentService {
       validated.topP ?? null,
       validated.maxSteps ?? null,
       validated.prompt ?? null,
-      validated.permissions ?? null,
       JSON.stringify(options),
       validated.color ?? null,
       0, // is_builtin = false for custom agents
@@ -253,7 +247,6 @@ export class AgentService {
       maxSteps: validated.maxSteps ?? null,
       prompt: validated.prompt ?? null,
       tools: validated.tools,
-      permissions: validated.permissions ?? null,
       options,
       color: validated.color ?? null,
       isBuiltin: false,
@@ -409,11 +402,6 @@ export class AgentService {
     if (validated.prompt !== undefined) {
       updates.push("prompt = ?");
       params.push(validated.prompt);
-    }
-
-    if (validated.permissions !== undefined) {
-      updates.push("permissions = ?");
-      params.push(validated.permissions);
     }
 
     if (validated.color !== undefined) {

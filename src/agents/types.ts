@@ -61,10 +61,6 @@ export interface ToolContext {
   abortSignal: AbortSignal;
   /** Update tool metadata/progress displayed to user */
   updateMetadata: (metadata: ToolMetadata) => void;
-  /** Check if user has permission for this action */
-  checkPermission: (action: string) => Promise<"allow" | "deny" | "ask">;
-  /** Request user approval for an action */
-  askPermission: (options: PermissionRequest) => Promise<void>;
 }
 
 /**
@@ -75,15 +71,6 @@ export interface ToolMetadata {
   description?: string;
   progress?: number; // 0-1
   data?: Record<string, unknown>;
-}
-
-/**
- * Permission request for sensitive operations
- */
-export interface PermissionRequest {
-  tool: string;
-  action: string;
-  message: string;
 }
 
 /**

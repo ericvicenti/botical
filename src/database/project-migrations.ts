@@ -17,7 +17,7 @@ import type { Migration } from "./migrations.ts";
  * - Custom agents and tools
  * - Files and versions (with diff-based history)
  * - Snapshots (point-in-time project state)
- * - Permissions (tool access rules)
+ * - Workflows and executions
  * - Todos (task tracking)
  *
  * See: docs/knowledge-base/02-data-model.md#project-database-one-per-project
@@ -215,22 +215,6 @@ export const PROJECT_MIGRATIONS: Migration[] = [
         );
 
         CREATE INDEX idx_todos_session ON todos(session_id, position);
-
-        -- ============================================
-        -- PERMISSIONS
-        -- ============================================
-
-        CREATE TABLE permissions (
-          id TEXT PRIMARY KEY,
-          session_id TEXT NOT NULL REFERENCES sessions(id),
-          permission TEXT NOT NULL,
-          pattern TEXT NOT NULL,
-          action TEXT NOT NULL,
-          scope TEXT NOT NULL DEFAULT 'session',
-          created_at INTEGER NOT NULL
-        );
-
-        CREATE INDEX idx_permissions_session ON permissions(session_id);
       `);
     },
   },
