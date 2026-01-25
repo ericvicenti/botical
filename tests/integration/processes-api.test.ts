@@ -64,7 +64,9 @@ describe("Processes API", () => {
 
       expect(response.status).toBe(201);
 
-      const body = await response.json();
+      const body = (await response.json()) as {
+        data: { id: string; command: string; type: string; projectId: string };
+      };
       expect(body.data).toBeDefined();
       expect(body.data.id).toMatch(/^proc_/);
       expect(body.data.command).toBe("echo hello");
@@ -119,7 +121,10 @@ describe("Processes API", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as {
+        data: unknown[];
+        meta: { total: number };
+      };
       expect(body.data).toBeInstanceOf(Array);
       expect(body.meta).toBeDefined();
       expect(body.meta.total).toBeGreaterThanOrEqual(0);
@@ -132,7 +137,7 @@ describe("Processes API", () => {
 
       expect(response.status).toBe(200);
 
-      const body = await response.json();
+      const body = (await response.json()) as { data: Array<{ type: string }> };
       for (const process of body.data) {
         expect(process.type).toBe("command");
       }

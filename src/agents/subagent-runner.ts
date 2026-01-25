@@ -278,6 +278,7 @@ export class SubAgentRunner {
       // Create stream processor
       const processor = new StreamProcessor({
         db,
+        projectId,
         sessionId: childSessionId,
         messageId: assistantMessage.id,
         providerId,

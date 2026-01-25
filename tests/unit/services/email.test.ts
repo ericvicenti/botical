@@ -28,7 +28,7 @@ describe("Email Service", () => {
   describe("getAppUrl", () => {
     it("returns default URL when APP_URL not set", () => {
       delete process.env.APP_URL;
-      expect(EmailService.getAppUrl()).toBe("http://localhost:4096");
+      expect(EmailService.getAppUrl()).toBe("http://localhost:6001");
     });
   });
 

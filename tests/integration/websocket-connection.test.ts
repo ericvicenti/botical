@@ -205,7 +205,7 @@ describe("WebSocket Integration", () => {
 
       // Verify message was sent
       expect(mockWs.sentMessages.length).toBeGreaterThan(0);
-      const message = JSON.parse(mockWs.sentMessages[0]);
+      const message = JSON.parse(mockWs.sentMessages[0]!);
       expect(message.type).toBe("session.created");
       expect(message.payload.sessionId).toBe("sess_new");
     });
@@ -233,6 +233,7 @@ describe("WebSocket Integration", () => {
         payload: {
           sessionId,
           messageId: "msg_1",
+          partId: "part_1",
           delta: "Hello",
         },
       });
@@ -240,7 +241,7 @@ describe("WebSocket Integration", () => {
       await new Promise((r) => setTimeout(r, 50));
 
       expect(mockWs.sentMessages.length).toBeGreaterThan(0);
-      const message = JSON.parse(mockWs.sentMessages[0]);
+      const message = JSON.parse(mockWs.sentMessages[0]!);
       expect(message.type).toBe("message.text.delta");
       expect(message.payload.delta).toBe("Hello");
     });

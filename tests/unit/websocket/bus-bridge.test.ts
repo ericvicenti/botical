@@ -32,8 +32,8 @@ describe("Bus Bridge", () => {
     it("subscribes to session events", () => {
       setupBusBridge();
 
-      // Should have subscriptions for session.*, message.*, file.*, project.*, process.*
-      expect(getBridgeSubscriptionCount()).toBe(5);
+      // Should have subscriptions for session.*, message.*, file.*, project.*, process.*, git.*
+      expect(getBridgeSubscriptionCount()).toBe(6);
     });
   });
 
@@ -155,6 +155,7 @@ describe("Bus Bridge", () => {
         payload: {
           sessionId: "sess_123",
           messageId: "msg_1",
+          partId: "part_1",
           delta: "Hello",
         },
       });
@@ -175,8 +176,10 @@ describe("Bus Bridge", () => {
         payload: {
           sessionId: "sess_123",
           messageId: "msg_1",
+          partId: "part_tool",
           toolCallId: "tool_1",
-          name: "test_tool",
+          toolName: "test_tool",
+          args: {},
         },
       });
 
@@ -196,6 +199,7 @@ describe("Bus Bridge", () => {
         payload: {
           sessionId: "sess_123",
           messageId: "msg_1",
+          partId: "part_tool",
           toolCallId: "tool_1",
           result: "success",
         },
@@ -237,7 +241,8 @@ describe("Bus Bridge", () => {
         payload: {
           sessionId: "sess_123",
           messageId: "msg_1",
-          error: "Test error",
+          errorType: "test_error",
+          errorMessage: "Test error",
         },
       });
 
@@ -302,10 +307,11 @@ describe("Bus Bridge", () => {
     });
 
     it("ignores events without known mapping", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       EventBus.publish("prj_test", {
-        type: "unknown.event" as any,
+        type: "unknown.event",
         payload: { data: "test" },
-      });
+      } as any);
 
       await new Promise((r) => setTimeout(r, 10));
 
@@ -314,6 +320,7 @@ describe("Bus Bridge", () => {
     });
 
     it("ignores message events without sessionId", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       EventBus.publish("prj_test", {
         type: "message.created",
         payload: {
@@ -321,7 +328,7 @@ describe("Bus Bridge", () => {
           role: "user",
           // No sessionId
         },
-      });
+      } as any);
 
       await new Promise((r) => setTimeout(r, 10));
 

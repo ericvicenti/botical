@@ -49,7 +49,7 @@ export const WorkflowCreateSchema = z.object({
   steps: z.array(z.unknown()).default([]),
 });
 
-export type WorkflowCreate = z.infer<typeof WorkflowCreateSchema>;
+export type WorkflowCreate = z.input<typeof WorkflowCreateSchema>;
 
 /**
  * Workflow update input schema

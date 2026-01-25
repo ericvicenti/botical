@@ -89,6 +89,7 @@ describe("WebSocket Streaming Integration", () => {
           payload: {
             sessionId: session.id,
             messageId: "msg_1",
+            partId: "part_1",
             delta,
           },
         });
@@ -139,6 +140,7 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session.id,
           messageId: "msg_life",
+          partId: "part_life",
           delta: "Response",
         },
       });
@@ -187,9 +189,10 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session.id,
           messageId: "msg_tool",
+          partId: "part_tool",
           toolCallId: "tool_123",
-          name: "read_file",
-          arguments: { path: "/test.txt" },
+          toolName: "read_file",
+          args: { path: "/test.txt" },
         },
       });
 
@@ -198,6 +201,7 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session.id,
           messageId: "msg_tool",
+          partId: "part_tool",
           toolCallId: "tool_123",
           result: "File contents here",
         },
@@ -209,7 +213,7 @@ describe("WebSocket Streaming Integration", () => {
       const events = mockWs.sentMessages.map((m) => JSON.parse(m));
 
       expect(events[0].type).toBe("message.tool.call");
-      expect(events[0].payload.name).toBe("read_file");
+      expect(events[0].payload.toolName).toBe("read_file");
       expect(events[1].type).toBe("message.tool.result");
       expect(events[1].payload.result).toBe("File contents here");
     });
@@ -238,16 +242,17 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session.id,
           messageId: "msg_err",
-          error: "API rate limit exceeded",
+          errorType: "rate_limit",
+          errorMessage: "API rate limit exceeded",
         },
       });
 
       await new Promise((r) => setTimeout(r, 100));
 
       expect(mockWs.sentMessages.length).toBe(1);
-      const event = JSON.parse(mockWs.sentMessages[0]);
+      const event = JSON.parse(mockWs.sentMessages[0]!);
       expect(event.type).toBe("message.error");
-      expect(event.payload.error).toBe("API rate limit exceeded");
+      expect(event.payload.errorMessage).toBe("API rate limit exceeded");
     });
   });
 
@@ -288,6 +293,7 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session1.id,
           messageId: "msg_s1",
+          partId: "part_s1",
           delta: "Session 1 message",
         },
       });
@@ -297,6 +303,7 @@ describe("WebSocket Streaming Integration", () => {
         payload: {
           sessionId: session2.id,
           messageId: "msg_s2",
+          partId: "part_s2",
           delta: "Session 2 message",
         },
       });
@@ -305,11 +312,11 @@ describe("WebSocket Streaming Integration", () => {
 
       // ws1 should only get session1 events
       expect(ws1.sentMessages.length).toBe(1);
-      expect(JSON.parse(ws1.sentMessages[0]).payload.sessionId).toBe(session1.id);
+      expect(JSON.parse(ws1.sentMessages[0]!).payload.sessionId).toBe(session1.id);
 
       // ws2 should only get session2 events
       expect(ws2.sentMessages.length).toBe(1);
-      expect(JSON.parse(ws2.sentMessages[0]).payload.sessionId).toBe(session2.id);
+      expect(JSON.parse(ws2.sentMessages[0]!).payload.sessionId).toBe(session2.id);
     });
 
     it("allows subscribing to multiple sessions", async () => {
@@ -413,6 +420,7 @@ describe("WebSocket Streaming Integration", () => {
           payload: {
             sessionId: session.id,
             messageId: "msg_burst",
+            partId: "part_burst",
             delta: `t${i} `,
           },
         });

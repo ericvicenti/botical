@@ -24,7 +24,7 @@ describe("Config", () => {
       const config = Config.load();
 
       expect(config.dataDir).toBe(path.join(os.homedir(), ".iris"));
-      expect(config.port).toBe(4096);
+      expect(config.port).toBe(6001);
       expect(config.host).toBe("localhost");
       expect(config.logLevel).toBe("info");
     });
@@ -68,7 +68,7 @@ describe("Config", () => {
     it("auto-loads with defaults if not loaded", () => {
       const config = Config.get();
 
-      expect(config.port).toBe(4096);
+      expect(config.port).toBe(6001);
     });
   });
 
