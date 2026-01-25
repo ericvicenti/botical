@@ -479,8 +479,21 @@ test.describe("Workflows", () => {
       });
     });
 
-    // Mock the workflow fetch
+    // Mock the workflow fetch (with and without projectId since component may fetch either way)
     await page.route(`**/api/workflows/${workflowWithWait.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: workflowWithWait }),
+      });
+    });
+
+    await page.route(`**/api/workflows/${workflowWithWait.id}`, async (route) => {
+      // Skip if already handled by the projectId route
+      if (route.request().url().includes("projectId=")) {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -569,8 +582,21 @@ test.describe("Workflows", () => {
       },
     };
 
-    // Mock the workflow fetch
+    // Mock the workflow fetch (with and without projectId since component may fetch either way)
     await page.route(`**/api/workflows/${mockWorkflow.id}?projectId=*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: mockWorkflow }),
+      });
+    });
+
+    await page.route(`**/api/workflows/${mockWorkflow.id}`, async (route) => {
+      // Skip if already handled by the projectId route
+      if (route.request().url().includes("projectId=")) {
+        await route.fallback();
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
