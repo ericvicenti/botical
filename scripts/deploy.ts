@@ -155,12 +155,45 @@ async function deploy(host: string): Promise<void> {
 
   const bunPath = `${homeDir}/.bun/bin/bun`;
 
-  // Step 3: Setup GitHub SSH host key (avoid host key verification failure)
-  console.log("🔑 Setting up GitHub SSH host key...");
+  // Step 3: Setup SSH for GitHub
+  console.log("🔑 Setting up SSH for GitHub...");
+
+  // Add GitHub to known hosts
   await runRemote(
     host,
-    `mkdir -p ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null`
+    `mkdir -p ~/.ssh && chmod 700 ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null`
   );
+
+  // Check if deploy key exists, generate if not
+  const keyCheck = await runRemote(host, `test -f ~/.ssh/id_ed25519 && echo 'exists'`);
+  if (!keyCheck.output.includes("exists")) {
+    console.log("   Generating deploy key...");
+    await runRemote(
+      host,
+      `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "iris-deploy@${host}"`
+    );
+  }
+
+  // Test GitHub access
+  const githubTest = await runRemote(host, `ssh -T git@github.com 2>&1 || true`);
+  if (!githubTest.output.includes("successfully authenticated")) {
+    // Show the public key and ask user to add it
+    const pubKey = await runRemote(host, `cat ~/.ssh/id_ed25519.pub`);
+    console.log("\n" + "=".repeat(70));
+    console.log("⚠️  Deploy key not authorized for GitHub repository");
+    console.log("=".repeat(70));
+    console.log("\nAdd this deploy key to your GitHub repository:");
+    console.log("  1. Go to: https://github.com/ericvicenti/iris/settings/keys");
+    console.log("  2. Click 'Add deploy key'");
+    console.log("  3. Title: iris-deploy@" + host);
+    console.log("  4. Paste this key:\n");
+    console.log(pubKey.output.trim());
+    console.log("\n" + "=".repeat(70));
+    console.log("\nAfter adding the key, run this deploy script again.");
+    console.log("");
+    process.exit(1);
+  }
+  console.log("   GitHub access confirmed\n");
 
   // Step 4: Clone or update repository
   console.log("📥 Updating repository...");
