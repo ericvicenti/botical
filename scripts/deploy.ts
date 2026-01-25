@@ -12,7 +12,7 @@
 import { spawn, type SpawnOptions } from "bun";
 import { resolve, dirname } from "path";
 
-const REPO_URL = "https://github.com/ericvicenti/iris.git";
+const REPO_URL = "git@github.com:ericvicenti/iris.git";
 const SERVICE_NAME = "iris";
 
 /**
