@@ -101,8 +101,8 @@ describe("StateSync", () => {
 
       // Should only include messages after msg_1
       expect(state.messages).toHaveLength(2);
-      expect(state.messages[0].id).toBe("msg_2");
-      expect(state.messages[1].id).toBe("msg_3");
+      expect(state.messages[0]!.id).toBe("msg_2");
+      expect(state.messages[1]!.id).toBe("msg_3");
     });
 
     it("returns all messages when afterMessageId not found", () => {

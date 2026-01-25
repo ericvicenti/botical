@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "bun:test"
 import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
-import { ProjectService } from "@/services/projects.ts";
+import { ProjectService, type Project } from "@/services/projects.ts";
 import type {
   ListResponse,
   ItemResponse,

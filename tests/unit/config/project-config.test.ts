@@ -113,13 +113,13 @@ describe("ProjectConfigService", () => {
       ProjectConfigService.setSetting(testProjectPath, "theme", "dark");
       ProjectConfigService.setSetting(testProjectPath, "fontSize", 14);
 
-      expect(ProjectConfigService.getSetting(testProjectPath, "theme")).toBe("dark");
-      expect(ProjectConfigService.getSetting(testProjectPath, "fontSize")).toBe(14);
+      expect(ProjectConfigService.getSetting<string>(testProjectPath, "theme")).toBe("dark");
+      expect(ProjectConfigService.getSetting<number>(testProjectPath, "fontSize")).toBe(14);
     });
 
     it("deletes settings", () => {
       ProjectConfigService.setSetting(testProjectPath, "toDelete", "value");
-      expect(ProjectConfigService.getSetting(testProjectPath, "toDelete")).toBe("value");
+      expect(ProjectConfigService.getSetting<string>(testProjectPath, "toDelete")).toBe("value");
 
       ProjectConfigService.deleteSetting(testProjectPath, "toDelete");
       expect(ProjectConfigService.getSetting(testProjectPath, "toDelete")).toBeUndefined();

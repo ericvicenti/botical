@@ -68,7 +68,7 @@ describe("Query type structure", () => {
 
 describe("Mutation type structure", () => {
   it("allows minimal mutation definition", () => {
-    const mutation: Mutation<void, { id: string }, void> = {
+    const mutation: Mutation<{ id: string }, void> = {
       name: "test.delete",
       execute: async () => {},
     };
@@ -78,21 +78,16 @@ describe("Mutation type structure", () => {
   });
 
   it("allows mutation with invalidation", () => {
-    const targetQuery: Query<string, void> = {
-      name: "test.target",
-      fetch: async () => "data",
-    };
-
-    const mutation: Mutation<void, { data: string }, string> = {
+    const mutation: Mutation<{ data: string }, string> = {
       name: "test.create",
       execute: async (params) => params.data,
-      invalidates: [targetQuery],
+      invalidates: ["test.target"],
       invalidateKeys: (params, result) => [["custom", result]],
       description: "Creates something",
     };
 
     expect(mutation.invalidates).toHaveLength(1);
-    expect(mutation.invalidates?.[0].name).toBe("test.target");
+    expect(mutation.invalidates?.[0]).toBe("test.target");
     expect(mutation.invalidateKeys).toBeDefined();
   });
 });

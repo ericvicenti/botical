@@ -93,16 +93,16 @@ describe("toolsCoreQuery", () => {
 
     expect(ToolRegistry.getAll).toHaveBeenCalled();
     expect(result).toHaveLength(3);
-    expect(result[0].name).toBe("read");
-    expect(result[1].name).toBe("bash");
+    expect(result[0]!.name).toBe("read");
+    expect(result[1]!.name).toBe("bash");
   });
 
   it("returns correct tool structure", async () => {
-    getAllSpy.mockReturnValue([mockTools[0]] as any);
+    getAllSpy.mockReturnValue([mockTools[0]!] as unknown[]);
 
     const result = await toolsCoreQuery.fetch(undefined, mockContext);
 
-    expect(result[0]).toMatchObject({
+    expect(result[0]!).toMatchObject({
       name: "read",
       description: "Read file contents",
       category: "filesystem",
@@ -157,16 +157,16 @@ describe("toolsActionsQuery", () => {
 
     expect(ActionRegistry.getAll).toHaveBeenCalled();
     expect(result).toHaveLength(3);
-    expect(result[0].id).toBe("git.commit");
-    expect(result[1].id).toBe("file.read");
+    expect(result[0]!.id).toBe("git.commit");
+    expect(result[1]!.id).toBe("file.read");
   });
 
   it("returns correct action structure", async () => {
-    getAllSpy.mockReturnValue([mockActions[0]] as any);
+    getAllSpy.mockReturnValue([mockActions[0]!] as unknown[]);
 
     const result = await toolsActionsQuery.fetch(undefined, mockContext);
 
-    expect(result[0]).toMatchObject({
+    expect(result[0]!).toMatchObject({
       id: "git.commit",
       label: "Git Commit",
       description: "Create a git commit",

@@ -31,7 +31,7 @@ describe("ToolHandlers", () => {
     publishSpy = spyOn(EventBus, "publish").mockImplementation(() => ({
       id: "evt_test",
       timestamp: Date.now(),
-      event: { type: "test", payload: {} },
+      event: { type: "session.created", payload: { agent: "default", sessionId: "sess_test", title: "Test" } },
     }));
   });
 

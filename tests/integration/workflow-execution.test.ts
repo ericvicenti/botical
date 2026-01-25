@@ -194,7 +194,8 @@ describe("Workflow Execution Integration", () => {
       expect(steps?.["wait-step"]).toBeDefined();
       expect(steps?.["wait-step"]?.status).toBe("completed");
       // Output structure: { title, output, metadata: { durationMs } }
-      expect(steps?.["wait-step"]?.output?.metadata?.durationMs).toBe(50);
+      const stepOutput = steps?.["wait-step"]?.output as { metadata?: { durationMs?: number } } | undefined;
+      expect(stepOutput?.metadata?.durationMs).toBe(50);
     });
 
     it("should execute a workflow with utility.wait using seconds", async () => {

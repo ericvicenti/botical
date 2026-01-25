@@ -7,16 +7,22 @@ import type { Session } from "@/services/sessions.ts";
 // Mock session for tests
 const mockSession: Session = {
   id: "sess_test123",
+  slug: "test-session",
   title: "Test Session",
   agent: "default",
   status: "active",
   parentId: null,
   providerId: null,
   modelId: null,
-  tokenCount: 0,
   messageCount: 0,
+  totalCost: 0,
+  totalTokensInput: 0,
+  totalTokensOutput: 0,
+  shareUrl: null,
+  shareSecret: null,
   createdAt: Date.now(),
   updatedAt: Date.now(),
+  archivedAt: null,
 };
 
 describe("SessionHandlers", () => {

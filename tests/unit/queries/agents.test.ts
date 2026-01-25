@@ -89,11 +89,11 @@ describe("agentsListQuery", () => {
       includeHidden: undefined,
     });
     expect(result).toHaveLength(3);
-    expect(result[0].name).toBe("default");
+    expect(result[0]!.name).toBe("default");
   });
 
   it("filters by mode", async () => {
-    listSpy.mockReturnValue([mockAgents[0]]);
+    listSpy.mockReturnValue([mockAgents[0]!]);
 
     const result = await agentsListQuery.fetch({ mode: "primary" }, mockContext);
 
@@ -102,7 +102,7 @@ describe("agentsListQuery", () => {
       includeHidden: undefined,
     });
     expect(result).toHaveLength(1);
-    expect(result[0].mode).toBe("primary");
+    expect(result[0]!.mode).toBe("primary");
   });
 
   it("includes hidden agents when requested", async () => {
@@ -147,7 +147,7 @@ describe("agentsGetQuery", () => {
   let getOrThrowSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    getOrThrowSpy = spyOn(AgentRegistry, "getOrThrow").mockReturnValue(mockAgents[0]);
+    getOrThrowSpy = spyOn(AgentRegistry, "getOrThrow").mockReturnValue(mockAgents[0]!);
   });
 
   afterEach(() => {
@@ -206,7 +206,7 @@ describe("agentsGetQuery", () => {
   });
 
   it("handles nullable fields correctly", async () => {
-    getOrThrowSpy.mockReturnValue(mockAgents[1]);
+    getOrThrowSpy.mockReturnValue(mockAgents[1]!);
 
     const result = await agentsGetQuery.fetch({ name: "explore" }, mockContext);
 

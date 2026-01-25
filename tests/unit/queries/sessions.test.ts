@@ -30,6 +30,7 @@ const mockSession: Session = {
   totalTokensInput: 1000,
   totalTokensOutput: 500,
   shareUrl: null,
+  shareSecret: null,
   createdAt: Date.now(),
   updatedAt: Date.now(),
   archivedAt: null,

@@ -77,7 +77,8 @@ describe("Streaming Integration", () => {
       // Verify the WebSocket received the message
       expect(mockWs.send).toHaveBeenCalled();
 
-      const sentData = JSON.parse(mockWs.send.mock.calls[0][0] as string);
+      const calls = mockWs.send.mock.calls as unknown as Array<[string]>;
+      const sentData = JSON.parse(calls[0]![0]);
       expect(sentData.type).toBe("message.text.delta");
       expect(sentData.payload.delta).toBe("Hello world");
       expect(sentData.payload.sessionId).toBe(sessionId);
@@ -122,7 +123,8 @@ describe("Streaming Integration", () => {
 
       expect(mockWs.send).toHaveBeenCalled();
 
-      const sentData = JSON.parse(mockWs.send.mock.calls[0][0] as string);
+      const calls = mockWs.send.mock.calls as unknown as Array<[string]>;
+      const sentData = JSON.parse(calls[0]![0]);
       expect(sentData.type).toBe("message.created");
       expect(sentData.payload.role).toBe("assistant");
 
@@ -165,7 +167,8 @@ describe("Streaming Integration", () => {
 
       expect(mockWs.send).toHaveBeenCalled();
 
-      const sentData = JSON.parse(mockWs.send.mock.calls[0][0] as string);
+      const calls = mockWs.send.mock.calls as unknown as Array<[string]>;
+      const sentData = JSON.parse(calls[0]![0]);
       expect(sentData.type).toBe("message.complete");
       expect(sentData.payload.finishReason).toBe("stop");
 

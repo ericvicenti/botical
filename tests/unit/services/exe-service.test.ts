@@ -47,10 +47,10 @@ describe("ExeService parsing", () => {
       };
 
       // Verify the expected structure
-      expect(sampleVMListJSON.vms[0].vm_name).toBe("test-vm");
-      expect(sampleVMListJSON.vms[0].status).toBe("running");
-      expect(sampleVMListJSON.vms[1].vm_name).toBe("another-vm");
-      expect(sampleVMListJSON.vms[1].status).toBe("stopped");
+      expect(sampleVMListJSON.vms[0]!.vm_name).toBe("test-vm");
+      expect(sampleVMListJSON.vms[0]!.status).toBe("running");
+      expect(sampleVMListJSON.vms[1]!.vm_name).toBe("another-vm");
+      expect(sampleVMListJSON.vms[1]!.status).toBe("stopped");
     });
 
     test("parses new VM response with vm_name field correctly", async () => {

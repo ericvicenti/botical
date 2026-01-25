@@ -166,8 +166,8 @@ describe("GitService", () => {
       git(tempDir, "checkout", "-b", "another");
 
       const branches = await GitService.branches(tempDir);
-      expect(branches[0].current).toBe(true);
-      expect(branches[0].name).toBe("another");
+      expect(branches[0]!.current).toBe(true);
+      expect(branches[0]!.name).toBe("another");
     });
   });
 
@@ -242,14 +242,14 @@ describe("GitService", () => {
 
       const commits = await GitService.log(tempDir);
       expect(commits).toHaveLength(1);
-      expect(commits[0]).toMatchObject({
+      expect(commits[0]!).toMatchObject({
         message: "Initial commit",
         author: "Test User",
         email: "test@example.com",
       });
-      expect(commits[0].hash).toBeDefined();
-      expect(commits[0].hashShort).toHaveLength(7);
-      expect(commits[0].date).toBeGreaterThan(0);
+      expect(commits[0]!.hash).toBeDefined();
+      expect(commits[0]!.hashShort).toHaveLength(7);
+      expect(commits[0]!.date).toBeGreaterThan(0);
     });
 
     it("returns multiple commits", async () => {
@@ -263,9 +263,9 @@ describe("GitService", () => {
 
       const commits = await GitService.log(tempDir);
       expect(commits).toHaveLength(3);
-      expect(commits[0].message).toBe("Third commit");
-      expect(commits[1].message).toBe("Second commit");
-      expect(commits[2].message).toBe("Initial commit");
+      expect(commits[0]!.message).toBe("Third commit");
+      expect(commits[1]!.message).toBe("Second commit");
+      expect(commits[2]!.message).toBe("Initial commit");
     });
 
     it("respects limit option", async () => {
@@ -286,10 +286,10 @@ describe("GitService", () => {
       initRepo(tempDir);
 
       const commits = await GitService.log(tempDir);
-      const commit = await GitService.getCommit(tempDir, commits[0].hash);
+      const commit = await GitService.getCommit(tempDir, commits[0]!.hash);
 
       expect(commit).not.toBeNull();
-      expect(commit!.hash).toBe(commits[0].hash);
+      expect(commit!.hash).toBe(commits[0]!.hash);
       expect(commit!.message).toBe("Initial commit");
       expect(commit!.files).toBeDefined();
     });
@@ -328,7 +328,7 @@ describe("GitService", () => {
       expect(status.files).toHaveLength(0);
 
       const commits = await GitService.log(tempDir);
-      expect(commits[0].message).toBe("Add untracked");
+      expect(commits[0]!.message).toBe("Add untracked");
     });
   });
 
@@ -368,7 +368,7 @@ describe("GitService", () => {
       git(tempDir, "commit", "-m", "Add newfile");
 
       const commits = await GitService.log(tempDir);
-      const diff = await GitService.commitDiff(tempDir, commits[0].hash);
+      const diff = await GitService.commitDiff(tempDir, commits[0]!.hash);
 
       expect(diff).toContain("newfile.txt");
       expect(diff).toContain("+new content");

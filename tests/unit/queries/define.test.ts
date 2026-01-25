@@ -101,7 +101,7 @@ describe("defineQuery", () => {
     expect(query.cache?.key).toBeDefined();
 
     // Test the generated key function
-    const key = query.cache!.key!({ id: "123", type: "foo" });
+    const key = query.cache!.key!({ id: "123", type: "foo" } as unknown as void);
     expect(key).toContain("test.autokey");
     expect(key).toContain("id:123");
     expect(key).toContain("type:foo");
@@ -128,7 +128,7 @@ describe("defineQuery", () => {
       cache: {},
     });
 
-    const key = query.cache!.key!({ a: "1", b: undefined, c: "3" });
+    const key = query.cache!.key!({ a: "1", b: undefined, c: "3" } as unknown as void);
     expect(key).toContain("a:1");
     expect(key).toContain("c:3");
     expect(key.join(",")).not.toContain("b:");
@@ -141,7 +141,7 @@ describe("defineQuery", () => {
       cache: {},
     });
 
-    const key = query.cache!.key!({ z: "1", a: "2", m: "3" });
+    const key = query.cache!.key!({ z: "1", a: "2", m: "3" } as unknown as void);
     const keyStr = key.join(",");
     const aPos = keyStr.indexOf("a:");
     const mPos = keyStr.indexOf("m:");
@@ -154,7 +154,7 @@ describe("defineQuery", () => {
 
 describe("defineMutation", () => {
   it("returns the mutation definition", () => {
-    const mutation = defineMutation<void, { id: string }, void>({
+    const mutation = defineMutation<{ id: string }, void>({
       name: "test.delete",
       execute: async () => {},
     });
@@ -172,19 +172,14 @@ describe("defineMutation", () => {
   });
 
   it("preserves invalidates configuration", () => {
-    const targetQuery: Query<string, void> = {
-      name: "target.query",
-      fetch: async () => "data",
-    };
-
     const mutation = defineMutation({
       name: "test.mutate",
       execute: async () => {},
-      invalidates: [targetQuery],
+      invalidates: ["target.query"],
     });
 
     expect(mutation.invalidates).toHaveLength(1);
-    expect(mutation.invalidates?.[0].name).toBe("target.query");
+    expect(mutation.invalidates?.[0]).toBe("target.query");
   });
 });
 
