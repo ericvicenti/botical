@@ -101,7 +101,7 @@ RestartSec=5
 
 # Production environment
 Environment=NODE_ENV=production
-Environment=IRIS_PORT=80
+Environment=IRIS_PORT=8000
 Environment=IRIS_HOST=0.0.0.0
 Environment=IRIS_STATIC_DIR=${irisDir}/webui/dist
 Environment=IRIS_DATA_DIR=${dataDir}
@@ -110,9 +110,6 @@ Environment=IRIS_DATA_DIR=${dataDir}
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=iris
-
-# Allow binding to port 80 as non-root
-AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
@@ -309,6 +306,27 @@ SERVICEEOF`
       stream: true,
     });
     throw new Error("Service failed to start");
+  }
+
+  // Step 8: Configure exe.dev proxy (make public, set port)
+  // Extract VM name from hostname (e.g., "iris-vicenti" from "iris-vicenti.exe.xyz")
+  const vmName = host.replace(/\.exe\.xyz$/, "");
+  if (host.endsWith(".exe.xyz")) {
+    console.log("🌐 Configuring exe.dev proxy...");
+
+    // Set the proxy port to 8000
+    const portResult = await runLocal(["ssh", "exe.dev", "share", "port", vmName, "8000"]);
+    if (!portResult.success) {
+      console.log("   Warning: Could not set proxy port (may already be configured)");
+    }
+
+    // Make public
+    const publicResult = await runLocal(["ssh", "exe.dev", "share", "set-public", vmName]);
+    if (!publicResult.success) {
+      console.log("   Warning: Could not set public access (may already be configured)");
+    } else {
+      console.log("   Proxy configured: public on port 8000\n");
+    }
   }
 
   console.log(`\n✅ Deployment complete!`);
