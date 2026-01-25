@@ -3,6 +3,7 @@
  *
  * REST API endpoints for managing agent configurations.
  * Lists both built-in agents and custom project-specific agents.
+ * Custom agents can come from YAML files (.iris/agents/) or SQLite database.
  *
  * Endpoints:
  * - GET /api/agents - List all available agents (built-in + custom)
@@ -12,7 +13,7 @@
  * - DELETE /api/agents/:name - Delete custom agent
  *
  * Built-in agents (default, explore, plan) cannot be modified or deleted.
- * Custom agents are stored per-project in the project database.
+ * Custom agents are stored per-project in the project database or YAML files.
  *
  * Response Format:
  * All endpoints return { data, meta? } on success or { error } on failure.
@@ -26,15 +27,28 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import {
-  AgentService,
   AgentCreateSchema,
   AgentUpdateSchema,
   toAgentConfig,
 } from "@/services/agents.ts";
+import { UnifiedAgentService } from "@/services/agents-unified.ts";
 import { AgentRegistry } from "@/agents/registry.ts";
-import { ValidationError, ForbiddenError } from "@/utils/errors.ts";
+import { ProjectService } from "@/services/projects.ts";
+import { ValidationError, ForbiddenError, NotFoundError } from "@/utils/errors.ts";
 
 const agents = new Hono();
+
+/**
+ * Get project path from project ID
+ */
+function getProjectPath(projectId: string): string | null {
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+  return project.path;
+}
 
 /**
  * Query parameters for listing agents
@@ -94,6 +108,8 @@ agents.get("/", async (c) => {
 /**
  * POST /api/agents
  * Create a custom agent
+ *
+ * Set saveToYaml=true in body to save as YAML file (recommended)
  */
 agents.post("/", async (c) => {
   const body = await c.req.json();
@@ -105,6 +121,7 @@ agents.post("/", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
+  const projectPath = getProjectPath(projectId);
 
   // Validate the rest of the input
   const result = AgentCreateSchema.safeParse(body);
@@ -122,7 +139,19 @@ agents.post("/", async (c) => {
     );
   }
 
-  const agent = AgentService.create(db, result.data);
+  const saveToYaml = body.saveToYaml === true;
+
+  // If no project path, can only save to database
+  if (!projectPath && saveToYaml) {
+    throw new ValidationError("Project has no path configured for YAML storage");
+  }
+
+  const agent = UnifiedAgentService.create(
+    db,
+    projectPath || "",
+    result.data,
+    saveToYaml && !!projectPath
+  );
 
   return c.json(
     {
@@ -172,9 +201,10 @@ agents.put("/:name", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
+  const projectPath = getProjectPath(projectId);
 
   // Get existing agent
-  const existing = AgentService.getByName(db, name);
+  const existing = UnifiedAgentService.getByName(db, projectPath || "", name);
   if (!existing) {
     throw new ValidationError(`Agent "${name}" not found`);
   }
@@ -194,7 +224,12 @@ agents.put("/:name", async (c) => {
     );
   }
 
-  const agent = AgentService.update(db, existing.id, result.data);
+  const agent = UnifiedAgentService.update(
+    db,
+    projectPath || "",
+    existing.id,
+    result.data
+  );
 
   return c.json({
     data: toAgentConfig(agent),
@@ -219,14 +254,15 @@ agents.delete("/:name", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
+  const projectPath = getProjectPath(projectId);
 
   // Get existing agent
-  const existing = AgentService.getByName(db, name);
+  const existing = UnifiedAgentService.getByName(db, projectPath || "", name);
   if (!existing) {
     throw new ValidationError(`Agent "${name}" not found`);
   }
 
-  AgentService.delete(db, existing.id);
+  UnifiedAgentService.delete(db, projectPath || "", existing.id);
 
   return c.json({
     data: { deleted: true },

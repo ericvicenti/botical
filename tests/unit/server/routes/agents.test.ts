@@ -7,6 +7,7 @@ import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import { AgentService } from "@/services/agents.ts";
+import { ProjectService } from "@/services/projects.ts";
 import type {
   ItemResponse,
   ErrorResponse,
@@ -29,7 +30,8 @@ describe("Agents API Routes", () => {
     import.meta.dirname,
     "../../../.test-data/agents-route-test"
   );
-  const testProjectId = "test-project-agents";
+  let testProjectId: string;
+  let testProjectPath: string;
 
   beforeAll(() => {
     Config.load({ dataDir: testDataDir });
@@ -47,10 +49,36 @@ describe("Agents API Routes", () => {
   });
 
   beforeEach(async () => {
-    await DatabaseManager.initialize();
-    if (DatabaseManager.projectDbExists(testProjectId)) {
-      DatabaseManager.deleteProjectDb(testProjectId);
+    // Reset and configure for test directory
+    DatabaseManager.closeAll();
+    Config.load({ dataDir: testDataDir });
+
+    // Clean up any existing test data
+    if (fs.existsSync(testDataDir)) {
+      fs.rmSync(testDataDir, { recursive: true, force: true });
     }
+
+    await DatabaseManager.initialize();
+
+    // Create test project in root database with path for YAML support
+    const rootDb = DatabaseManager.getRootDb();
+    // Create a test user first
+    rootDb.query(`
+      INSERT OR IGNORE INTO users (id, email, username, created_at, updated_at)
+      VALUES ('usr_test', 'test@example.com', 'testuser', ?, ?)
+    `).run(Date.now(), Date.now());
+    // Create the project with a path - capture the returned project to get the actual ID
+    testProjectPath = path.join(testDataDir, "test-project");
+    const project = ProjectService.create(rootDb, {
+      name: "Test Agent Project",
+      ownerId: "usr_test",
+      type: "local",
+      path: testProjectPath,
+    });
+    testProjectId = project.id;
+    // Create the .iris directory for YAML agents
+    const irisDir = path.join(testProjectPath, ".iris", "agents");
+    fs.mkdirSync(irisDir, { recursive: true });
   });
 
   const app = createApp();
