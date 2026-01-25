@@ -1,9 +1,11 @@
-import { useSessions, useCreateSession } from "@/lib/api/queries";
+import { useState } from "react";
+import { useSessions } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 import { Plus, MessageSquare, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Session } from "@/lib/api/types";
+import { NewTaskModal } from "./NewTaskModal";
 
 interface TasksPanelProps {
   projectId: string;
@@ -11,29 +13,13 @@ interface TasksPanelProps {
 
 export function TasksPanel({ projectId }: TasksPanelProps) {
   const { data: sessions, isLoading } = useSessions(projectId);
-  const createSession = useCreateSession();
-  const { openTab } = useTabs();
-  const navigate = useNavigate();
+  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
 
   const activeSessions = sessions?.filter((s) => s.status === "active") || [];
   const archivedSessions = sessions?.filter((s) => s.status === "archived") || [];
 
-  const handleCreateTask = async () => {
-    try {
-      const session = await createSession.mutateAsync({
-        projectId,
-        title: "New Task",
-      });
-      openTab({
-        type: "task",
-        sessionId: session.id,
-        projectId,
-        title: session.title,
-      });
-      navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
-    } catch (err) {
-      console.error("Failed to create task:", err);
-    }
+  const handleCreateTask = () => {
+    setShowNewTaskModal(true);
   };
 
   if (isLoading) {
@@ -51,17 +37,21 @@ export function TasksPanel({ projectId }: TasksPanelProps) {
         </div>
         <button
           onClick={handleCreateTask}
-          disabled={createSession.isPending}
-          className={cn(
-            "p-1 hover:bg-bg-elevated rounded text-text-secondary hover:text-text-primary",
-            createSession.isPending && "opacity-50 cursor-not-allowed"
-          )}
+          className="p-1 hover:bg-bg-elevated rounded text-text-secondary hover:text-text-primary"
           title="New Task"
           data-testid="new-task-button"
         >
           <Plus className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* New Task Modal */}
+      {showNewTaskModal && (
+        <NewTaskModal
+          projectId={projectId}
+          onClose={() => setShowNewTaskModal(false)}
+        />
+      )}
 
       {/* Task List */}
       <div className="flex-1 overflow-auto py-1">

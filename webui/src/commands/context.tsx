@@ -59,6 +59,8 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         setSidebarPanel: ui.setSidebarPanel,
         setTheme: ui.setTheme,
         setSelectedProject: ui.setSelectedProject,
+        openNewTaskModal: ui.openNewTaskModal,
+        closeNewTaskModal: ui.closeNewTaskModal,
         sidebarCollapsed: ui.sidebarCollapsed,
         theme: ui.theme,
         resolvedTheme: ui.resolvedTheme,

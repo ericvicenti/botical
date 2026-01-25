@@ -53,6 +53,8 @@ export interface UIActions {
   setSidebarPanel: (panel: "files" | "git" | "run" | "services" | "tasks" | "settings") => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
   setSelectedProject: (projectId: string | null) => void;
+  openNewTaskModal: () => void;
+  closeNewTaskModal: () => void;
   sidebarCollapsed: boolean;
   theme: "dark" | "light" | "system";
   resolvedTheme: "dark" | "light";

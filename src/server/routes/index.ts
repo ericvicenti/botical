@@ -17,3 +17,4 @@ export { workflowExecutions } from "./workflow-executions.ts";
 export { exe } from "./exe.ts";
 export { filesystem } from "./filesystem.ts";
 export { skills } from "./skills.ts";
+export { templates } from "./templates.ts";

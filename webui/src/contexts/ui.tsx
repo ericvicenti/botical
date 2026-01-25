@@ -74,6 +74,7 @@ interface UIState {
   resolvedTheme: ResolvedTheme;
   selectedProjectId: string | null;
   revealPath: string | null; // Path to reveal in file tree
+  showNewTaskModal: boolean;
 }
 
 interface UIContextValue extends UIState {
@@ -83,6 +84,8 @@ interface UIContextValue extends UIState {
   setTheme: (theme: ThemePreference) => void;
   setSelectedProject: (projectId: string | null) => void;
   revealInTree: (path: string) => void;
+  openNewTaskModal: () => void;
+  closeNewTaskModal: () => void;
 }
 
 const UIContext = createContext<UIContextValue | null>(null);
@@ -99,6 +102,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
       resolvedTheme,
       selectedProjectId: stored.selectedProjectId,
       revealPath: null,
+      showNewTaskModal: false,
     };
   });
 
@@ -143,6 +147,14 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   const setSidebarPanel = useCallback((panel: SidebarPanel) => {
     setState((s) => ({ ...s, sidebarPanel: panel }));
+  }, []);
+
+  const openNewTaskModal = useCallback(() => {
+    setState((s) => ({ ...s, showNewTaskModal: true }));
+  }, []);
+
+  const closeNewTaskModal = useCallback(() => {
+    setState((s) => ({ ...s, showNewTaskModal: false }));
   }, []);
 
   // Subscribe to UI action events from WebSocket (AI agent tools)
@@ -190,6 +202,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
         sidebarCollapsed: false,
         revealPath: path,
       })),
+    openNewTaskModal,
+    closeNewTaskModal,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

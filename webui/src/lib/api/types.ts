@@ -326,6 +326,21 @@ export interface BackendAction {
   params: BackendActionParam[];
 }
 
+// Task Template types
+
+export interface TaskTemplateSummary {
+  id: string;
+  name: string;
+  description?: string;
+  agentClass: string;
+}
+
+export interface TaskTemplate extends TaskTemplateSummary {
+  systemPrompt: string;
+  tools?: string[];
+  filePath: string;
+}
+
 // Workflow types
 
 export interface WorkflowInputField {

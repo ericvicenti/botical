@@ -103,16 +103,24 @@ async function executeBackendAction(
 }
 
 /**
+ * Actions that should be intercepted and handled specially in the frontend
+ */
+const INTERCEPTED_ACTIONS = new Set(["agent.newTask"]);
+
+/**
  * Convert a backend action to a frontend Command
  */
 export function backendActionToCommand(action: BackendAction): Command {
   const category = inferCategory(action.id);
   const args: CommandArg[] = [];
 
-  for (const param of action.params) {
-    const arg = paramToArg(param);
-    if (arg) {
-      args.push(arg);
+  // For intercepted actions, don't add args - they'll be handled specially
+  if (!INTERCEPTED_ACTIONS.has(action.id)) {
+    for (const param of action.params) {
+      const arg = paramToArg(param);
+      if (arg) {
+        args.push(arg);
+      }
     }
   }
 
@@ -123,6 +131,11 @@ export function backendActionToCommand(action: BackendAction): Command {
     category,
     args: args.length > 0 ? args : undefined,
     execute: async (ctx, collectedArgs) => {
+      // Handle intercepted actions specially
+      if (action.id === "agent.newTask") {
+        ctx.ui.openNewTaskModal();
+        return;
+      }
       try {
         const result = await executeBackendAction(
           action.id,

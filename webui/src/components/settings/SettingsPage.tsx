@@ -1,7 +1,26 @@
 import { useState, useEffect } from "react";
-import { useSettings, useSaveSettings } from "@/lib/api/queries";
+import { useSettings, useSaveSettings, type AgentClass, DEFAULT_AGENT_CLASSES } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
-import { Save, Eye, EyeOff, Check, AlertCircle } from "lucide-react";
+import { Save, Eye, EyeOff, Check, AlertCircle, Plus, Pencil, Trash2, X } from "lucide-react";
+
+// Available models by provider
+const PROVIDER_MODELS: Record<"anthropic" | "openai" | "google", { id: string; name: string }[]> = {
+  anthropic: [
+    { id: "claude-3-5-haiku-latest", name: "Claude 3.5 Haiku" },
+    { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
+    { id: "claude-opus-4-20250514", name: "Claude Opus 4" },
+  ],
+  openai: [
+    { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+    { id: "gpt-4o", name: "GPT-4o" },
+    { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
+    { id: "o1", name: "o1" },
+  ],
+  google: [
+    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+    { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+  ],
+};
 
 export function SettingsPage() {
   const { data: settings, isLoading } = useSettings();
@@ -14,6 +33,12 @@ export function SettingsPage() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
 
+  // Agent Classes state
+  const [agentClasses, setAgentClasses] = useState<AgentClass[]>(DEFAULT_AGENT_CLASSES);
+  const [defaultAgentClass, setDefaultAgentClass] = useState("medium");
+  const [editingClass, setEditingClass] = useState<AgentClass | null>(null);
+  const [isAddingClass, setIsAddingClass] = useState(false);
+
   // Load settings when available
   useEffect(() => {
     if (settings) {
@@ -21,6 +46,8 @@ export function SettingsPage() {
       setOpenaiKey(settings.openaiApiKey || "");
       setGoogleKey(settings.googleApiKey || "");
       setDefaultProvider(settings.defaultProvider || "anthropic");
+      setAgentClasses(settings.agentClasses || DEFAULT_AGENT_CLASSES);
+      setDefaultAgentClass(settings.defaultAgentClass || "medium");
     }
   }, [settings]);
 
@@ -33,10 +60,77 @@ export function SettingsPage() {
       openaiApiKey: openaiKey || undefined,
       googleApiKey: googleKey || undefined,
       defaultProvider,
+      agentClasses,
+      defaultAgentClass,
     });
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleAddClass = () => {
+    setEditingClass({
+      id: "",
+      name: "",
+      providerId: "anthropic",
+      modelId: "claude-sonnet-4-20250514",
+    });
+    setIsAddingClass(true);
+  };
+
+  const handleEditClass = (cls: AgentClass) => {
+    setEditingClass({ ...cls });
+    setIsAddingClass(false);
+  };
+
+  const handleDeleteClass = (id: string) => {
+    if (agentClasses.length <= 1) {
+      alert("You must have at least one agent class.");
+      return;
+    }
+    setAgentClasses(agentClasses.filter((c) => c.id !== id));
+    if (defaultAgentClass === id) {
+      setDefaultAgentClass(agentClasses.find((c) => c.id !== id)?.id || "");
+    }
+  };
+
+  const handleSaveClass = () => {
+    if (!editingClass) return;
+
+    // Generate ID from name if adding new
+    const classId = isAddingClass
+      ? editingClass.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      : editingClass.id;
+
+    if (!classId || !editingClass.name) {
+      alert("Please enter a name for the agent class.");
+      return;
+    }
+
+    // Check for duplicate ID when adding
+    if (isAddingClass && agentClasses.some((c) => c.id === classId)) {
+      alert("An agent class with this name already exists.");
+      return;
+    }
+
+    const updatedClass: AgentClass = {
+      ...editingClass,
+      id: classId,
+    };
+
+    if (isAddingClass) {
+      setAgentClasses([...agentClasses, updatedClass]);
+    } else {
+      setAgentClasses(agentClasses.map((c) => (c.id === editingClass.id ? updatedClass : c)));
+    }
+
+    setEditingClass(null);
+    setIsAddingClass(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingClass(null);
+    setIsAddingClass(false);
   };
 
   const toggleShowKey = (key: string) => {
@@ -209,6 +303,184 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+        </section>
+
+        {/* Agent Classes Section */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Agent Classes</h2>
+          <p className="text-sm text-text-muted mb-4">
+            Define agent classes that map names to specific providers and models.
+            These can be used in task templates.
+          </p>
+
+          <div className="space-y-3 mb-4">
+            {agentClasses.map((cls) => (
+              <div
+                key={cls.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 bg-bg-secondary border rounded-lg",
+                  defaultAgentClass === cls.id ? "border-accent-primary" : "border-border"
+                )}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-text-primary">{cls.name}</span>
+                    <span className="text-xs text-text-muted px-1.5 py-0.5 bg-bg-elevated rounded">
+                      {cls.id}
+                    </span>
+                    {defaultAgentClass === cls.id && (
+                      <span className="text-xs text-accent-primary px-1.5 py-0.5 bg-accent-primary/10 rounded">
+                        default
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-text-muted mt-1">
+                    {cls.providerId} / {cls.modelId}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {defaultAgentClass !== cls.id && (
+                    <button
+                      onClick={() => setDefaultAgentClass(cls.id)}
+                      className="px-2 py-1 text-xs text-text-secondary hover:text-text-primary border border-border rounded hover:bg-bg-elevated"
+                    >
+                      Set Default
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleEditClass(cls)}
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-elevated rounded"
+                    title="Edit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClass(cls.id)}
+                    className="p-1.5 text-text-muted hover:text-accent-error hover:bg-accent-error/10 rounded"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleAddClass}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg",
+              "text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            Add Agent Class
+          </button>
+
+          {/* Edit/Add Class Modal */}
+          {editingClass && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-bg-primary border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-text-primary">
+                    {isAddingClass ? "Add Agent Class" : "Edit Agent Class"}
+                  </h3>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-1 text-text-muted hover:text-text-primary"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editingClass.name}
+                      onChange={(e) => setEditingClass({ ...editingClass, name: e.target.value })}
+                      placeholder="e.g. Smart"
+                      className={cn(
+                        "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
+                        "text-text-primary placeholder:text-text-muted",
+                        "focus:outline-none focus:border-accent-primary"
+                      )}
+                    />
+                    {isAddingClass && editingClass.name && (
+                      <p className="text-xs text-text-muted mt-1">
+                        ID: {editingClass.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Provider */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">
+                      Provider
+                    </label>
+                    <select
+                      value={editingClass.providerId}
+                      onChange={(e) => {
+                        const providerId = e.target.value as "anthropic" | "openai" | "google";
+                        const firstModel = PROVIDER_MODELS[providerId][0]?.id || "";
+                        setEditingClass({ ...editingClass, providerId, modelId: firstModel });
+                      }}
+                      className={cn(
+                        "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
+                        "text-text-primary",
+                        "focus:outline-none focus:border-accent-primary"
+                      )}
+                    >
+                      <option value="anthropic">Anthropic</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="google">Google</option>
+                    </select>
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-1">
+                      Model
+                    </label>
+                    <select
+                      value={editingClass.modelId}
+                      onChange={(e) => setEditingClass({ ...editingClass, modelId: e.target.value })}
+                      className={cn(
+                        "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
+                        "text-text-primary",
+                        "focus:outline-none focus:border-accent-primary"
+                      )}
+                    >
+                      {PROVIDER_MODELS[editingClass.providerId].map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 text-text-secondary hover:text-text-primary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveClass}
+                    className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90"
+                  >
+                    {isAddingClass ? "Add Class" : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Warning if no key for default provider */}

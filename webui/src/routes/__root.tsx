@@ -12,6 +12,8 @@ import { BackendActionsLoader } from "@/commands/BackendActionsLoader";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ResultDialogProvider } from "@/components/ui/ResultDialog";
 import { registerAllCommands } from "@/commands/definitions";
+import { useUI } from "@/contexts/ui";
+import { NewTaskModal } from "@/components/tasks/NewTaskModal";
 
 // Register commands on app load
 registerAllCommands();
@@ -25,6 +27,8 @@ function RootLayoutInner() {
   useAgentActions();
   useWorkflowNotifications();
   useAutoDocumentTitle();
+
+  const { showNewTaskModal, closeNewTaskModal, selectedProjectId } = useUI();
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
@@ -46,6 +50,14 @@ function RootLayoutInner() {
 
       {/* Command Palette */}
       <CommandPalette />
+
+      {/* New Task Modal */}
+      {showNewTaskModal && selectedProjectId && (
+        <NewTaskModal
+          projectId={selectedProjectId}
+          onClose={closeNewTaskModal}
+        />
+      )}
     </div>
   );
 }

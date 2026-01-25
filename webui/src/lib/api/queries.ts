@@ -155,12 +155,34 @@ export function useSendMessage() {
 // Settings - stored in localStorage for now
 const SETTINGS_KEY = "iris:settings";
 
+/**
+ * Agent Class - Maps a name (easy/medium/smart) to a provider+model
+ */
+export interface AgentClass {
+  id: string;           // e.g. "easy", "medium", "smart"
+  name: string;         // Display name
+  providerId: "anthropic" | "openai" | "google";
+  modelId: string;      // e.g. "claude-sonnet-4-20250514"
+}
+
+/**
+ * Default agent classes
+ */
+export const DEFAULT_AGENT_CLASSES: AgentClass[] = [
+  { id: "easy", name: "Easy", providerId: "anthropic", modelId: "claude-3-5-haiku-latest" },
+  { id: "medium", name: "Medium", providerId: "anthropic", modelId: "claude-sonnet-4-20250514" },
+  { id: "smart", name: "Smart", providerId: "anthropic", modelId: "claude-opus-4-20250514" },
+];
+
 export interface AppSettings {
   anthropicApiKey?: string;
   openaiApiKey?: string;
   googleApiKey?: string;
   defaultProvider: "anthropic" | "openai" | "google";
   userId: string;
+  // Agent Classes
+  agentClasses: AgentClass[];
+  defaultAgentClass: string; // ID of default agent class
   // Experiments
   exeEnabled?: boolean;
 }
@@ -169,7 +191,15 @@ export function getSettings(): AppSettings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Ensure agentClasses exists with defaults
+      if (!parsed.agentClasses || parsed.agentClasses.length === 0) {
+        parsed.agentClasses = DEFAULT_AGENT_CLASSES;
+      }
+      if (!parsed.defaultAgentClass) {
+        parsed.defaultAgentClass = "medium";
+      }
+      return parsed;
     }
   } catch (e) {
     console.warn("Failed to load settings:", e);
@@ -178,6 +208,8 @@ export function getSettings(): AppSettings {
   return {
     defaultProvider: "anthropic",
     userId: `user-${Date.now()}`,
+    agentClasses: DEFAULT_AGENT_CLASSES,
+    defaultAgentClass: "medium",
   };
 }
 
@@ -1299,6 +1331,142 @@ export function useDeleteWorkflow() {
       // Use refetchQueries to force immediate refetch
       queryClient.refetchQueries({
         queryKey: ["projects", projectId, "workflows"],
+      });
+    },
+  });
+}
+
+// Templates
+import type { TaskTemplateSummary, TaskTemplate } from "./types";
+
+export function useTemplates(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "templates"],
+    queryFn: async () => {
+      const response = await apiClientRaw<TaskTemplateSummary[]>(
+        `/api/templates?projectId=${encodeURIComponent(projectId)}`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useTemplate(templateId: string, projectId: string) {
+  return useQuery({
+    queryKey: ["templates", templateId, projectId],
+    queryFn: async () => {
+      const response = await apiClient<TaskTemplate>(
+        `/api/templates/${templateId}?projectId=${encodeURIComponent(projectId)}`
+      );
+      return response;
+    },
+    enabled: !!templateId && !!projectId,
+  });
+}
+
+export function useCreateTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      id,
+      name,
+      description,
+      agentClass,
+      tools,
+      systemPrompt,
+    }: {
+      projectId: string;
+      id: string;
+      name: string;
+      description?: string;
+      agentClass?: string;
+      tools?: string[];
+      systemPrompt?: string;
+    }) =>
+      apiClient<TaskTemplate>("/api/templates", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId,
+          id,
+          name,
+          description,
+          agentClass,
+          tools,
+          systemPrompt,
+        }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "templates"],
+      });
+    },
+  });
+}
+
+export function useUpdateTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      templateId,
+      name,
+      description,
+      agentClass,
+      tools,
+      systemPrompt,
+    }: {
+      projectId: string;
+      templateId: string;
+      name?: string;
+      description?: string;
+      agentClass?: string;
+      tools?: string[];
+      systemPrompt?: string;
+    }) =>
+      apiClient<TaskTemplate>(`/api/templates/${templateId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          projectId,
+          name,
+          description,
+          agentClass,
+          tools,
+          systemPrompt,
+        }),
+      }),
+    onSuccess: (_, { projectId, templateId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "templates"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["templates", templateId],
+      });
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      templateId,
+    }: {
+      projectId: string;
+      templateId: string;
+    }) =>
+      apiClient<{ deleted: boolean }>(
+        `/api/templates/${templateId}?projectId=${encodeURIComponent(projectId)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "templates"],
       });
     },
   });
