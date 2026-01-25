@@ -1,0 +1,346 @@
+/**
+ * Project Configuration (YAML-based)
+ *
+ * Manages project-level configuration stored in .iris/config.yaml
+ * This file contains project-wide settings that can be version-controlled.
+ */
+
+import { z } from "zod";
+import {
+  loadYamlFileWithSchema,
+  saveYamlFile,
+  yamlFileExists,
+  getIrisPaths,
+} from "./yaml.ts";
+
+// ============================================================================
+// YAML Schema
+// ============================================================================
+
+/**
+ * Model configuration for agents
+ */
+const ModelConfigSchema = z.object({
+  providerId: z.string().optional(),
+  modelId: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  topP: z.number().min(0).max(1).optional(),
+  maxSteps: z.number().positive().optional(),
+});
+
+/**
+ * Default agent configuration
+ */
+const DefaultAgentConfigSchema = z.object({
+  name: z.string().optional(),
+  model: ModelConfigSchema.optional(),
+  tools: z.array(z.string()).optional(),
+});
+
+/**
+ * Git configuration
+ */
+const GitConfigSchema = z.object({
+  remote: z.string().optional(),
+  branch: z.string().optional(),
+  autoCommit: z.boolean().optional(),
+  commitMessagePrefix: z.string().optional(),
+});
+
+/**
+ * Project YAML configuration schema
+ */
+export const ProjectConfigYamlSchema = z.object({
+  // Project metadata
+  name: z.string().optional(),
+  description: z.string().optional(),
+
+  // Default agent settings
+  defaultAgent: DefaultAgentConfigSchema.optional(),
+
+  // Model defaults
+  model: ModelConfigSchema.optional(),
+
+  // Enabled tools (whitelist or blacklist)
+  tools: z.object({
+    enabled: z.array(z.string()).optional(),
+    disabled: z.array(z.string()).optional(),
+  }).optional(),
+
+  // Environment variables (non-sensitive)
+  env: z.record(z.string()).optional(),
+
+  // Git settings
+  git: GitConfigSchema.optional(),
+
+  // Custom settings (extensible)
+  settings: z.record(z.unknown()).optional(),
+});
+
+export type ProjectConfigYaml = z.infer<typeof ProjectConfigYamlSchema>;
+
+// ============================================================================
+// Project Config Entity
+// ============================================================================
+
+/**
+ * Full project configuration with all fields
+ */
+export interface ProjectConfig {
+  name?: string;
+  description?: string;
+  defaultAgent?: {
+    name?: string;
+    model?: {
+      providerId?: string;
+      modelId?: string;
+      temperature?: number;
+      topP?: number;
+      maxSteps?: number;
+    };
+    tools?: string[];
+  };
+  model?: {
+    providerId?: string;
+    modelId?: string;
+    temperature?: number;
+    topP?: number;
+    maxSteps?: number;
+  };
+  tools?: {
+    enabled?: string[];
+    disabled?: string[];
+  };
+  env?: Record<string, string>;
+  git?: {
+    remote?: string;
+    branch?: string;
+    autoCommit?: boolean;
+    commitMessagePrefix?: string;
+  };
+  settings?: Record<string, unknown>;
+}
+
+// ============================================================================
+// Project Config Service
+// ============================================================================
+
+/**
+ * YAML-based Project Configuration Service
+ *
+ * Reads and writes project configuration from .iris/config.yaml
+ */
+export const ProjectConfigService = {
+  /**
+   * Get config file path for a project
+   */
+  getPath(projectPath: string): string {
+    return getIrisPaths(projectPath).config;
+  },
+
+  /**
+   * Check if config exists
+   */
+  exists(projectPath: string): boolean {
+    return yamlFileExists(this.getPath(projectPath));
+  },
+
+  /**
+   * Load project configuration
+   * Returns empty config if file doesn't exist
+   */
+  load(projectPath: string): ProjectConfig {
+    const filePath = this.getPath(projectPath);
+    const yaml = loadYamlFileWithSchema(filePath, ProjectConfigYamlSchema, {
+      optional: true,
+    });
+
+    if (!yaml) {
+      return {};
+    }
+
+    return yaml as ProjectConfig;
+  },
+
+  /**
+   * Save project configuration
+   */
+  save(projectPath: string, config: ProjectConfig): void {
+    const filePath = this.getPath(projectPath);
+
+    // Validate before saving
+    const validated = ProjectConfigYamlSchema.parse(config);
+
+    // Remove undefined/empty values for cleaner YAML
+    const cleaned = this.cleanConfig(validated);
+
+    saveYamlFile(filePath, cleaned);
+  },
+
+  /**
+   * Update specific fields in project configuration
+   */
+  update(projectPath: string, updates: Partial<ProjectConfig>): ProjectConfig {
+    const current = this.load(projectPath);
+    const merged = this.mergeConfig(current, updates);
+    this.save(projectPath, merged);
+    return merged;
+  },
+
+  /**
+   * Get a specific setting value
+   */
+  getSetting<T = unknown>(projectPath: string, key: string): T | undefined {
+    const config = this.load(projectPath);
+    return config.settings?.[key] as T | undefined;
+  },
+
+  /**
+   * Set a specific setting value
+   */
+  setSetting(projectPath: string, key: string, value: unknown): void {
+    const config = this.load(projectPath);
+    config.settings = config.settings || {};
+    config.settings[key] = value;
+    this.save(projectPath, config);
+  },
+
+  /**
+   * Delete a specific setting
+   */
+  deleteSetting(projectPath: string, key: string): void {
+    const config = this.load(projectPath);
+    if (config.settings) {
+      delete config.settings[key];
+      this.save(projectPath, config);
+    }
+  },
+
+  /**
+   * Get environment variables from config
+   */
+  getEnv(projectPath: string): Record<string, string> {
+    const config = this.load(projectPath);
+    return config.env || {};
+  },
+
+  /**
+   * Set environment variables in config
+   */
+  setEnv(projectPath: string, env: Record<string, string>): void {
+    const config = this.load(projectPath);
+    config.env = { ...config.env, ...env };
+    this.save(projectPath, config);
+  },
+
+  /**
+   * Get model configuration
+   */
+  getModelConfig(projectPath: string): ProjectConfig["model"] | undefined {
+    const config = this.load(projectPath);
+    return config.model;
+  },
+
+  /**
+   * Get default agent configuration
+   */
+  getDefaultAgentConfig(projectPath: string): ProjectConfig["defaultAgent"] | undefined {
+    const config = this.load(projectPath);
+    return config.defaultAgent;
+  },
+
+  /**
+   * Get git configuration
+   */
+  getGitConfig(projectPath: string): ProjectConfig["git"] | undefined {
+    const config = this.load(projectPath);
+    return config.git;
+  },
+
+  /**
+   * Get tool configuration
+   */
+  getToolsConfig(projectPath: string): ProjectConfig["tools"] | undefined {
+    const config = this.load(projectPath);
+    return config.tools;
+  },
+
+  /**
+   * Merge two configurations
+   */
+  mergeConfig(base: ProjectConfig, updates: Partial<ProjectConfig>): ProjectConfig {
+    return {
+      ...base,
+      ...updates,
+      defaultAgent: updates.defaultAgent
+        ? { ...base.defaultAgent, ...updates.defaultAgent }
+        : base.defaultAgent,
+      model: updates.model
+        ? { ...base.model, ...updates.model }
+        : base.model,
+      tools: updates.tools
+        ? { ...base.tools, ...updates.tools }
+        : base.tools,
+      env: updates.env
+        ? { ...base.env, ...updates.env }
+        : base.env,
+      git: updates.git
+        ? { ...base.git, ...updates.git }
+        : base.git,
+      settings: updates.settings
+        ? { ...base.settings, ...updates.settings }
+        : base.settings,
+    };
+  },
+
+  /**
+   * Clean config by removing undefined/empty values
+   */
+  cleanConfig(config: ProjectConfig): ProjectConfig {
+    const cleaned: ProjectConfig = {};
+
+    if (config.name) cleaned.name = config.name;
+    if (config.description) cleaned.description = config.description;
+
+    if (config.defaultAgent && Object.keys(config.defaultAgent).length > 0) {
+      cleaned.defaultAgent = this.cleanObject(config.defaultAgent);
+    }
+
+    if (config.model && Object.keys(config.model).length > 0) {
+      cleaned.model = this.cleanObject(config.model);
+    }
+
+    if (config.tools && (config.tools.enabled?.length || config.tools.disabled?.length)) {
+      cleaned.tools = {};
+      if (config.tools.enabled?.length) cleaned.tools.enabled = config.tools.enabled;
+      if (config.tools.disabled?.length) cleaned.tools.disabled = config.tools.disabled;
+    }
+
+    if (config.env && Object.keys(config.env).length > 0) {
+      cleaned.env = config.env;
+    }
+
+    if (config.git && Object.keys(config.git).length > 0) {
+      cleaned.git = this.cleanObject(config.git);
+    }
+
+    if (config.settings && Object.keys(config.settings).length > 0) {
+      cleaned.settings = config.settings;
+    }
+
+    return cleaned;
+  },
+
+  /**
+   * Remove undefined values from an object
+   */
+  cleanObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
+    const cleaned: Partial<T> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined && value !== null) {
+        cleaned[key as keyof T] = value as T[keyof T];
+      }
+    }
+    return cleaned;
+  },
+};
