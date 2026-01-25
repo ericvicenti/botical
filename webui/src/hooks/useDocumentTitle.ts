@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
-import { matchPageRoute } from "@/primitives/registry";
-import type { PageDefinition } from "@/primitives/types";
+import { useTabs } from "@/contexts/tabs";
+import { parseUrlToTabData, generateTabId } from "@/lib/tabs";
 
 const APP_NAME = "Iris";
 
@@ -23,50 +23,35 @@ export function useDocumentTitle(title?: string) {
 }
 
 /**
- * Get the document title for a page with its params.
- * Uses getTitle if defined, otherwise falls back to getLabel.
- */
-export function getPageDocumentTitle(
-  page: PageDefinition,
-  params: unknown,
-  search?: unknown
-): string {
-  if (page.getTitle) {
-    return page.getTitle(params, search);
-  }
-  return page.getLabel(params, search);
-}
-
-/**
- * Hook that automatically sets document title based on current page route.
+ * Hook that automatically sets document title based on the active tab.
+ *
+ * This ensures the document title always matches the tab label, even when
+ * the tab label is updated dynamically (e.g., after loading workflow data).
+ *
  * Should be called once at the app root level.
  */
 export function useAutoDocumentTitle() {
   const location = useLocation();
+  const { tabs } = useTabs();
 
   useEffect(() => {
-    const searchParams = location.search
-      ? new URLSearchParams(
-          typeof location.search === "string"
-            ? location.search
-            : Object.entries(location.search)
-                .map(([k, v]) => `${k}=${v}`)
-                .join("&")
-        )
-      : undefined;
+    // Parse the current URL to get tab data
+    const currentTabData = parseUrlToTabData(location.pathname, location.search?.toString());
 
-    const match = matchPageRoute(location.pathname, searchParams);
-
-    if (match && match.parsedParams) {
-      const title = getPageDocumentTitle(
-        match.page,
-        match.parsedParams,
-        match.parsedSearch ?? undefined
-      );
-      document.title = `${title} - ${APP_NAME}`;
-    } else {
-      // Default title for non-page routes
+    if (!currentTabData) {
       document.title = APP_NAME;
+      return;
     }
-  }, [location.pathname, location.search]);
+
+    // Generate the tab ID for the current URL
+    const currentTabId = generateTabId(currentTabData.data);
+
+    // Find the matching tab in our tabs list (which may have an updated label)
+    const matchingTab = tabs.find(t => t.id === currentTabId);
+
+    // Use the tab's label if found, otherwise fall back to the parsed label
+    const title = matchingTab?.label || currentTabData.label;
+
+    document.title = `${title} - ${APP_NAME}`;
+  }, [location.pathname, location.search, tabs]);
 }

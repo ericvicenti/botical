@@ -9,6 +9,11 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * Run with: bun test:e2e (from root) or bun run test:e2e (from webui)
  */
+
+// Support running against a different port via environment variable
+const port = process.env.PLAYWRIGHT_PORT || "5173";
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -17,7 +22,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "html",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -30,7 +35,7 @@ export default defineConfig({
   webServer: {
     // Start both backend and frontend servers for e2e tests
     command: "bun run ../scripts/e2e-server.ts",
-    url: "http://localhost:5173",
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     stdout: "pipe",

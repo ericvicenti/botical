@@ -10,42 +10,97 @@ const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
 };
 
 /**
- * Generate a unique ID for a tab based on its data.
- * This ID is used as the key for the tab in the tabs list.
+ * Generate a stable, unique ID for a tab based on its data.
+ *
+ * IMPORTANT: This function must generate consistent IDs regardless of whether
+ * the tab was created from URL parsing or from a direct openTab call.
+ *
+ * For page-type tabs, we generate IDs like:
+ * - "home.projects-list" (no params)
+ * - "project.overview:prj_123" (with key param)
+ * - "file.view:prj_123:/src/index.ts" (with multiple key params)
  */
 export function generateTabId(data: TabData): string {
   switch (data.type) {
+    // Legacy types - generate IDs that match their page primitive equivalents
     case "projects":
-      return "projects";
+      return "home.projects-list";
     case "project":
-      return `project:${data.projectId}`;
+      return `project.overview:${data.projectId}`;
     case "project-settings":
-      return `project-settings:${data.projectId}`;
+      return `project.settings:${data.projectId}`;
     case "mission":
       return `mission:${data.missionId}`;
     case "file":
-      return `file:${data.projectId}:${data.path}`;
+      return `file.view:${data.projectId}:${data.path}`;
     case "folder":
-      return `folder:${data.projectId}:${data.path}`;
+      return `folder.view:${data.projectId}:${data.path}`;
     case "process":
-      return `process:${data.processId}`;
+      return `process.terminal:${data.processId}`;
     case "diff":
       return `diff:${data.projectId}:${data.path}:${data.base || "working"}`;
     case "settings":
-      return `settings:${data.page}`;
+      return `settings.${data.page}`;
     case "create-project":
-      return "create-project";
+      return "project.create";
     case "task":
-      return `task:${data.sessionId}`;
+      return `task.chat:${data.sessionId}`;
     case "commit":
-      return `commit:${data.projectId}:${data.hash}`;
+      return `git.commit-view:${data.projectId}:${data.hash}`;
     case "review-commit":
-      return `review-commit:${data.projectId}`;
-    case "page": {
-      // Generate stable ID from pageId, params, and search
-      const searchPart = data.search ? `:${JSON.stringify(data.search)}` : "";
-      return `page:${data.pageId}:${JSON.stringify(data.params)}${searchPart}`;
-    }
+      return `git.review-commit:${data.projectId}`;
+    case "page":
+      return generatePageTabId(data.pageId, data.params);
+  }
+}
+
+/**
+ * Generate a stable tab ID for a page primitive.
+ * Format: pageId or pageId:param1:param2:...
+ */
+function generatePageTabId(pageId: string, params: Record<string, unknown>): string {
+  // Build ID based on page category and key params
+  switch (pageId) {
+    case "home.projects-list":
+      return "home.projects-list";
+    case "project.create":
+      return "project.create";
+    case "project.overview":
+      return `project.overview:${params.projectId}`;
+    case "project.settings":
+      return `project.settings:${params.projectId}`;
+    case "task.chat":
+      return `task.chat:${params.sessionId}`;
+    case "process.terminal":
+      return `process.terminal:${params.processId}`;
+    case "file.view":
+      return `file.view:${params.projectId}:${params.path}`;
+    case "folder.view":
+      return `folder.view:${params.projectId}:${params.path}`;
+    case "git.review-commit":
+      return `git.review-commit:${params.projectId}`;
+    case "git.commit-view":
+      return `git.commit-view:${params.projectId}:${params.hash}`;
+    case "settings.api-keys":
+      return "settings.api-keys";
+    case "settings.theme":
+      return "settings.theme";
+    case "settings.shortcuts":
+      return "settings.shortcuts";
+    case "settings.about":
+      return "settings.about";
+    case "workflow.editor":
+      return `workflow.editor:${params.workflowId}`;
+    case "workflow.execution":
+      return `workflow.execution:${params.executionId}`;
+    default:
+      // Fallback for unknown pages: use pageId + sorted params
+      const sortedParams = Object.keys(params)
+        .sort()
+        .map(k => params[k])
+        .filter(v => v !== undefined && v !== "")
+        .join(":");
+      return sortedParams ? `${pageId}:${sortedParams}` : pageId;
   }
 }
 
@@ -131,6 +186,9 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
 /**
  * Parse a URL pathname into tab data. Used for creating preview tabs
  * when navigating to a URL that doesn't have an open tab.
+ *
+ * IMPORTANT: This function ALWAYS returns page-type tab data to ensure
+ * consistent tab IDs regardless of how the tab was created.
  */
 export function parseUrlToTabData(
   pathname: string,
@@ -157,107 +215,59 @@ export function parseUrlToTabData(
     };
   }
 
-  // Fall back to legacy route parsing for routes not yet migrated to page primitives
+  // Handle splat routes that the page registry can't match directly
+  // These return page-type tabs with the appropriate page IDs
 
-  // /projects/:projectId/settings
-  const projectSettingsMatch = pathname.match(/^\/projects\/([^/]+)\/settings$/);
-  if (projectSettingsMatch) {
-    return {
-      type: "project-settings",
-      data: { type: "project-settings", projectId: projectSettingsMatch[1], projectName: "Project" },
-      label: "Settings",
-    };
-  }
-
-  // /projects/:projectId
-  const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
-  if (projectMatch) {
-    return {
-      type: "project",
-      data: { type: "project", projectId: projectMatch[1], projectName: "Project" },
-      label: "Project",
-    };
-  }
-
-  // /tasks/:sessionId
-  const taskMatch = pathname.match(/^\/tasks\/([^/]+)$/);
-  if (taskMatch) {
-    return {
-      type: "task",
-      data: { type: "task", sessionId: taskMatch[1], projectId: "", title: "Task" },
-      label: "Task",
-    };
-  }
-
-  // /processes/:processId
-  const processMatch = pathname.match(/^\/processes\/([^/]+)$/);
-  if (processMatch) {
-    return {
-      type: "process",
-      data: { type: "process", processId: processMatch[1], projectId: "" },
-      label: "Process",
-    };
-  }
-
-  // /files/:projectId/:path
+  // /files/:projectId/:path (splat route)
   const fileMatch = pathname.match(/^\/files\/([^/]+)\/(.+)$/);
   if (fileMatch) {
+    const projectId = fileMatch[1];
     const path = fileMatch[2];
+    const label = path.split("/").pop() || "File";
     return {
-      type: "file",
-      data: { type: "file", projectId: fileMatch[1], path },
-      label: path.split("/").pop() || "File",
+      type: "page",
+      data: {
+        type: "page",
+        pageId: "file.view",
+        params: { projectId, path },
+        label,
+        icon: "file-code",
+      },
+      label,
     };
   }
 
-  // /folders/:projectId/:path
+  // /folders/:projectId/:path (splat route)
   const folderMatch = pathname.match(/^\/folders\/([^/]+)\/(.*)$/);
   if (folderMatch) {
+    const projectId = folderMatch[1];
     const path = folderMatch[2] || "";
+    const label = path ? path.split("/").pop() || "Folder" : "Root";
     return {
-      type: "folder",
-      data: { type: "folder", projectId: folderMatch[1], path },
-      label: path.split("/").pop() || "Folder",
+      type: "page",
+      data: {
+        type: "page",
+        pageId: "folder.view",
+        params: { projectId, path },
+        label,
+        icon: "folder",
+      },
+      label,
     };
-  }
-
-  // /settings/:page
-  const settingsMatch = pathname.match(/^\/settings\/([^/]+)$/);
-  if (settingsMatch) {
-    const page = settingsMatch[1] as SettingsPage;
-    if (["api-keys", "theme", "shortcuts", "experiments", "about"].includes(page)) {
-      return {
-        type: "settings",
-        data: { type: "settings", page },
-        label: SETTINGS_PAGE_LABELS[page] || "Settings",
-      };
-    }
   }
 
   // /settings (redirect to api-keys)
   if (pathname === "/settings") {
     return {
-      type: "settings",
-      data: { type: "settings", page: "api-keys" },
+      type: "page",
+      data: {
+        type: "page",
+        pageId: "settings.api-keys",
+        params: {},
+        label: "API Keys",
+        icon: "key",
+      },
       label: "API Keys",
-    };
-  }
-
-  // /create-project
-  if (pathname === "/create-project") {
-    return {
-      type: "create-project",
-      data: { type: "create-project" },
-      label: "New Project",
-    };
-  }
-
-  // / (home/projects list)
-  if (pathname === "/") {
-    return {
-      type: "projects",
-      data: { type: "projects" },
-      label: "Projects",
     };
   }
 

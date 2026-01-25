@@ -88,9 +88,12 @@ interface WorkflowEditorPageProps {
 export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) {
   const { workflowId } = params;
   const { selectedProjectId, setSelectedProject } = useUI();
-  const { markDirty } = useTabs();
+  const { markDirty, updateTabLabel } = useTabs();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Tab ID for this workflow - must match generateTabId output
+  const tabId = `workflow.editor:${workflowId}`;
 
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");
@@ -98,9 +101,6 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [inputFields, setInputFields] = useState<WorkflowInputField[]>([]);
   const [isDirty, setIsDirty] = useState(false);
-
-  // Tab ID for dirty state tracking
-  const tabId = `workflow:${workflowId}`;
 
   // Fetch workflow - can work without selectedProjectId (API will search all projects)
   const { data: workflow, isLoading, error } = useQuery({
@@ -134,12 +134,17 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
       setInputFields(workflow.inputSchema.fields);
       setIsDirty(false);
 
+      // Update tab label with the workflow's actual label
+      if (workflow.label) {
+        updateTabLabel(tabId, workflow.label);
+      }
+
       // If the workflow belongs to a different project, switch to it
       if (workflow.projectId && workflow.projectId !== selectedProjectId) {
         setSelectedProject(workflow.projectId);
       }
     }
-  }, [workflow, selectedProjectId, setSelectedProject]);
+  }, [workflow, selectedProjectId, setSelectedProject, tabId, updateTabLabel]);
 
   // Sync dirty state with tabs
   useEffect(() => {

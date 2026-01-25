@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import * as LucideIcons from "lucide-react";
@@ -38,24 +39,31 @@ const TAB_ICONS = {
 } as const;
 
 /**
+ * Get an icon component from a kebab-case icon name (e.g., "git-commit" -> GitCommit)
+ */
+function getIconFromName(iconName: string): React.ComponentType<{ className?: string }> {
+  // Convert kebab-case to PascalCase (e.g., "git-commit" -> "GitCommit")
+  const pascalName = iconName
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Icon = (LucideIcons as any)[pascalName];
+  return Icon || FileText;
+}
+
+/**
  * Get icon component for a tab, handling dynamic page icons
  */
 function getTabIcon(tab: Tab): React.ComponentType<{ className?: string }> {
   if (tab.data.type === "page" && tab.data.icon) {
-    // Convert kebab-case to PascalCase (e.g., "git-commit" -> "GitCommit")
-    const iconName = tab.data.icon
-      .split("-")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join("");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Icon = (LucideIcons as any)[iconName];
-    if (Icon) return Icon;
+    return getIconFromName(tab.data.icon);
   }
   return TAB_ICONS[tab.type] || FileText;
 }
 
 export function TabBar() {
-  const { tabs, setActiveTab, closeTab, openTab, pinTab } = useTabs();
+  const { tabs, setActiveTab, closeTab, openPreviewTab, pinTab } = useTabs();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -64,8 +72,16 @@ export function TabBar() {
   const currentTabId = currentTabData ? generateTabId(currentTabData.data) : null;
   const hasMatchingTab = currentTabId ? tabs.some((t) => t.id === currentTabId) : true;
 
-  // Determine what should appear as "active" - either the matching tab or the preview
-  const effectiveActiveId = hasMatchingTab ? currentTabId : null;
+  // Auto-create preview tab when navigating to a URL that doesn't have a matching tab
+  // This ensures the tab is in the array so updateTabLabel and other operations work
+  useEffect(() => {
+    if (!hasMatchingTab && currentTabData) {
+      openPreviewTab(currentTabData.data);
+    }
+  }, [hasMatchingTab, currentTabData, openPreviewTab]);
+
+  // Determine what should appear as "active" - the matching tab (including newly created preview)
+  const effectiveActiveId = currentTabId;
 
   const handleTabClick = (tab: Tab) => {
     setActiveTab(tab.id);
@@ -76,12 +92,6 @@ export function TabBar() {
   const handleTabDoubleClick = (tab: Tab) => {
     if (tab.preview) {
       pinTab(tab.id);
-    }
-  };
-
-  const handlePreviewClick = () => {
-    if (currentTabData) {
-      openTab(currentTabData.data);
     }
   };
 
@@ -154,25 +164,21 @@ export function TabBar() {
         );
       })}
 
-      {/* Preview tab for current URL that doesn't have a matching tab */}
+      {/* Fallback preview tab shown briefly before useEffect creates the real tab */}
       {!hasMatchingTab && currentTabData && (
         <div
-          onClick={handlePreviewClick}
           className={cn(
-            "group h-full px-3 flex items-center gap-2 border-r border-border cursor-pointer shrink-0",
-            "hover:bg-bg-elevated transition-colors max-w-48",
+            "group h-full px-3 flex items-center gap-2 border-r border-border shrink-0",
+            "transition-colors max-w-48",
             "bg-bg-primary text-text-primary border-b-2 border-b-accent-primary italic"
           )}
-          title="Click to open as tab"
         >
-          {TAB_ICONS[currentTabData.type] && (
-            <span className="w-4 h-4 shrink-0 opacity-60">
-              {(() => {
-                const Icon = TAB_ICONS[currentTabData.type];
-                return <Icon className="w-4 h-4" />;
-              })()}
-            </span>
-          )}
+          {(() => {
+            const PreviewIcon = currentTabData.data.type === "page" && currentTabData.data.icon
+              ? getIconFromName(currentTabData.data.icon)
+              : TAB_ICONS[currentTabData.type] || FileText;
+            return <PreviewIcon className="w-4 h-4 shrink-0 opacity-60" />;
+          })()}
           <span className="truncate text-sm">{currentTabData.label}</span>
         </div>
       )}
