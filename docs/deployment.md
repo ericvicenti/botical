@@ -24,13 +24,23 @@ The script is **idempotent** - safe to run multiple times:
 
 | Step | First Run | Subsequent Runs |
 |------|-----------|-----------------|
-| 1. Check SSH | Connects | Connects |
+| 1. Check SSH | Connects, detects user/home | Connects |
 | 2. Install Bun | Installs | Skips (already installed) |
-| 3. Clone/Update Repo | `git clone` | `git reset --hard origin/main` |
-| 4. Install Dependencies | Full install | Updates only |
-| 5. Build Frontend | Builds | Rebuilds |
-| 6. Install Service | Creates | Overwrites |
-| 7. Restart Service | Starts | Restarts |
+| 3. Setup GitHub SSH | Generates deploy key | Verifies access |
+| 4. Clone/Update Repo | `git clone` | `git reset --hard origin/main` |
+| 5. Install Dependencies | Full install | Updates only |
+| 6. Build Frontend | Builds | Rebuilds |
+| 7. Install Service | Creates | Overwrites |
+| 8. Restart Service | Starts | Restarts |
+| 9. Configure Proxy | Sets port 8000, makes public | No-op |
+
+### Deploy Key Setup
+
+On first run, if the server can't access GitHub, the script will:
+1. Generate an SSH key on the server
+2. Display the public key
+3. Ask you to add it as a deploy key at `https://github.com/<owner>/<repo>/settings/keys`
+4. Exit - run the script again after adding the key
 
 ## Architecture
 
@@ -43,7 +53,7 @@ https://your-domain.com  ───CNAME───> hostname.exe.xyz
     ▼
 exe.dev Proxy (TLS termination, automatic certificates)
     │
-    ▼ HTTP (port 80)
+    ▼ HTTP (port 8000)
 Bun Server (Hono)
     ├── /api/*     → API routes
     ├── /health    → Health check
@@ -73,10 +83,10 @@ The systemd service sets these environment variables:
 | Variable | Value | Description |
 |----------|-------|-------------|
 | `NODE_ENV` | `production` | Production mode |
-| `IRIS_PORT` | `80` | HTTP port |
+| `IRIS_PORT` | `8000` | HTTP port (exe.dev requires 3000-9999) |
 | `IRIS_HOST` | `0.0.0.0` | Listen on all interfaces |
-| `IRIS_STATIC_DIR` | `/root/iris/webui/dist` | Built frontend path |
-| `IRIS_DATA_DIR` | `/root/.iris` | Data directory |
+| `IRIS_STATIC_DIR` | `$HOME/iris/webui/dist` | Built frontend path |
+| `IRIS_DATA_DIR` | `$HOME/.iris` | Data directory |
 
 To customize, edit `/etc/systemd/system/iris.service` on the server.
 
