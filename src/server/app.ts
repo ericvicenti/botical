@@ -17,6 +17,7 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
@@ -44,6 +45,17 @@ export function createApp() {
   // Global middleware (order matters)
   app.use("*", requestId());
   app.use("*", logger());
+
+  // Security headers in production (includes HSTS)
+  if (process.env.NODE_ENV === "production") {
+    app.use(
+      "*",
+      secureHeaders({
+        strictTransportSecurity: "max-age=31536000; includeSubDomains",
+      })
+    );
+  }
+
   app.use(
     "*",
     cors({
