@@ -73,7 +73,7 @@ describe("Database Lifecycle Integration", () => {
       expect(tableNames).toContain("snapshots");
       expect(tableNames).toContain("tasks");
       expect(tableNames).toContain("missions");
-      expect(tableNames).toContain("permissions");
+      expect(tableNames).toContain("workflows");
       expect(tableNames).toContain("migrations");
     });
   });

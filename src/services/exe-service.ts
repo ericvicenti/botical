@@ -228,6 +228,7 @@ export const ExeService = {
     const args = ["new", "--json"];
     if (name) args.push("--name", name);
     if (image) args.push("--image", image);
+    args.push('-no-email');
 
     const result = await runExeCommand(args, 60000); // Longer timeout for creation
 

@@ -17,20 +17,24 @@ describe("Processes API", () => {
   let db: Database;
   let app: Hono;
   const projectId = "prj_test-integration";
+  let originalGetProjectDb: typeof DatabaseManager.getProjectDb;
+  let originalGetOpenProjectIds: typeof DatabaseManager.getOpenProjectIds;
 
   beforeAll(() => {
     // Create in-memory database
     db = new Database(":memory:");
     runMigrations(db, PROJECT_MIGRATIONS);
 
+    // Store original methods
+    originalGetProjectDb = DatabaseManager.getProjectDb.bind(DatabaseManager);
+    originalGetOpenProjectIds = DatabaseManager.getOpenProjectIds.bind(DatabaseManager);
+
     // Mock DatabaseManager to return our test database
-    const originalGetProjectDb = DatabaseManager.getProjectDb;
     DatabaseManager.getProjectDb = (id: string) => {
       if (id === projectId) return db;
       return originalGetProjectDb(id);
     };
 
-    const originalGetOpenProjectIds = DatabaseManager.getOpenProjectIds;
     DatabaseManager.getOpenProjectIds = () => [projectId];
 
     // Create test app with error handler
@@ -41,6 +45,9 @@ describe("Processes API", () => {
   });
 
   afterAll(() => {
+    // Restore original methods
+    DatabaseManager.getProjectDb = originalGetProjectDb;
+    DatabaseManager.getOpenProjectIds = originalGetOpenProjectIds;
     db.close();
   });
 

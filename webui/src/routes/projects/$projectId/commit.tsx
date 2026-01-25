@@ -5,6 +5,127 @@ import { useGitStatus, useGitDiff, useCreateCommit, useGenerateCommitMessage, us
 import { useTabs } from "@/contexts/tabs";
 import type { FileStatus } from "@/lib/api/types";
 
+function getStatusIcon(status: FileStatus) {
+  switch (status) {
+    case "A":
+      return <Plus className="w-4 h-4 text-green-500" />;
+    case "D":
+      return <Minus className="w-4 h-4 text-red-500" />;
+    case "M":
+      return <Edit className="w-4 h-4 text-yellow-500" />;
+    case "R":
+      return <ArrowRight className="w-4 h-4 text-blue-500" />;
+    case "C":
+      return <Copy className="w-4 h-4 text-purple-500" />;
+    case "?":
+      return <HelpCircle className="w-4 h-4 text-gray-500" />;
+    default:
+      return <Edit className="w-4 h-4 text-text-secondary" />;
+  }
+}
+
+function getStatusLabel(status: FileStatus): string {
+  switch (status) {
+    case "A":
+      return "Added";
+    case "D":
+      return "Deleted";
+    case "M":
+      return "Modified";
+    case "R":
+      return "Renamed";
+    case "C":
+      return "Copied";
+    case "?":
+      return "Untracked";
+    default:
+      return "Unknown";
+  }
+}
+
+interface DiffHunk {
+  oldStart: number;
+  oldCount: number;
+  newStart: number;
+  newCount: number;
+  lines: Array<{ type: "add" | "remove" | "context"; content: string }>;
+}
+
+interface FileDiff {
+  hunks: DiffHunk[];
+}
+
+function parseDiffSections(diffText: string): Record<string, FileDiff> {
+  const sections: Record<string, FileDiff> = {};
+  if (!diffText) return sections;
+
+  const lines = diffText.split("\n");
+  let currentFile = "";
+  let currentHunk: DiffHunk | null = null;
+  let currentHunks: DiffHunk[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git")) {
+      if (currentFile && currentHunks.length > 0) {
+        sections[currentFile] = { hunks: currentHunks };
+      }
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match) {
+        currentFile = match[2]!;
+      }
+      currentHunks = [];
+      currentHunk = null;
+      continue;
+    }
+
+    if (
+      line.startsWith("index ") ||
+      line.startsWith("--- ") ||
+      line.startsWith("+++ ") ||
+      line.startsWith("new file") ||
+      line.startsWith("deleted file") ||
+      line.startsWith("similarity") ||
+      line.startsWith("rename")
+    ) {
+      continue;
+    }
+
+    const hunkMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+    if (hunkMatch) {
+      if (currentHunk) {
+        currentHunks.push(currentHunk);
+      }
+      currentHunk = {
+        oldStart: parseInt(hunkMatch[1]!, 10),
+        oldCount: parseInt(hunkMatch[2] || "1", 10),
+        newStart: parseInt(hunkMatch[3]!, 10),
+        newCount: parseInt(hunkMatch[4] || "1", 10),
+        lines: [],
+      };
+      continue;
+    }
+
+    if (currentHunk) {
+      if (line.startsWith("+")) {
+        currentHunk.lines.push({ type: "add", content: line.slice(1) });
+      } else if (line.startsWith("-")) {
+        currentHunk.lines.push({ type: "remove", content: line.slice(1) });
+      } else if (line.startsWith(" ") || line === "") {
+        currentHunk.lines.push({ type: "context", content: line.slice(1) || "" });
+      }
+    }
+  }
+
+  if (currentHunk) {
+    currentHunks.push(currentHunk);
+  }
+  if (currentFile && currentHunks.length > 0) {
+    sections[currentFile] = { hunks: currentHunks };
+  }
+
+  return sections;
+}
+
 export const Route = createFileRoute("/projects/$projectId/commit")({
   component: ReviewCommitPageRoute,
 });
