@@ -184,10 +184,48 @@ systemctl restart iris
 - CORS is currently permissive (`*`) - configure in production if needed
 - Data is stored in `/root/.iris` - back up this directory
 
+## Continuous Deployment (GitHub Actions)
+
+Set up automatic deploys on every push to main:
+
+### 1. Get a Runner Token
+
+Go to: https://github.com/ericvicenti/iris/settings/actions/runners/new?arch=x64&os=linux
+
+Copy the token from the `./config.sh` command (starts with `A...`).
+
+### 2. Run the Setup Script
+
+```bash
+bun scripts/setup-runner.ts iris-vicenti.exe.xyz <TOKEN>
+```
+
+This installs and configures a self-hosted GitHub Actions runner on your server.
+
+### 3. Done!
+
+Every push to `main` will now trigger automatic deployment. View runs at:
+https://github.com/ericvicenti/iris/actions
+
+### Runner Management
+
+```bash
+# View runner status
+ssh iris-vicenti.exe.xyz sudo systemctl status gh-actions-runner
+
+# View runner logs
+ssh iris-vicenti.exe.xyz sudo journalctl -u gh-actions-runner -f
+
+# Restart runner
+ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
+```
+
 ## Files
 
 | File | Description |
 |------|-------------|
 | `scripts/deploy.ts` | Main deployment script |
+| `scripts/setup-runner.ts` | GitHub Actions runner setup |
 | `scripts/iris.service` | Systemd service template |
+| `.github/workflows/deploy.yml` | CI/CD workflow |
 | `src/server/app.ts` | Static file serving logic |

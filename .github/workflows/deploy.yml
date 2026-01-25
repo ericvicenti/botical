@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Pull latest code
+        run: |
+          cd ~/iris
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: Install dependencies
+        run: |
+          cd ~/iris
+          ~/.bun/bin/bun install
+          cd webui && ~/.bun/bin/bun install
+
+      - name: Build frontend
+        run: |
+          cd ~/iris/webui
+          ~/.bun/bin/bun run build
+
+      - name: Restart service
+        run: |
+          sudo systemctl restart iris
+
+      - name: Verify deployment
+        run: |
+          sleep 2
+          curl -sf http://localhost:8000/health || exit 1
+          echo "Deployment successful!"
