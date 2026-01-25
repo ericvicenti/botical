@@ -20,6 +20,19 @@ import { WorkflowService } from "@/services/workflows";
 import path from "path";
 import fs from "fs";
 
+interface WorkflowData {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  steps: Array<{ id: string; type: string; message?: unknown }>;
+}
+
+interface ApiResponse<T> {
+  data: T;
+  meta?: { total: number; limit: number; offset: number; hasMore: boolean };
+}
+
 const app = createApp();
 
 describe("Workflows API Integration", () => {
@@ -84,7 +97,7 @@ describe("Workflows API Integration", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse<WorkflowData>;
       expect(data.data.id).toMatch(/^wf_/);
       expect(data.data.name).toBe("test-workflow");
       expect(data.data.label).toBe("Test Workflow");
@@ -125,9 +138,9 @@ describe("Workflows API Integration", () => {
       );
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse<WorkflowData[]>;
       expect(data.data).toHaveLength(2);
-      expect(data.meta.total).toBe(2);
+      expect(data.meta!.total).toBe(2);
     });
 
     it("should return empty array when no workflows exist", async () => {
@@ -136,9 +149,9 @@ describe("Workflows API Integration", () => {
       );
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse<WorkflowData[]>;
       expect(data.data).toHaveLength(0);
-      expect(data.meta.total).toBe(0);
+      expect(data.meta!.total).toBe(0);
     });
 
     it("should show newly created workflow in list", async () => {
@@ -154,7 +167,7 @@ describe("Workflows API Integration", () => {
       });
 
       expect(createResponse.status).toBe(201);
-      const created = await createResponse.json();
+      const created = (await createResponse.json()) as ApiResponse<WorkflowData>;
 
       // List workflows - should include the new one
       const listResponse = await app.request(
@@ -162,10 +175,10 @@ describe("Workflows API Integration", () => {
       );
 
       expect(listResponse.status).toBe(200);
-      const list = await listResponse.json();
+      const list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       expect(list.data).toHaveLength(1);
-      expect(list.data[0].id).toBe(created.data.id);
-      expect(list.data[0].label).toBe("New Workflow");
+      expect(list.data[0]!.id).toBe(created.data.id);
+      expect(list.data[0]!.label).toBe("New Workflow");
     });
   });
 
@@ -183,7 +196,7 @@ describe("Workflows API Integration", () => {
       );
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse<WorkflowData>;
       expect(data.data.id).toBe(workflow.id);
       expect(data.data.label).toBe("Get Test Workflow");
     });
@@ -217,7 +230,7 @@ describe("Workflows API Integration", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse<WorkflowData>;
       expect(data.data.label).toBe("Updated Label");
       expect(data.data.description).toBe("Updated description");
 
@@ -225,7 +238,7 @@ describe("Workflows API Integration", () => {
       const getResponse = await app.request(
         `/api/workflows/${workflow.id}?projectId=${projectId}`
       );
-      const getData = await getResponse.json();
+      const getData = (await getResponse.json()) as ApiResponse<WorkflowData>;
       expect(getData.data.label).toBe("Updated Label");
     });
 
@@ -250,9 +263,9 @@ describe("Workflows API Integration", () => {
       const listResponse = await app.request(
         `/api/workflows?projectId=${projectId}`
       );
-      const list = await listResponse.json();
-      const updatedInList = list.data.find((w: { id: string }) => w.id === workflow.id);
-      expect(updatedInList.label).toBe("New Label After Update");
+      const list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
+      const updatedInList = list.data.find((w) => w.id === workflow.id);
+      expect(updatedInList!.label).toBe("New Label After Update");
     });
   });
 
@@ -298,9 +311,9 @@ describe("Workflows API Integration", () => {
       const listResponse = await app.request(
         `/api/workflows?projectId=${projectId}`
       );
-      const list = await listResponse.json();
+      const list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       expect(list.data).toHaveLength(1);
-      expect(list.data[0].id).toBe(workflow1.id);
+      expect(list.data[0]!.id).toBe(workflow1.id);
     });
   });
 
@@ -318,13 +331,13 @@ describe("Workflows API Integration", () => {
         }),
       });
       expect(createResponse.status).toBe(201);
-      const created = await createResponse.json();
+      const created = (await createResponse.json()) as ApiResponse<WorkflowData>;
       const workflowId = created.data.id;
 
       // 2. Verify it appears in list
       let listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
-      let list = await listResponse.json();
-      expect(list.data.some((w: { id: string }) => w.id === workflowId)).toBe(true);
+      let list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
+      expect(list.data.some((w) => w.id === workflowId)).toBe(true);
 
       // 3. Update
       const updateResponse = await app.request(`/api/workflows/${workflowId}`, {
@@ -342,15 +355,15 @@ describe("Workflows API Integration", () => {
 
       // 4. Verify update in list
       listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
-      list = await listResponse.json();
-      const updatedInList = list.data.find((w: { id: string }) => w.id === workflowId);
-      expect(updatedInList.label).toBe("Updated Lifecycle Test");
+      list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
+      const updatedInList = list.data.find((w) => w.id === workflowId);
+      expect(updatedInList!.label).toBe("Updated Lifecycle Test");
 
       // 5. Get to verify steps
       const getResponse = await app.request(`/api/workflows/${workflowId}?projectId=${projectId}`);
-      const getResult = await getResponse.json();
+      const getResult = (await getResponse.json()) as ApiResponse<WorkflowData>;
       expect(getResult.data.steps).toHaveLength(1);
-      expect(getResult.data.steps[0].type).toBe("log");
+      expect(getResult.data.steps[0]!.type).toBe("log");
 
       // 6. Delete
       const deleteResponse = await app.request(`/api/workflows/${workflowId}?projectId=${projectId}`, {
@@ -360,8 +373,8 @@ describe("Workflows API Integration", () => {
 
       // 7. Verify removed from list
       listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
-      list = await listResponse.json();
-      expect(list.data.some((w: { id: string }) => w.id === workflowId)).toBe(false);
+      list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
+      expect(list.data.some((w) => w.id === workflowId)).toBe(false);
     });
   });
 });

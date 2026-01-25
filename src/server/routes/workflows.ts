@@ -2,6 +2,7 @@
  * Workflows API Routes
  *
  * REST API endpoints for managing workflows within a project.
+ * Workflows can come from YAML files (.iris/workflows/) or SQLite database.
  *
  * Endpoints:
  * - GET /api/workflows - List workflows for a project
@@ -15,10 +16,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import {
-  WorkflowService,
   WorkflowCreateSchema,
   WorkflowUpdateSchema,
 } from "@/services/workflows.ts";
+import { UnifiedWorkflowService } from "@/services/workflows-unified.ts";
 import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 import { ProjectService } from "@/services/projects.ts";
 
@@ -33,6 +34,21 @@ const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+/**
+ * Get project path from project ID
+ */
+function getProjectPath(projectId: string): string {
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+  if (!project.path) {
+    throw new ValidationError("Project has no path configured");
+  }
+  return project.path;
+}
 
 /**
  * GET /api/workflows
@@ -57,14 +73,15 @@ workflows.get("/", async (c) => {
   const { projectId, category, limit, offset } = result.data;
 
   const db = DatabaseManager.getProjectDb(projectId);
+  const projectPath = getProjectPath(projectId);
 
-  const workflowList = WorkflowService.list(db, projectId, {
+  const workflowList = UnifiedWorkflowService.list(db, projectId, projectPath, {
     category,
     limit,
     offset,
   });
 
-  const total = WorkflowService.count(db, projectId, { category });
+  const total = UnifiedWorkflowService.count(db, projectId, projectPath, { category });
 
   return c.json({
     data: workflowList,
@@ -80,6 +97,8 @@ workflows.get("/", async (c) => {
 /**
  * POST /api/workflows
  * Create a new workflow
+ *
+ * Set saveToYaml=true in body to save as YAML file (recommended)
  */
 workflows.post("/", async (c) => {
   const body = await c.req.json();
@@ -98,7 +117,16 @@ workflows.post("/", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
-  const workflow = WorkflowService.create(db, projectId, result.data);
+  const projectPath = getProjectPath(projectId);
+  const saveToYaml = body.saveToYaml === true;
+
+  const workflow = UnifiedWorkflowService.create(
+    db,
+    projectId,
+    projectPath,
+    result.data,
+    saveToYaml
+  );
 
   return c.json({ data: workflow }, 201);
 });
@@ -107,7 +135,7 @@ workflows.post("/", async (c) => {
  * GET /api/workflows/:id
  * Get workflow by ID
  *
- * If projectId is provided, looks in that project's database.
+ * If projectId is provided, looks in that project.
  * Otherwise, searches all projects to find the workflow.
  */
 workflows.get("/:id", async (c) => {
@@ -117,7 +145,13 @@ workflows.get("/:id", async (c) => {
   if (projectId) {
     // Fast path: projectId is known
     const db = DatabaseManager.getProjectDb(projectId);
-    const workflow = WorkflowService.getByIdOrThrow(db, workflowId);
+    const projectPath = getProjectPath(projectId);
+    const workflow = UnifiedWorkflowService.getByIdOrThrow(
+      db,
+      projectId,
+      projectPath,
+      workflowId
+    );
     return c.json({ data: workflow });
   }
 
@@ -126,9 +160,15 @@ workflows.get("/:id", async (c) => {
   const projects = ProjectService.list(rootDb, { limit: 100 });
 
   for (const project of projects) {
+    if (!project.path) continue; // Skip projects without a path
     try {
       const db = DatabaseManager.getProjectDb(project.id);
-      const workflow = WorkflowService.getById(db, workflowId);
+      const workflow = UnifiedWorkflowService.getById(
+        db,
+        project.id,
+        project.path,
+        workflowId
+      );
       if (workflow) {
         return c.json({ data: workflow });
       }
@@ -162,7 +202,14 @@ workflows.put("/:id", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
-  const workflow = WorkflowService.update(db, workflowId, result.data);
+  const projectPath = getProjectPath(projectId);
+  const workflow = UnifiedWorkflowService.update(
+    db,
+    projectId,
+    projectPath,
+    workflowId,
+    result.data
+  );
 
   return c.json({ data: workflow });
 });
@@ -180,7 +227,8 @@ workflows.delete("/:id", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
-  WorkflowService.delete(db, workflowId);
+  const projectPath = getProjectPath(projectId);
+  UnifiedWorkflowService.delete(db, projectId, projectPath, workflowId);
 
   return c.json({ data: { deleted: true } });
 });
