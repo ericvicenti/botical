@@ -2,7 +2,7 @@
  * Services API Routes
  *
  * REST API endpoints for managing persistent service configurations.
- * Services can be configured to auto-start when Iris starts.
+ * Services can come from YAML files (.iris/services/) or SQLite database.
  *
  * Project-scoped endpoints:
  * - POST /api/projects/:projectId/services - Create service
@@ -23,12 +23,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import {
-  ServiceConfigService,
   ServiceCreateSchema,
   ServiceUpdateSchema,
 } from "@/services/service-config.ts";
+import { UnifiedServiceConfigService } from "@/services/services-unified.ts";
 import { ServiceRunner } from "@/services/service-runner.ts";
-import { ValidationError } from "@/utils/errors.ts";
+import { ProjectService } from "@/services/projects.ts";
+import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 
 // ============================================
 // PROJECT-SCOPED ROUTES
@@ -53,8 +54,25 @@ const ListQuerySchema = z.object({
 });
 
 /**
+ * Get project path from project ID
+ */
+function getProjectPath(projectId: string): string {
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+  if (!project.path) {
+    throw new ValidationError("Project has no path configured");
+  }
+  return project.path;
+}
+
+/**
  * POST /api/projects/:projectId/services
  * Create a new service configuration
+ *
+ * Set saveToYaml=true in body to save as YAML file (recommended)
  */
 projectServices.post("/:projectId/services", async (c) => {
   const projectId = c.req.param("projectId");
@@ -74,7 +92,16 @@ projectServices.post("/:projectId/services", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
-  const service = ServiceConfigService.create(db, result.data);
+  const projectPath = getProjectPath(projectId);
+  const saveToYaml = body.saveToYaml === true;
+
+  const service = UnifiedServiceConfigService.create(
+    db,
+    projectId,
+    projectPath,
+    result.data,
+    saveToYaml
+  );
 
   return c.json({ data: service }, 201);
 });
@@ -103,7 +130,9 @@ projectServices.get("/:projectId/services", async (c) => {
 
   const query = queryResult.data;
   const db = DatabaseManager.getProjectDb(projectId);
-  const services = ServiceConfigService.listByProject(db, projectId, {
+  const projectPath = getProjectPath(projectId);
+
+  const services = UnifiedServiceConfigService.list(db, projectId, projectPath, {
     autoStart: query.autoStart,
     enabled: query.enabled,
     limit: query.limit,
@@ -123,7 +152,7 @@ projectServices.get("/:projectId/services", async (c) => {
     };
   });
 
-  const total = ServiceConfigService.count(db, projectId, {
+  const total = UnifiedServiceConfigService.count(db, projectId, projectPath, {
     autoStart: query.autoStart,
     enabled: query.enabled,
   });
@@ -152,23 +181,34 @@ const ServiceIdSchema = z.string().startsWith("svc_");
 
 /**
  * Validate service ID parameter
+ * Now accepts both svc_ (database) and svc_yaml_ (YAML) prefixes
  */
 function validateServiceId(id: string): void {
-  if (!ServiceIdSchema.safeParse(id).success) {
+  if (!id.startsWith("svc_")) {
     throw new ValidationError("Invalid service ID format");
   }
 }
 
 /**
- * Helper to get project DB and service
+ * Helper to get project DB, path, and service
  */
 function getDbAndService(serviceId: string) {
   const projectDbs = DatabaseManager.getOpenProjectIds();
   for (const projectId of projectDbs) {
     const db = DatabaseManager.getProjectDb(projectId);
-    const service = ServiceConfigService.getById(db, serviceId);
-    if (service) {
-      return { db, service, projectId };
+    try {
+      const projectPath = getProjectPath(projectId);
+      const service = UnifiedServiceConfigService.getById(
+        db,
+        projectId,
+        projectPath,
+        serviceId
+      );
+      if (service) {
+        return { db, service, projectId, projectPath };
+      }
+    } catch {
+      // Project may not have a path, skip
     }
   }
   throw new ValidationError("Service not found in any project");
@@ -212,8 +252,14 @@ services.put("/:id", async (c) => {
     );
   }
 
-  const { db, projectId } = getDbAndService(serviceId);
-  const service = ServiceConfigService.update(db, serviceId, result.data);
+  const { db, projectId, projectPath } = getDbAndService(serviceId);
+  const service = UnifiedServiceConfigService.update(
+    db,
+    projectId,
+    projectPath,
+    serviceId,
+    result.data
+  );
   const runningProcess = ServiceRunner.getRunningProcess(projectId, service.id);
 
   return c.json({
@@ -233,7 +279,7 @@ services.delete("/:id", async (c) => {
   const serviceId = c.req.param("id");
   validateServiceId(serviceId);
 
-  const { db, service, projectId } = getDbAndService(serviceId);
+  const { db, service, projectId, projectPath } = getDbAndService(serviceId);
 
   // Stop the service if running
   const runningProcess = ServiceRunner.getRunningProcess(projectId, service.id);
@@ -241,7 +287,7 @@ services.delete("/:id", async (c) => {
     await ServiceRunner.stopService(projectId, serviceId);
   }
 
-  ServiceConfigService.delete(db, serviceId);
+  UnifiedServiceConfigService.delete(db, projectId, projectPath, serviceId);
 
   return c.json({ success: true });
 });
