@@ -116,7 +116,7 @@ describe("ExeService integration", () => {
     } else {
       console.log("No running VMs available for integration tests");
     }
-  });
+  }, 15000); // 15 second timeout
 
   test("checkStatus returns connection info", async () => {
     const status = await ExeService.checkStatus();
@@ -212,7 +212,7 @@ describe("ExeService VM lifecycle", () => {
     if (!hasExeAccess) {
       console.log("Skipping VM lifecycle tests - not authenticated");
     }
-  });
+  }, 10000); // 10 second timeout
 
   afterAll(async () => {
     // Cleanup: delete test VM if it exists
@@ -224,7 +224,7 @@ describe("ExeService VM lifecycle", () => {
         // Ignore cleanup errors
       }
     }
-  });
+  }, 30000); // 30 second timeout for cleanup
 
   test("createVM creates a new VM", async () => {
     if (!hasExeAccess) {
