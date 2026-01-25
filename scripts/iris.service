@@ -1,0 +1,26 @@
+[Unit]
+Description=Iris AI Agent Workspace
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/iris
+ExecStart=/root/.bun/bin/bun run src/index.ts
+Restart=always
+RestartSec=5
+
+# Production environment
+Environment=NODE_ENV=production
+Environment=IRIS_PORT=80
+Environment=IRIS_HOST=0.0.0.0
+Environment=IRIS_STATIC_DIR=/root/iris/webui/dist
+Environment=IRIS_DATA_DIR=/root/.iris
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iris
+
+[Install]
+WantedBy=multi-user.target

@@ -37,7 +37,14 @@ bun dev:webui   # Frontend only (port 5173)
 
 ### Production
 
-See [Deployment Guide](docs/deployment-guide.md) for Ubuntu VPS deployment with systemd.
+**Quick deploy to exe.dev:**
+```bash
+bun scripts/deploy.ts your-vm.exe.xyz
+```
+
+See [Deployment Guide](docs/deployment.md) for details.
+
+For manual deployment on Ubuntu VPS with Nginx, see [Manual Deployment](docs/deployment-guide.md).
 
 ## Configuration
 
@@ -195,7 +202,8 @@ This enables complete project isolation and easy backup/restore.
 - [Data Model](docs/knowledge-base/02-data-model.md) - Entity relationships
 - [API Reference](docs/knowledge-base/03-api-reference.md) - API documentation
 - [Patterns](docs/knowledge-base/04-patterns.md) - Code patterns
-- [Deployment Guide](docs/deployment-guide.md) - Production deployment
+- [Deployment](docs/deployment.md) - Quick deployment with exe.dev
+- [Manual Deployment](docs/deployment-guide.md) - Full Ubuntu VPS guide with Nginx
 
 ## License
 

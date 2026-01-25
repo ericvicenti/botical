@@ -9,11 +9,16 @@
  * - WebSocket (primary, real-time)
  * - SSE fallback (limited environments)
  *
+ * In production, also serves static frontend files.
+ * See: docs/deployment.md
+ *
  * See: docs/knowledge-base/01-architecture.md#transport-layer
  */
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { serveStatic } from "hono/bun";
+import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, exe, filesystem } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
@@ -91,6 +96,33 @@ export function createApp() {
       status: "ok",
     });
   });
+
+  // Static file serving for production
+  // In development, Vite serves the frontend with HMR
+  // In production, the built frontend is served from IRIS_STATIC_DIR
+  // See: docs/deployment.md
+  const staticDir = process.env.IRIS_STATIC_DIR;
+  if (staticDir && existsSync(staticDir)) {
+    // Serve static files from the built frontend directory
+    app.use(
+      "/*",
+      serveStatic({
+        root: staticDir,
+        rewriteRequestPath: (path) => path,
+      })
+    );
+
+    // SPA fallback: serve index.html for any unmatched routes
+    // This enables client-side routing in the React app
+    app.get("*", async (c) => {
+      const indexPath = `${staticDir}/index.html`;
+      if (existsSync(indexPath)) {
+        const content = await Bun.file(indexPath).text();
+        return c.html(content);
+      }
+      return c.notFound();
+    });
+  }
 
   // 404 handler
   app.notFound((c) => {
