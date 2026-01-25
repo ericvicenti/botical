@@ -10,11 +10,9 @@
  */
 
 import { spawn, type SpawnOptions } from "bun";
-import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 
 const REPO_URL = "https://github.com/ericvicenti/iris.git";
-const REMOTE_DIR = "/root/iris";
 const SERVICE_NAME = "iris";
 
 /**
@@ -82,18 +80,61 @@ async function copyToRemote(
 }
 
 /**
+ * Generate systemd service file content with correct paths
+ */
+function generateServiceFile(homeDir: string, user: string): string {
+  const irisDir = `${homeDir}/iris`;
+  const bunPath = `${homeDir}/.bun/bin/bun`;
+  const dataDir = `${homeDir}/.iris`;
+
+  return `[Unit]
+Description=Iris AI Agent Workspace
+After=network.target
+
+[Service]
+Type=simple
+User=${user}
+WorkingDirectory=${irisDir}
+ExecStart=${bunPath} run src/index.ts
+Restart=always
+RestartSec=5
+
+# Production environment
+Environment=NODE_ENV=production
+Environment=IRIS_PORT=80
+Environment=IRIS_HOST=0.0.0.0
+Environment=IRIS_STATIC_DIR=${irisDir}/webui/dist
+Environment=IRIS_DATA_DIR=${dataDir}
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iris
+
+# Allow binding to port 80 as non-root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+`;
+}
+
+/**
  * Main deployment function
  */
 async function deploy(host: string): Promise<void> {
   console.log(`\n🚀 Deploying Iris to ${host}\n`);
 
-  // Step 1: Check SSH connectivity
+  // Step 1: Check SSH connectivity and get user info
   console.log("📡 Checking SSH connectivity...");
-  const sshCheck = await runRemote(host, "echo 'connected'");
+  const sshCheck = await runRemote(host, "echo $HOME && whoami");
   if (!sshCheck.success) {
     throw new Error(`Cannot connect to ${host}. Ensure SSH access is configured.`);
   }
-  console.log("   Connected!\n");
+  const [homeDir, user] = sshCheck.output.trim().split("\n");
+  console.log(`   Connected as ${user} (home: ${homeDir})\n`);
+
+  const remoteDir = `${homeDir}/iris`;
 
   // Step 2: Install Bun if not present
   console.log("📦 Checking Bun installation...");
@@ -112,15 +153,17 @@ async function deploy(host: string): Promise<void> {
     console.log("   Bun already installed\n");
   }
 
+  const bunPath = `${homeDir}/.bun/bin/bun`;
+
   // Step 3: Clone or update repository
   console.log("📥 Updating repository...");
-  const repoCheck = await runRemote(host, `test -d ${REMOTE_DIR}/.git && echo 'exists'`);
+  const repoCheck = await runRemote(host, `test -d ${remoteDir}/.git && echo 'exists'`);
   if (repoCheck.output.includes("exists")) {
     // Pull latest changes
     console.log("   Pulling latest changes...");
     const pullResult = await runRemote(
       host,
-      `cd ${REMOTE_DIR} && git fetch origin && git reset --hard origin/main`,
+      `cd ${remoteDir} && git fetch origin && git reset --hard origin/main`,
       { stream: true }
     );
     if (!pullResult.success) {
@@ -131,7 +174,7 @@ async function deploy(host: string): Promise<void> {
     console.log("   Cloning repository...");
     const cloneResult = await runRemote(
       host,
-      `rm -rf ${REMOTE_DIR} && git clone ${REPO_URL} ${REMOTE_DIR}`,
+      `rm -rf ${remoteDir} && git clone ${REPO_URL} ${remoteDir}`,
       { stream: true }
     );
     if (!cloneResult.success) {
@@ -144,7 +187,7 @@ async function deploy(host: string): Promise<void> {
   console.log("📦 Installing dependencies...");
   const installResult = await runRemote(
     host,
-    `cd ${REMOTE_DIR} && /root/.bun/bin/bun install`,
+    `cd ${remoteDir} && ${bunPath} install`,
     { stream: true }
   );
   if (!installResult.success) {
@@ -153,7 +196,7 @@ async function deploy(host: string): Promise<void> {
 
   const webuiInstallResult = await runRemote(
     host,
-    `cd ${REMOTE_DIR}/webui && /root/.bun/bin/bun install`,
+    `cd ${remoteDir}/webui && ${bunPath} install`,
     { stream: true }
   );
   if (!webuiInstallResult.success) {
@@ -165,7 +208,7 @@ async function deploy(host: string): Promise<void> {
   console.log("🔨 Building frontend...");
   const buildResult = await runRemote(
     host,
-    `cd ${REMOTE_DIR}/webui && /root/.bun/bin/bun run build`,
+    `cd ${remoteDir}/webui && ${bunPath} run build`,
     { stream: true }
   );
   if (!buildResult.success) {
@@ -175,24 +218,25 @@ async function deploy(host: string): Promise<void> {
 
   // Step 6: Install systemd service
   console.log("⚙️  Installing systemd service...");
-  const scriptDir = dirname(resolve(import.meta.path));
-  const serviceFile = resolve(scriptDir, "iris.service");
-  const serviceContent = readFileSync(serviceFile, "utf-8");
 
-  // Copy service file
-  const copyResult = await copyToRemote(
+  // Generate service file with correct paths
+  const serviceContent = generateServiceFile(homeDir, user);
+
+  // Write service file to remote via stdin
+  const writeServiceResult = await runRemote(
     host,
-    serviceFile,
-    `/etc/systemd/system/${SERVICE_NAME}.service`
+    `sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null << 'SERVICEEOF'
+${serviceContent}
+SERVICEEOF`
   );
-  if (!copyResult) {
-    throw new Error("Failed to copy systemd service file");
+  if (!writeServiceResult.success) {
+    throw new Error("Failed to write systemd service file");
   }
 
   // Reload systemd and enable service
   const systemdResult = await runRemote(
     host,
-    `systemctl daemon-reload && systemctl enable ${SERVICE_NAME}`,
+    `sudo systemctl daemon-reload && sudo systemctl enable ${SERVICE_NAME}`,
     { stream: true }
   );
   if (!systemdResult.success) {
@@ -204,7 +248,7 @@ async function deploy(host: string): Promise<void> {
   console.log("🔄 Restarting service...");
   const restartResult = await runRemote(
     host,
-    `systemctl restart ${SERVICE_NAME}`,
+    `sudo systemctl restart ${SERVICE_NAME}`,
     { stream: true }
   );
   if (!restartResult.success) {
@@ -217,11 +261,11 @@ async function deploy(host: string): Promise<void> {
   // Check service status
   const statusResult = await runRemote(
     host,
-    `systemctl is-active ${SERVICE_NAME}`
+    `sudo systemctl is-active ${SERVICE_NAME}`
   );
   if (!statusResult.output.includes("active")) {
     console.log("\n⚠️  Service may not have started correctly. Checking logs...\n");
-    await runRemote(host, `journalctl -u ${SERVICE_NAME} -n 20 --no-pager`, {
+    await runRemote(host, `sudo journalctl -u ${SERVICE_NAME} -n 20 --no-pager`, {
       stream: true,
     });
     throw new Error("Service failed to start");
@@ -230,8 +274,8 @@ async function deploy(host: string): Promise<void> {
   console.log(`\n✅ Deployment complete!`);
   console.log(`\n   Server: https://${host}`);
   console.log(`   Health: https://${host}/health`);
-  console.log(`\n   View logs: ssh ${host} journalctl -u ${SERVICE_NAME} -f`);
-  console.log(`   Restart:   ssh ${host} systemctl restart ${SERVICE_NAME}`);
+  console.log(`\n   View logs: ssh ${host} sudo journalctl -u ${SERVICE_NAME} -f`);
+  console.log(`   Restart:   ssh ${host} sudo systemctl restart ${SERVICE_NAME}`);
   console.log("");
 }
 

@@ -1,12 +1,19 @@
+# Iris Systemd Service Template
+#
+# This is a reference template. The deploy script generates the actual
+# service file with correct paths for the target system.
+#
+# See: docs/deployment.md
+
 [Unit]
 Description=Iris AI Agent Workspace
 After=network.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/root/iris
-ExecStart=/root/.bun/bin/bun run src/index.ts
+User=<USER>
+WorkingDirectory=<HOME>/iris
+ExecStart=<HOME>/.bun/bin/bun run src/index.ts
 Restart=always
 RestartSec=5
 
@@ -14,13 +21,16 @@ RestartSec=5
 Environment=NODE_ENV=production
 Environment=IRIS_PORT=80
 Environment=IRIS_HOST=0.0.0.0
-Environment=IRIS_STATIC_DIR=/root/iris/webui/dist
-Environment=IRIS_DATA_DIR=/root/.iris
+Environment=IRIS_STATIC_DIR=<HOME>/iris/webui/dist
+Environment=IRIS_DATA_DIR=<HOME>/.iris
 
 # Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=iris
+
+# Allow binding to port 80 as non-root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
