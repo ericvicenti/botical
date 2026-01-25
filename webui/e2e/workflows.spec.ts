@@ -531,13 +531,10 @@ test.describe("Workflows", () => {
               label: "Wait",
               description: "Pause execution for a specified duration",
               category: "other",
-              params: {
-                type: "object",
-                properties: {
-                  ms: { type: "number", description: "Duration in milliseconds" },
-                  seconds: { type: "number", description: "Duration in seconds" },
-                },
-              },
+              params: [
+                { name: "ms", type: "number", required: false, description: "Duration in milliseconds" },
+                { name: "seconds", type: "number", required: false, description: "Duration in seconds" },
+              ],
             },
           ],
         }),
@@ -573,13 +570,10 @@ test.describe("Workflows", () => {
       description: "Pause execution for a specified duration",
       category: "other",
       icon: "clock",
-      params: {
-        type: "object",
-        properties: {
-          ms: { type: "number", description: "Duration in milliseconds" },
-          seconds: { type: "number", description: "Duration in seconds" },
-        },
-      },
+      params: [
+        { name: "ms", type: "number", required: false, description: "Duration in milliseconds" },
+        { name: "seconds", type: "number", required: false, description: "Duration in seconds" },
+      ],
     };
 
     // Mock the workflow fetch (with and without projectId since component may fetch either way)
