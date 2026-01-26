@@ -1,0 +1,36 @@
+{
+  "name": "iris-ai",
+  "version": "0.1.0",
+  "description": "Run Iris AI Agent Workspace locally with a single command",
+  "type": "module",
+  "bin": {
+    "iris-ai": "./bin/iris.js",
+    "iris": "./bin/iris.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "workspace",
+    "llm",
+    "claude",
+    "openai",
+    "anthropic",
+    "cli"
+  ],
+  "author": "Eric Vicenti",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ericvicenti/iris.git",
+    "directory": "packages/iris-ai"
+  },
+  "homepage": "https://github.com/ericvicenti/iris#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
