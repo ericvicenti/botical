@@ -1,6 +1,11 @@
 # Deployment Guide
 
-Deploy Iris to a server with a single command.
+Deploy Iris to an exe.dev server with a single command.
+
+> **Other deployment options:**
+> - [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup details for iris.vicenti.net
+> - [Traditional VPS](./deployment-guide.md) - Ubuntu/Nginx deployment
 
 ## Quick Start
 
@@ -229,3 +234,10 @@ ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
 | `scripts/iris.service` | Systemd service template |
 | `.github/workflows/deploy.yml` | CI/CD workflow |
 | `src/server/app.ts` | Static file serving logic |
+
+## Related Documentation
+
+- [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
+- [Traditional VPS Guide](./deployment-guide.md) - Ubuntu/Nginx deployment
+- [Architecture](./knowledge-base/01-architecture.md) - System architecture

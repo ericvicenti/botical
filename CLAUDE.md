@@ -148,6 +148,13 @@ Core concepts and definitions:
 - [`docs/knowledge-base/04-patterns.md`](docs/knowledge-base/04-patterns.md) - Code patterns
 - [`docs/knowledge-base/05-conventions.md`](docs/knowledge-base/05-conventions.md) - Coding conventions
 
+### Deployment & Hosting
+Running Iris locally or on a server:
+- [`docs/local-development.md`](docs/local-development.md) - Run locally with `npx iris-ai`
+- [`docs/deployment.md`](docs/deployment.md) - Deploy to exe.dev with CI/CD
+- [`docs/hosting-infrastructure.md`](docs/hosting-infrastructure.md) - Production hosting on iris.vicenti.net
+- [`docs/deployment-guide.md`](docs/deployment-guide.md) - Traditional VPS deployment (Ubuntu/Nginx)
+
 ## Key Concepts
 
 ### Project Instance Pattern
@@ -319,6 +326,34 @@ bun dev:server  # Backend only (default port 4096, uses IRIS_PORT env)
 bun dev:webui   # Frontend only (default port 5173)
 ```
 
+## Deployment & Hosting
+
+Iris can be deployed in three ways:
+
+### 1. Local with npx (Zero Setup)
+```bash
+npx iris-ai
+```
+Installs Bun, downloads Iris, and starts a local server. Data stored in `~/.iris/`. See [`docs/local-development.md`](docs/local-development.md).
+
+### 2. exe.dev Deployment (Recommended for Hosting)
+```bash
+bun scripts/deploy.ts iris-vicenti.exe.xyz
+```
+One-command deployment to exe.dev VMs with automatic TLS and CI/CD. See [`docs/deployment.md`](docs/deployment.md).
+
+### 3. Traditional VPS (Ubuntu/Nginx)
+Manual deployment with systemd, nginx, and certbot. See [`docs/deployment-guide.md`](docs/deployment-guide.md).
+
+### Production Infrastructure (iris.vicenti.net)
+The production instance runs on exe.dev with:
+- GitHub Actions self-hosted runner for CI/CD
+- Automatic deployment on push to `main`
+- TLS termination via exe.dev proxy
+- systemd service management
+
+See [`docs/hosting-infrastructure.md`](docs/hosting-infrastructure.md) for full details.
+
 ## File Structure
 
 ```
@@ -353,3 +388,5 @@ If unclear about:
 - **Data structures**: See `docs/knowledge-base/02-data-model.md`
 - **API format**: See `docs/knowledge-base/03-api-reference.md`
 - **Code patterns**: See `docs/knowledge-base/04-patterns.md`
+- **Deployment options**: See `docs/deployment.md`
+- **Production hosting**: See `docs/hosting-infrastructure.md`

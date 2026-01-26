@@ -1,6 +1,11 @@
 # Deployment Guide - Ubuntu VPS with systemd
 
-This guide covers deploying Iris to a Ubuntu VPS with systemd for process management.
+This guide covers deploying Iris to a traditional Ubuntu VPS with systemd and Nginx.
+
+> **Other deployment options:**
+> - [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+> - [exe.dev Deployment](./deployment.md) - One-command deployment with CI/CD
+> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
 
 ## Prerequisites
 
@@ -394,3 +399,10 @@ sudo iotop
 # Disk space
 df -h /var/lib/iris
 ```
+
+## Related Documentation
+
+- [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+- [exe.dev Deployment](./deployment.md) - One-command deployment with CI/CD
+- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
+- [Architecture](./knowledge-base/01-architecture.md) - System architecture
