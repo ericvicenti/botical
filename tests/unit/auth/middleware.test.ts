@@ -19,6 +19,7 @@ interface AuthResponse {
 
 describe("Auth Middleware", () => {
   const testDataDir = path.join(import.meta.dirname, "../../../.test-data/middleware-test");
+  const originalEnv = { ...process.env };
   let testUserId: string;
   let adminUserId: string;
   let codeExecUserId: string;
@@ -27,6 +28,9 @@ describe("Auth Middleware", () => {
   let codeExecToken: string;
 
   beforeEach(async () => {
+    // Disable single-user mode for these tests
+    process.env.IRIS_SINGLE_USER = "false";
+
     // Reset database for each test
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
@@ -68,6 +72,9 @@ describe("Auth Middleware", () => {
   });
 
   afterEach(() => {
+    // Restore environment
+    process.env = { ...originalEnv };
+
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

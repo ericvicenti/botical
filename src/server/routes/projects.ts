@@ -31,6 +31,7 @@ import {
   ProjectUpdateSchema,
   type ProjectRole,
 } from "@/services/projects.ts";
+import { requireProjectAccess } from "@/auth/middleware.ts";
 import { ValidationError, ForbiddenError } from "@/utils/errors.ts";
 
 const projects = new Hono();
@@ -183,8 +184,9 @@ projects.get("/:id", async (c) => {
 /**
  * PUT /api/projects/:id
  * Update project
+ * Requires admin role or higher
  */
-projects.put("/:id", async (c) => {
+projects.put("/:id", requireProjectAccess("admin"), async (c) => {
   const projectId = c.req.param("id");
   const body = await c.req.json();
 
@@ -207,8 +209,9 @@ projects.put("/:id", async (c) => {
 /**
  * DELETE /api/projects/:id
  * Archive project (soft delete)
+ * Requires owner role
  */
-projects.delete("/:id", async (c) => {
+projects.delete("/:id", requireProjectAccess("owner"), async (c) => {
   const projectId = c.req.param("id");
 
   const rootDb = DatabaseManager.getRootDb();
@@ -253,8 +256,9 @@ const AddMemberSchema = z.object({
 /**
  * POST /api/projects/:id/members
  * Add member to project
+ * Requires admin role or higher
  */
-projects.post("/:id/members", async (c) => {
+projects.post("/:id/members", requireProjectAccess("admin"), async (c) => {
   const projectId = c.req.param("id");
   const body = await c.req.json();
 
@@ -295,8 +299,9 @@ const UpdateMemberSchema = z.object({
 /**
  * PUT /api/projects/:id/members/:userId
  * Update member's role
+ * Requires admin role or higher
  */
-projects.put("/:id/members/:userId", async (c) => {
+projects.put("/:id/members/:userId", requireProjectAccess("admin"), async (c) => {
   const projectId = c.req.param("id");
   const userId = c.req.param("userId");
   const body = await c.req.json();
@@ -325,8 +330,9 @@ projects.put("/:id/members/:userId", async (c) => {
 /**
  * DELETE /api/projects/:id/members/:userId
  * Remove member from project
+ * Requires admin role or higher
  */
-projects.delete("/:id/members/:userId", async (c) => {
+projects.delete("/:id/members/:userId", requireProjectAccess("admin"), async (c) => {
   const projectId = c.req.param("id");
   const userId = c.req.param("userId");
 

@@ -21,8 +21,10 @@ import {
   MagicLinkRequestSchema,
   requireAuth,
   rowToUser,
+  LocalUserService,
 } from "../../auth/index.ts";
 import { DatabaseManager } from "../../database/manager.ts";
+import { Config } from "../../config/index.ts";
 import { ValidationError } from "../../utils/errors.ts";
 import type { UserRow } from "../../auth/index.ts";
 
@@ -213,6 +215,37 @@ auth.post("/sessions/revoke-others", requireAuth(), async (c) => {
   return c.json({
     success: true,
     revokedCount,
+  });
+});
+
+/**
+ * Get authentication mode
+ *
+ * GET /auth/mode
+ *
+ * Returns whether the server is in single-user or multi-user mode.
+ * In single-user mode, no login is required.
+ */
+auth.get("/mode", async (c) => {
+  const isSingleUser = Config.isSingleUserMode();
+
+  if (isSingleUser) {
+    // In single-user mode, also return the local user info
+    const localAuth = LocalUserService.ensureLocalUser();
+    return c.json({
+      mode: "single-user",
+      user: {
+        userId: localAuth.userId,
+        email: localAuth.email,
+        isAdmin: localAuth.isAdmin,
+        canExecuteCode: localAuth.canExecuteCode,
+      },
+    });
+  }
+
+  return c.json({
+    mode: "multi-user",
+    user: null,
   });
 });
 

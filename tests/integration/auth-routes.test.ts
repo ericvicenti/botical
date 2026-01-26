@@ -47,10 +47,14 @@ interface RevokeOthersResponse {
 
 describe("Auth Routes", () => {
   const testDataDir = path.join(import.meta.dirname, "../../.test-data/auth-routes-test");
+  const originalEnv = { ...process.env };
   let app: Hono;
   let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
+    // Disable single-user mode for auth route tests
+    process.env.IRIS_SINGLE_USER = "false";
+
     // Reset database for each test
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
@@ -80,6 +84,9 @@ describe("Auth Routes", () => {
   });
 
   afterEach(() => {
+    // Restore environment
+    process.env = { ...originalEnv };
+
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

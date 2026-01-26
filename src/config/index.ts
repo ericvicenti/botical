@@ -156,6 +156,27 @@ class ConfigManager {
   getDefaultWorkspacePath(slug: string): string {
     return path.join(this.getWorkspacesDir(), slug);
   }
+
+  /**
+   * Check if the server is running in single-user mode.
+   *
+   * Single-user mode is enabled when:
+   * - IRIS_SINGLE_USER env var is explicitly set to 'true', OR
+   * - Auto-detected: host is 'localhost' AND no RESEND_API_KEY configured
+   *
+   * In single-user mode, authentication is bypassed and a local user
+   * with admin privileges is automatically used.
+   * See: docs/knowledge-base/04-patterns.md
+   */
+  isSingleUserMode(): boolean {
+    // Explicit override takes precedence
+    if (process.env.IRIS_SINGLE_USER !== undefined) {
+      return process.env.IRIS_SINGLE_USER === "true";
+    }
+    // Auto-detect: localhost without email service configured
+    const config = this.get();
+    return config.host === "localhost" && !config.resendApiKey;
+  }
 }
 
 export const Config = ConfigManager.getInstance();

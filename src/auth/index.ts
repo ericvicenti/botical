@@ -1,19 +1,22 @@
 /**
  * Auth Module
  *
- * Provides email-based magic link authentication.
+ * Provides email-based magic link authentication and single-user mode support.
  * See: docs/knowledge-base/04-patterns.md
  *
  * Key features:
- * - Passwordless magic link authentication
+ * - Passwordless magic link authentication (multi-user mode)
+ * - Single-user mode for local deployments (npx iris-ai)
  * - Database-backed sessions (revocable)
  * - First user becomes admin
  * - Code execution permissions
+ * - Project-based access control
  */
 
 // Services
 export { MagicLinkService } from "./magic-link.ts";
 export { SessionService } from "./session.ts";
+export { LocalUserService, LOCAL_USER_ID } from "./local-user.ts";
 
 // Middleware
 export {
@@ -21,6 +24,7 @@ export {
   optionalAuth,
   requireAdmin,
   requireCodeExecution,
+  requireProjectAccess,
 } from "./middleware.ts";
 
 // Schemas and types

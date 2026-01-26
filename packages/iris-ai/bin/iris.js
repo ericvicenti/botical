@@ -269,6 +269,7 @@ async function startServer(port) {
     IRIS_HOST: "localhost",
     IRIS_STATIC_DIR: join(APP_DIR, "webui", "dist"),
     IRIS_DATA_DIR: IRIS_DIR,
+    IRIS_SINGLE_USER: "true", // Enable single-user mode for local deployment
   };
 
   const url = `http://localhost:${port}`;

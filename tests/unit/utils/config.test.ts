@@ -12,6 +12,8 @@ describe("Config", () => {
     delete process.env.IRIS_PORT;
     delete process.env.IRIS_HOST;
     delete process.env.IRIS_LOG_LEVEL;
+    delete process.env.IRIS_SINGLE_USER;
+    delete process.env.RESEND_API_KEY;
   });
 
   afterEach(() => {
@@ -123,6 +125,61 @@ describe("Config", () => {
         const config = Config.load();
         expect(config.logLevel).toBe(level);
       }
+    });
+  });
+
+  describe("isSingleUserMode", () => {
+    it("returns true when IRIS_SINGLE_USER is explicitly true", () => {
+      process.env.IRIS_SINGLE_USER = "true";
+      Config.load();
+
+      expect(Config.isSingleUserMode()).toBe(true);
+    });
+
+    it("returns false when IRIS_SINGLE_USER is explicitly false", () => {
+      process.env.IRIS_SINGLE_USER = "false";
+      Config.load({ host: "localhost" }); // Even with localhost
+
+      expect(Config.isSingleUserMode()).toBe(false);
+    });
+
+    it("auto-detects single-user mode on localhost without resendApiKey", () => {
+      // No explicit IRIS_SINGLE_USER set
+      Config.load({ host: "localhost" });
+
+      expect(Config.isSingleUserMode()).toBe(true);
+    });
+
+    it("returns false when host is not localhost", () => {
+      Config.load({ host: "0.0.0.0" });
+
+      expect(Config.isSingleUserMode()).toBe(false);
+    });
+
+    it("returns false when resendApiKey is configured", () => {
+      Config.load({
+        host: "localhost",
+        resendApiKey: "re_test123",
+      });
+
+      expect(Config.isSingleUserMode()).toBe(false);
+    });
+
+    it("explicit IRIS_SINGLE_USER=true overrides other conditions", () => {
+      process.env.IRIS_SINGLE_USER = "true";
+      Config.load({
+        host: "0.0.0.0", // Not localhost
+        resendApiKey: "re_test123", // Has API key
+      });
+
+      expect(Config.isSingleUserMode()).toBe(true);
+    });
+
+    it("explicit IRIS_SINGLE_USER=false overrides auto-detection", () => {
+      process.env.IRIS_SINGLE_USER = "false";
+      Config.load({ host: "localhost" }); // Would normally be single-user
+
+      expect(Config.isSingleUserMode()).toBe(false);
     });
   });
 });

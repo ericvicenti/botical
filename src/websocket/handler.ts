@@ -15,7 +15,9 @@ import type { Context } from "hono";
 import { upgradeWebSocket } from "hono/bun";
 import { generateId } from "@/utils/id.ts";
 import { DatabaseManager } from "@/database/manager.ts";
+import { Config } from "@/config/index.ts";
 import { SessionService as AuthSessionService } from "@/auth/session.ts";
+import { LocalUserService, LOCAL_USER_ID } from "@/auth/local-user.ts";
 import { hashSha256 } from "@/services/crypto.ts";
 import {
   ConnectionManager,
@@ -145,6 +147,51 @@ export function createWebSocketHandler() {
         // Generate connection ID
         const connectionId = generateId("conn");
 
+        // Single-user mode: auto-authenticate as local user
+        if (Config.isSingleUserMode()) {
+          const localAuth = LocalUserService.ensureLocalUser();
+
+          // In single-user mode, projectId is optional for global connections
+          const targetProjectId = projectId || "global";
+
+          userData = {
+            userId: localAuth.userId,
+            projectId: targetProjectId,
+            connectionId,
+          };
+
+          // Register connection
+          ConnectionManager.add(connectionId, {
+            ws: rawWs,
+            userId: localAuth.userId,
+            projectId: targetProjectId,
+            connectedAt: Date.now(),
+            lastActivity: Date.now(),
+          });
+
+          // Join project room if specific project
+          if (projectId) {
+            RoomManager.join(getProjectRoom(projectId), connectionId);
+          }
+
+          // Send welcome message
+          rawWs.send(
+            JSON.stringify(
+              createEvent("connected", {
+                connectionId,
+                projectId: targetProjectId,
+                userId: localAuth.userId,
+                singleUserMode: true,
+              })
+            )
+          );
+
+          console.log(
+            `[WebSocket] Single-user connection ${connectionId} opened`
+          );
+          return;
+        }
+
         // Development mode: allow anonymous connections
         const isDev = process.env.NODE_ENV !== "production";
 
@@ -183,7 +230,7 @@ export function createWebSocketHandler() {
           return;
         }
 
-        // Validate token
+        // Multi-user mode: validate token
         if (!token || !projectId) {
           rawWs.close(4001, "Missing token or projectId");
           return;

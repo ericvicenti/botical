@@ -21,6 +21,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
+import { requireAuth } from "../auth/middleware.ts";
 import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, exe, filesystem } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
@@ -70,6 +71,10 @@ export function createApp() {
   app.route("/health", health);
   app.route("/auth", auth);
   app.route("/credentials", credentials);
+
+  // Global auth middleware for all API routes
+  // In single-user mode, this auto-authenticates as the local user
+  app.use("/api/*", requireAuth());
 
   // API routes
   app.route("/api/projects", projects);

@@ -6,6 +6,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "bun:test"
 import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
+import { LocalUserService, LOCAL_USER_ID } from "@/auth/local-user.ts";
 import { ProjectService, type Project } from "@/services/projects.ts";
 import type {
   ListResponse,
@@ -22,10 +23,13 @@ describe("Projects API Routes", () => {
     import.meta.dirname,
     "../../../../.test-data/projects-route-test"
   );
-  const testUserId = "usr_test-user-123";
+  // In single-user mode, use the local user as the test user
+  const testUserId = LOCAL_USER_ID;
   const testUserId2 = "usr_test-user-456";
 
   beforeAll(() => {
+    // Enable single-user mode for these tests so auth is auto-handled
+    process.env.IRIS_SINGLE_USER = "true";
     Config.load({ dataDir: testDataDir });
 
     if (fs.existsSync(testDataDir)) {
@@ -34,6 +38,7 @@ describe("Projects API Routes", () => {
   });
 
   afterAll(() => {
+    delete process.env.IRIS_SINGLE_USER;
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -43,21 +48,21 @@ describe("Projects API Routes", () => {
   beforeEach(async () => {
     await DatabaseManager.initialize();
 
-    // Create test users
+    // Ensure local user exists (used as testUserId in single-user mode)
+    LocalUserService.ensureLocalUser();
+
+    // Create additional test user
     const rootDb = DatabaseManager.getRootDb();
     const now = Date.now();
 
     // Clean up any existing test data (respecting foreign key constraints)
     rootDb.prepare("DELETE FROM project_members WHERE project_id IN (SELECT id FROM projects WHERE owner_id IN (?, ?))").run(testUserId, testUserId2);
     rootDb.prepare("DELETE FROM projects WHERE owner_id IN (?, ?)").run(testUserId, testUserId2);
-    rootDb.prepare("DELETE FROM users WHERE id IN (?, ?)").run(testUserId, testUserId2);
 
-    rootDb
-      .prepare(
-        "INSERT INTO users (id, email, username, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
-      )
-      .run(testUserId, "test@example.com", "testuser1", now, now);
+    // Only delete testUserId2, not the local user
+    rootDb.prepare("DELETE FROM users WHERE id = ?").run(testUserId2);
 
+    // Create second test user
     rootDb
       .prepare(
         "INSERT INTO users (id, email, username, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
