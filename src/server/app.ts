@@ -101,6 +101,7 @@ export function createApp() {
   app.route("/api/exe", exe); // Exe.dev VM routes
   app.route("/api/filesystem", filesystem); // Filesystem browsing routes
   app.route("/api/projects", skills); // Project-scoped skills routes
+  app.route("/api/skills", skills); // Skills search route (non-project-scoped)
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

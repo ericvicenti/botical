@@ -194,14 +194,15 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
     if (!skillSearchQuery.trim()) return;
     setIsSearching(true);
     try {
+      // Use our backend proxy to avoid CORS issues
       const response = await fetch(
-        `https://skills.sh/api/search?q=${encodeURIComponent(skillSearchQuery.trim())}`
+        `/api/skills/search?q=${encodeURIComponent(skillSearchQuery.trim())}`
       );
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);
       }
       const data = await response.json();
-      setSkillSearchResults(data.skills || []);
+      setSkillSearchResults(data.data || []);
     } catch (err) {
       console.error("Failed to search skills:", err);
       alert(`Failed to search: ${err instanceof Error ? err.message : "Unknown error"}`);

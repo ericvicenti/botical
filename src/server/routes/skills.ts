@@ -362,4 +362,66 @@ skills.delete("/:projectId/skills/installed/*", async (c) => {
   });
 });
 
+// ============================================================================
+// Skills Directory Search (skills.sh proxy)
+// ============================================================================
+
+interface SkillsShSearchResult {
+  id: string;
+  name: string;
+  installs: number;
+  topSource: string;
+}
+
+interface SkillsShSearchResponse {
+  query: string;
+  searchType: string;
+  skills: SkillsShSearchResult[];
+  count: number;
+}
+
+/**
+ * GET /api/skills/search
+ * Search the skills.sh directory for available skills
+ *
+ * This proxies requests to https://skills.sh/api/search to avoid CORS issues.
+ */
+skills.get("/search", async (c) => {
+  const query = c.req.query("q");
+
+  if (!query || !query.trim()) {
+    throw new ValidationError("Search query is required");
+  }
+
+  try {
+    const response = await fetch(
+      `https://skills.sh/api/search?q=${encodeURIComponent(query.trim())}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`skills.sh API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = (await response.json()) as SkillsShSearchResponse;
+
+    return c.json({
+      data: data.skills || [],
+      meta: {
+        query: data.query,
+        count: data.count,
+        searchType: data.searchType,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return c.json(
+      {
+        error: `Failed to search skills: ${message}`,
+        data: [],
+      },
+      500
+    );
+  }
+});
+
 export { skills };
