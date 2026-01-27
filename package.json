@@ -3,6 +3,7 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "bun run scripts/dev.ts",
     "dev:server": "bun run --hot src/index.ts",

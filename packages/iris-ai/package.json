@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Run Iris AI Agent Workspace locally with a single command",
   "type": "module",
+  "license": "Apache-2.0",
   "bin": {
     "iris-ai": "./bin/iris.js",
     "iris": "./bin/iris.js"
@@ -23,7 +24,6 @@
     "cli"
   ],
   "author": "Eric Vicenti",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/ericvicenti/iris.git",
