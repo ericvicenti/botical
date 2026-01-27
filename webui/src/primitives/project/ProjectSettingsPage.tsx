@@ -17,6 +17,8 @@ import {
   Trash2,
   Loader2,
   ExternalLink,
+  Search,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GitIdentity } from "@/components/git";
@@ -173,11 +175,56 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
 
   // Skills state
   const [skillRepoInput, setSkillRepoInput] = useState("");
+  const [skillSearchQuery, setSkillSearchQuery] = useState("");
+  const [skillSearchResults, setSkillSearchResults] = useState<Array<{
+    id: string;
+    name: string;
+    installs: number;
+    topSource: string;
+  }> | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [installingRepo, setInstallingRepo] = useState<string | null>(null);
   const { data: installedSkills, isLoading: isLoadingInstalled } = useInstalledSkills(projectId);
   const { data: allSkills } = useSkills(projectId);
   const installSkill = useInstallSkill();
   const uninstallSkill = useUninstallSkill();
   const toggleSkillEnabled = useToggleSkillEnabled();
+
+  const handleSearchSkills = async () => {
+    if (!skillSearchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://skills.sh/api/search?q=${encodeURIComponent(skillSearchQuery.trim())}`
+      );
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setSkillSearchResults(data.skills || []);
+    } catch (err) {
+      console.error("Failed to search skills:", err);
+      alert(`Failed to search: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleInstallFromSearch = async (repo: string) => {
+    setInstallingRepo(repo);
+    try {
+      await installSkill.mutateAsync({ projectId, repo });
+    } catch (err) {
+      console.error("Failed to install skill:", err);
+      alert(`Failed to install: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setInstallingRepo(null);
+    }
+  };
+
+  const isRepoInstalled = (repo: string) => {
+    return installedSkills?.some((s) => s.repo === repo) || false;
+  };
 
   // Initialize name when project loads
   useEffect(() => {
@@ -416,6 +463,117 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
           badge={installedSkills?.length ? `${installedSkills.length}` : undefined}
         >
           <div className="space-y-6">
+            {/* Search for Skills */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Find Skills
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                  <input
+                    type="text"
+                    value={skillSearchQuery}
+                    onChange={(e) => setSkillSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearchSkills()}
+                    placeholder="Search for skills..."
+                    className="w-full pl-9 pr-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/50 text-sm"
+                  />
+                </div>
+                <button
+                  onClick={handleSearchSkills}
+                  disabled={isSearching || !skillSearchQuery.trim()}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isSearching || !skillSearchQuery.trim()
+                      ? "bg-bg-elevated text-text-muted cursor-not-allowed"
+                      : "bg-accent-primary text-white hover:bg-accent-primary/90"
+                  )}
+                >
+                  {isSearching ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Search"
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-text-muted mt-2">
+                Search the{" "}
+                <a
+                  href="https://skills.sh"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent-primary hover:underline"
+                >
+                  skills.sh
+                </a>{" "}
+                directory for community skills.
+              </p>
+
+              {/* Search Results */}
+              {skillSearchResults !== null && (
+                <div className="mt-3 border border-border rounded-lg overflow-hidden">
+                  {skillSearchResults.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-text-muted text-sm">
+                      No skills found for "{skillSearchQuery}"
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border max-h-64 overflow-auto">
+                      {skillSearchResults.map((skill) => {
+                        const installed = isRepoInstalled(skill.topSource);
+                        const installing = installingRepo === skill.topSource;
+                        return (
+                          <div
+                            key={skill.id}
+                            className="flex items-center gap-3 px-3 py-2.5 hover:bg-bg-elevated/50"
+                          >
+                            <Wand2 className="w-4 h-4 text-accent-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-text-primary text-sm truncate">
+                                {skill.name}
+                              </div>
+                              <div className="text-xs text-text-muted truncate">
+                                {skill.topSource} • {skill.installs.toLocaleString()} installs
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleInstallFromSearch(skill.topSource)}
+                              disabled={installed || installing}
+                              className={cn(
+                                "px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1.5",
+                                installed
+                                  ? "bg-green-500/10 text-green-500 cursor-default"
+                                  : installing
+                                    ? "bg-bg-elevated text-text-muted cursor-not-allowed"
+                                    : "bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20"
+                              )}
+                            >
+                              {installed ? (
+                                "Installed"
+                              ) : installing ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Download className="w-3 h-3" />
+                                  Install
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setSkillSearchResults(null)}
+                    className="w-full px-3 py-2 text-xs text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors border-t border-border"
+                  >
+                    Close search results
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Install from GitHub */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
