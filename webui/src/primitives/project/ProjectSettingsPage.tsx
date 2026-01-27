@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GitIdentity } from "@/components/git";
-import type { InstalledSkill, Skill } from "@/lib/api/types";
+import type { InstalledSkill } from "@/lib/api/types";
 
 interface ProjectSettingsPageProps {
   params: {

@@ -2,8 +2,24 @@ import { useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { useTabs } from "@/contexts/tabs";
 import { parseUrlToTabData, generateTabId } from "@/lib/tabs";
+import type { PageDefinition } from "@/primitives/types";
 
 const APP_NAME = "Iris";
+
+/**
+ * Get the document title for a page.
+ * Uses page.getTitle if available, otherwise falls back to page.getLabel.
+ */
+export function getPageDocumentTitle(
+  page: PageDefinition,
+  params: Record<string, unknown>,
+  search?: Record<string, unknown>
+): string {
+  if (page.getTitle) {
+    return page.getTitle(params, search);
+  }
+  return page.getLabel(params, search);
+}
 
 /**
  * Set the document title. Automatically appends " - Iris" suffix.
