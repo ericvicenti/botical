@@ -14,6 +14,7 @@ import {
   FileOutput,
   Terminal,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
@@ -28,6 +29,7 @@ const TOOL_INFO: Record<string, { description: string; icon: typeof Wrench }> = 
   bash: { description: "Run shell command", icon: Terminal },
   webfetch: { description: "Fetch web page", icon: Globe },
   websearch: { description: "Search the web", icon: Globe },
+  read_skill: { description: "Read skill", icon: Sparkles },
 };
 
 export interface ToolCallProps {
@@ -71,7 +73,16 @@ export function ToolCall({
   const bashDescription = name.toLowerCase() === "bash" && args?.description
     ? (args.description as string)
     : null;
-  const toolDescription = bashDescription || toolInfo?.description || name;
+
+  // For read_skill, show "Read Skill: <name>"
+  const skillName = name.toLowerCase() === "read_skill" && args?.name
+    ? (args.name as string)
+    : null;
+  const readSkillDescription = skillName
+    ? `Read Skill: ${skillName}`
+    : null;
+
+  const toolDescription = readSkillDescription || bashDescription || toolInfo?.description || name;
 
   const hasArgs = !!(args && typeof args === "object" && Object.keys(args).length > 0);
   const hasResult = result !== undefined && result !== null;
@@ -112,6 +123,23 @@ export function ToolCall({
   // Render smart output based on tool type
   const renderOutput = () => {
     const toolLower = name.toLowerCase();
+
+    // Read Skill tool - render with skill name styled nicely
+    if (toolLower === "read_skill" && rawResult) {
+      return (
+        <div className="space-y-2">
+          {skillName && (
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="w-4 h-4 text-accent-primary" />
+              <span className="font-medium text-text-primary">{skillName}</span>
+            </div>
+          )}
+          <pre className="text-xs text-text-secondary overflow-auto max-h-80 bg-bg-primary/50 p-3 rounded whitespace-pre-wrap break-words">
+            {rawResult}
+          </pre>
+        </div>
+      );
+    }
 
     // Glob tool - render file list with links
     if (toolLower === "glob" && rawResult) {

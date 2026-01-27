@@ -355,6 +355,7 @@ export class LLM {
     parts.push(`- To search for code, call the "grep" tool`);
     parts.push(`- To edit a file, call the "edit" tool`);
     parts.push(`- To run a command, call the "bash" tool`);
+    parts.push(`- To use a skill, call the "read_skill" tool with the skill name`);
     parts.push(``);
     parts.push(`Be concise and helpful. Focus on completing the user's request efficiently.`);
 
@@ -370,12 +371,15 @@ export class LLM {
       parts.push("");
       parts.push("## Available Skills");
       parts.push(
-        "The project has the following skills available. Use the `read_skill` tool to get detailed instructions for a skill before attempting the task:"
+        "IMPORTANT: When asked to use a skill, you MUST call the `read_skill` tool to load the skill's instructions. Do NOT try to read skill files directly with the `read` tool - always use `read_skill` instead."
       );
       parts.push("");
+      parts.push("Available skills:");
       for (const skill of options.availableSkills) {
         parts.push(`- **${skill.name}**: ${skill.description}`);
       }
+      parts.push("");
+      parts.push("Example: To use the skill named 'code-review', call: read_skill({ name: 'code-review' })");
     }
 
     // Agent-specific prompt
