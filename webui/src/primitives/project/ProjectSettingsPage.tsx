@@ -585,6 +585,20 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
                   type="text"
                   value={skillRepoInput}
                   onChange={(e) => setSkillRepoInput(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && skillRepoInput.match(/^[\w.-]+\/[\w.-]+$/) && !installSkill.isPending) {
+                      try {
+                        await installSkill.mutateAsync({
+                          projectId,
+                          repo: skillRepoInput,
+                        });
+                        setSkillRepoInput("");
+                      } catch (err) {
+                        console.error("Failed to install skill:", err);
+                        alert(`Failed to install skill: ${err instanceof Error ? err.message : "Unknown error"}`);
+                      }
+                    }
+                  }}
                   placeholder="owner/repo (e.g., anthropics/skills)"
                   className="flex-1 px-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/50 font-mono text-sm"
                 />
