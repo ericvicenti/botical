@@ -23,6 +23,10 @@ Usage:
   parameters: z.object({
     path: z.string().describe("The file path to write to (absolute or relative to project root)"),
     content: z.string().describe("The content to write to the file"),
+    description: z
+      .string()
+      .optional()
+      .describe("Brief description of what you're writing (shown in UI)"),
   }),
 
   async execute(args, context) {

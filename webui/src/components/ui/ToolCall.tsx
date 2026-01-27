@@ -69,9 +69,14 @@ export function ToolCall({
   const toolInfo = TOOL_INFO[name.toLowerCase()];
   const ToolIcon = toolInfo?.icon || Wrench;
 
-  // For bash, prefer the description from args (LLM-provided) over generic
-  const bashDescription = name.toLowerCase() === "bash" && args?.description
+  // Prefer the description from args (LLM-provided) over generic for all tools
+  const argsDescription = args?.description
     ? (args.description as string)
+    : null;
+
+  // For service tool, use label as fallback
+  const serviceLabel = name.toLowerCase() === "service" && args?.label
+    ? (args.label as string)
     : null;
 
   // For read_skill, show "Read Skill: <name>"
@@ -82,7 +87,7 @@ export function ToolCall({
     ? `Read Skill: ${skillName}`
     : null;
 
-  const toolDescription = readSkillDescription || bashDescription || toolInfo?.description || name;
+  const toolDescription = argsDescription || readSkillDescription || serviceLabel || toolInfo?.description || name;
 
   const hasArgs = !!(args && typeof args === "object" && Object.keys(args).length > 0);
   const hasResult = result !== undefined && result !== null;

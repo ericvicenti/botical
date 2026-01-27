@@ -357,6 +357,11 @@ export class LLM {
     parts.push(`- To run a command, call the "bash" tool`);
     parts.push(`- To use a skill, call the "read_skill" tool with the skill name`);
     parts.push(``);
+    parts.push(`IMPORTANT: When calling any tool, ALWAYS include a brief "description" parameter that explains what you're doing and why. This helps the user understand your actions in the UI. For example:`);
+    parts.push(`- read({ path: "src/config.ts", description: "Checking database configuration" })`);
+    parts.push(`- bash({ command: "npm test", description: "Running test suite" })`);
+    parts.push(`- grep({ pattern: "TODO", description: "Finding remaining TODO comments" })`);
+    parts.push(``);
     parts.push(`Be concise and helpful. Focus on completing the user's request efficiently.`);
 
     // Project context

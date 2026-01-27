@@ -30,6 +30,10 @@ Usage:
       .optional()
       .default(false)
       .describe("Replace all occurrences instead of just the first"),
+    description: z
+      .string()
+      .optional()
+      .describe("Brief description of what you're changing (shown in UI)"),
   }),
 
   async execute(args, context) {

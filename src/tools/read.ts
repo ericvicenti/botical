@@ -38,6 +38,10 @@ Usage:
       .max(MAX_LINES)
       .optional()
       .describe(`Maximum number of lines to read. Default: ${MAX_LINES}`),
+    description: z
+      .string()
+      .optional()
+      .describe("Brief description of why you're reading this file (shown in UI)"),
   }),
 
   async execute(args, context) {

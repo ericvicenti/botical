@@ -42,6 +42,10 @@ Examples:
       .max(MAX_RESULTS)
       .optional()
       .describe(`Maximum number of results (default: ${MAX_RESULTS})`),
+    description: z
+      .string()
+      .optional()
+      .describe("Brief description of what you're searching for (shown in UI)"),
   }),
 
   async execute(args, context) {
