@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useSession, useSettings, useProject, useCoreTools, useSkills } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
@@ -66,8 +66,15 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [skillsInitialized, setSkillsInitialized] = useState(false);
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Scroll state tracking
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const lastMessageCountRef = useRef(messages.length);
+  const lastStreamingRef = useRef(!!streamingMessage);
 
   // Load core tools to initialize enabled tools
   const { data: coreTools } = useCoreTools();
@@ -206,10 +213,50 @@ Guidelines:
 
 You have access to tools for reading, writing, and editing files, as well as executing commands.` : `Agent: ${session?.agent || "default"}`}`;
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
+  // Check if container is scrolled near the bottom
+  const checkIsNearBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 100; // pixels from bottom to consider "near bottom"
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distanceFromBottom <= threshold;
+  }, []);
+
+  // Handle scroll events to track user scroll position
+  const handleScroll = useCallback(() => {
+    const nearBottom = checkIsNearBottom();
+    setIsNearBottom(nearBottom);
+    // Hide the button if user scrolls to bottom
+    if (nearBottom) {
+      setShowScrollButton(false);
+    }
+  }, [checkIsNearBottom]);
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingMessage]);
+    setShowScrollButton(false);
+    setIsNearBottom(true);
+  }, []);
+
+  // Auto-scroll to bottom when messages change, but only if user is near bottom
+  useEffect(() => {
+    const hasNewMessages = messages.length > lastMessageCountRef.current;
+    const hasNewStreaming = !!streamingMessage && !lastStreamingRef.current;
+    const hasContentUpdate = hasNewMessages || hasNewStreaming || (streamingMessage && isNearBottom);
+
+    // Update refs for next comparison
+    lastMessageCountRef.current = messages.length;
+    lastStreamingRef.current = !!streamingMessage;
+
+    if (isNearBottom && hasContentUpdate) {
+      // User is at bottom, auto-scroll
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (!isNearBottom && (hasNewMessages || streamingMessage)) {
+      // User has scrolled up and there's new content - show the button
+      setShowScrollButton(true);
+    }
+  }, [messages, streamingMessage, isNearBottom]);
 
   // Focus input when tab becomes active
   useEffect(() => {
@@ -383,7 +430,11 @@ You have access to tools for reading, writing, and editing files, as well as exe
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-4">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-auto p-4 relative"
+      >
         {messages.length === 0 && !streamingMessage ? (
           <EmptyState />
         ) : (
@@ -400,6 +451,26 @@ You have access to tools for reading, writing, and editing files, as well as exe
               <StreamingMessageBubble message={streamingMessage} projectId={projectId} />
             )}
             <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <div className="sticky bottom-4 flex justify-center pointer-events-none">
+            <button
+              onClick={scrollToBottom}
+              className={cn(
+                "pointer-events-auto p-2 rounded-full",
+                "bg-bg-elevated border border-border shadow-lg",
+                "hover:bg-bg-secondary hover:border-accent-primary/50",
+                "transition-all duration-200",
+                "flex items-center justify-center"
+              )}
+              title="Scroll to bottom"
+              data-testid="scroll-to-bottom-button"
+            >
+              <ArrowDown className="w-5 h-5 text-text-primary" />
+            </button>
           </div>
         )}
       </div>
