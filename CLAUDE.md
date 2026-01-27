@@ -20,7 +20,7 @@ bun test              # All backend tests
 bun test:unit         # Unit tests only
 bun test:integration  # Integration tests
 bun test:coverage     # With coverage report
-cd webui && bun run test  # Frontend e2e tests (Playwright)
+bun test:e2e          # E2E tests (self-contained, starts servers automatically)
 ```
 
 Coverage minimums: 85% overall, 90% for critical paths (auth, permissions, tools).
@@ -35,7 +35,8 @@ Unit and integration tests only verify individual layers. E2E tests verify the f
 - UI state management working end-to-end
 - Navigation and routing working correctly
 
-E2E tests go in `webui/tests/` using Playwright. Run with `cd webui && bun run test`.
+E2E tests go in `webui/e2e/` using Playwright. Run with `bun test:e2e` from the root directory.
+The e2e test command automatically starts both backend and frontend servers - no manual setup required.
 
 ## Commit Frequently
 
