@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useSession, useSettings, useProject, useCoreTools } from "@/lib/api/queries";
+import { useSession, useSettings, useProject, useCoreTools, useSkills } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
@@ -63,6 +63,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [toolsInitialized, setToolsInitialized] = useState(false);
+  const [skillsInitialized, setSkillsInitialized] = useState(false);
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -70,6 +71,9 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
 
   // Load core tools to initialize enabled tools
   const { data: coreTools } = useCoreTools();
+
+  // Load skills for this project
+  const { data: skills } = useSkills(projectId);
 
   // Initialize enabled tools when core tools load (enable ALL tools by default)
   useEffect(() => {
@@ -79,6 +83,15 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
       setToolsInitialized(true);
     }
   }, [coreTools, toolsInitialized]);
+
+  // Initialize enabled skills when skills load (enable ALL skills by default)
+  useEffect(() => {
+    if (skills && !skillsInitialized) {
+      const allSkills = new Set(skills.map(s => s.name));
+      setEnabledSkills(allSkills);
+      setSkillsInitialized(true);
+    }
+  }, [skills, skillsInitialized]);
 
   const handleToggleTool = (toolName: string) => {
     setEnabledTools(prev => {

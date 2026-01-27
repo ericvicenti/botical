@@ -46,6 +46,6 @@ export const defaultAgent: AgentConfig = {
   topP: null, // Use provider default
   maxSteps: 25,
   prompt: DEFAULT_AGENT_PROMPT,
-  tools: ["read", "write", "edit", "bash", "service", "glob", "grep"],
+  tools: ["read", "write", "edit", "bash", "service", "glob", "grep", "task", "read_skill"],
   isBuiltin: true,
 };
