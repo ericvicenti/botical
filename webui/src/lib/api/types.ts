@@ -287,6 +287,26 @@ export interface SkillDetails extends Skill {
   resources: SkillResource[];
 }
 
+export interface InstalledSkill {
+  repo: string;
+  ref?: string;
+  installedAt: number;
+  enabled: boolean;
+  path: string;
+  skills: Skill[];
+}
+
+export interface SkillInstallRequest {
+  repo: string;
+  ref?: string;
+}
+
+export interface SkillInstallResult {
+  repo: string;
+  ref?: string;
+  skills: Skill[];
+}
+
 // Backend Action types (from /api/actions)
 
 export interface BackendActionParam {

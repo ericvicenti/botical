@@ -48,6 +48,23 @@ const GitConfigSchema = z.object({
 });
 
 /**
+ * Installed skill from GitHub
+ */
+const InstalledSkillSchema = z.object({
+  repo: z.string(), // "owner/repo" format
+  ref: z.string().optional(), // branch, tag, or commit SHA
+  installedAt: z.number(),
+  enabled: z.boolean().default(true),
+});
+
+/**
+ * Skills configuration
+ */
+const SkillsConfigSchema = z.object({
+  installed: z.array(InstalledSkillSchema).optional(),
+});
+
+/**
  * Project YAML configuration schema
  */
 export const ProjectConfigYamlSchema = z.object({
@@ -67,6 +84,9 @@ export const ProjectConfigYamlSchema = z.object({
     disabled: z.array(z.string()).optional(),
   }).optional(),
 
+  // Skills configuration (installed from GitHub)
+  skills: SkillsConfigSchema.optional(),
+
   // Environment variables (non-sensitive)
   env: z.record(z.string()).optional(),
 
@@ -78,6 +98,7 @@ export const ProjectConfigYamlSchema = z.object({
 });
 
 export type ProjectConfigYaml = z.infer<typeof ProjectConfigYamlSchema>;
+export type InstalledSkillConfig = z.infer<typeof InstalledSkillSchema>;
 
 // ============================================================================
 // Project Config Entity
@@ -110,6 +131,14 @@ export interface ProjectConfig {
   tools?: {
     enabled?: string[];
     disabled?: string[];
+  };
+  skills?: {
+    installed?: Array<{
+      repo: string;
+      ref?: string;
+      installedAt: number;
+      enabled: boolean;
+    }>;
   };
   env?: Record<string, string>;
   git?: {
@@ -266,6 +295,14 @@ export const ProjectConfigService = {
   },
 
   /**
+   * Get skills configuration
+   */
+  getSkillsConfig(projectPath: string): ProjectConfig["skills"] | undefined {
+    const config = this.load(projectPath);
+    return config.skills;
+  },
+
+  /**
    * Merge two configurations
    */
   mergeConfig(base: ProjectConfig, updates: Partial<ProjectConfig>): ProjectConfig {
@@ -281,6 +318,9 @@ export const ProjectConfigService = {
       tools: updates.tools
         ? { ...base.tools, ...updates.tools }
         : base.tools,
+      skills: updates.skills
+        ? { ...base.skills, ...updates.skills }
+        : base.skills,
       env: updates.env
         ? { ...base.env, ...updates.env }
         : base.env,
@@ -314,6 +354,10 @@ export const ProjectConfigService = {
       cleaned.tools = {};
       if (config.tools.enabled?.length) cleaned.tools.enabled = config.tools.enabled;
       if (config.tools.disabled?.length) cleaned.tools.disabled = config.tools.disabled;
+    }
+
+    if (config.skills?.installed?.length) {
+      cleaned.skills = { installed: config.skills.installed };
     }
 
     if (config.env && Object.keys(config.env).length > 0) {

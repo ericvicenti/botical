@@ -16,9 +16,11 @@
  */
 
 import { Hono } from "hono";
+import { z } from "zod";
 import { DatabaseManager } from "@/database/index.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { SkillService } from "@/services/skills.ts";
+import { GitHubSkillService } from "@/services/github-skills.ts";
 import { ValidationError, NotFoundError } from "@/utils/errors.ts";
 
 const skills = new Hono();
@@ -130,6 +132,233 @@ skills.get("/:projectId/skills/:name/resources/*", async (c) => {
       path: resourcePath,
       content,
     },
+  });
+});
+
+// ============================================================================
+// GitHub Skills Installation Endpoints
+// ============================================================================
+
+const InstallSkillSchema = z.object({
+  repo: z.string().min(1),
+  ref: z.string().optional(),
+});
+
+const UpdateSkillSchema = z.object({
+  ref: z.string().optional(),
+  enabled: z.boolean().optional(),
+});
+
+/**
+ * GET /api/projects/:projectId/skills/installed
+ * List all installed GitHub skills
+ */
+skills.get("/:projectId/skills/installed", async (c) => {
+  const projectId = c.req.param("projectId");
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    return c.json({
+      data: [],
+      meta: { total: 0 },
+    });
+  }
+
+  const installed = GitHubSkillService.listInstalled(project.path);
+
+  return c.json({
+    data: installed,
+    meta: { total: installed.length },
+  });
+});
+
+/**
+ * POST /api/projects/:projectId/skills/install
+ * Install skills from a GitHub repository
+ */
+skills.post("/:projectId/skills/install", async (c) => {
+  const projectId = c.req.param("projectId");
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    throw new ValidationError("Project has no local path");
+  }
+
+  const body = await c.req.json();
+  const parsed = InstallSkillSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.message);
+  }
+
+  const { repo, ref } = parsed.data;
+
+  if (!GitHubSkillService.isValidRepo(repo)) {
+    throw new ValidationError(
+      `Invalid repository format: ${repo}. Use owner/repo format.`
+    );
+  }
+
+  const result = await GitHubSkillService.install(project.path, repo, ref);
+
+  if (!result.success) {
+    return c.json(
+      {
+        error: result.error,
+        data: null,
+      },
+      400
+    );
+  }
+
+  return c.json(
+    {
+      data: {
+        repo,
+        ref,
+        skills: result.skills,
+      },
+    },
+    201
+  );
+});
+
+/**
+ * PUT /api/projects/:projectId/skills/installed/*
+ * Update an installed skill (toggle enabled or update ref)
+ *
+ * The repo is in the URL path as owner/repo
+ */
+skills.put("/:projectId/skills/installed/*", async (c) => {
+  const projectId = c.req.param("projectId");
+
+  // Extract repo from wildcard path
+  const fullPath = c.req.path;
+  const marker = `/skills/installed/`;
+  const markerIndex = fullPath.indexOf(marker);
+  if (markerIndex === -1) {
+    throw new ValidationError("Invalid path");
+  }
+  const repo = decodeURIComponent(
+    fullPath.substring(markerIndex + marker.length)
+  );
+
+  if (!repo || !GitHubSkillService.isValidRepo(repo)) {
+    throw new ValidationError(
+      `Invalid repository format: ${repo}. Use owner/repo format.`
+    );
+  }
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    throw new ValidationError("Project has no local path");
+  }
+
+  const body = await c.req.json();
+  const parsed = UpdateSkillSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.message);
+  }
+
+  const { ref, enabled } = parsed.data;
+
+  // If ref provided, update to new ref (re-download)
+  if (ref !== undefined) {
+    const result = await GitHubSkillService.update(project.path, repo, ref);
+    if (!result.success) {
+      return c.json(
+        {
+          error: result.error,
+          data: null,
+        },
+        400
+      );
+    }
+
+    return c.json({
+      data: {
+        repo,
+        ref,
+        skills: result.skills,
+      },
+    });
+  }
+
+  // If enabled provided, toggle enabled state
+  if (enabled !== undefined) {
+    const success = GitHubSkillService.setEnabled(project.path, repo, enabled);
+    if (!success) {
+      throw new NotFoundError("InstalledSkill", repo);
+    }
+
+    return c.json({
+      data: {
+        repo,
+        enabled,
+      },
+    });
+  }
+
+  throw new ValidationError("Either ref or enabled must be provided");
+});
+
+/**
+ * DELETE /api/projects/:projectId/skills/installed/*
+ * Uninstall a skill repository
+ *
+ * The repo is in the URL path as owner/repo
+ */
+skills.delete("/:projectId/skills/installed/*", async (c) => {
+  const projectId = c.req.param("projectId");
+
+  // Extract repo from wildcard path
+  const fullPath = c.req.path;
+  const marker = `/skills/installed/`;
+  const markerIndex = fullPath.indexOf(marker);
+  if (markerIndex === -1) {
+    throw new ValidationError("Invalid path");
+  }
+  const repo = decodeURIComponent(
+    fullPath.substring(markerIndex + marker.length)
+  );
+
+  if (!repo || !GitHubSkillService.isValidRepo(repo)) {
+    throw new ValidationError(
+      `Invalid repository format: ${repo}. Use owner/repo format.`
+    );
+  }
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    throw new ValidationError("Project has no local path");
+  }
+
+  const success = GitHubSkillService.uninstall(project.path, repo);
+  if (!success) {
+    throw new NotFoundError("InstalledSkill", repo);
+  }
+
+  return c.json({
+    data: { repo, uninstalled: true },
   });
 });
 

@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
+import { getIrisPaths } from "../config/yaml.ts";
 
 // ============================================================================
 // Constants
@@ -132,12 +133,12 @@ export const SkillService = {
   },
 
   /**
-   * List all skills in a project (metadata only - Level 1)
+   * List local skills in a project (from skills/ directory)
    *
    * Returns skill metadata (~100 tokens per skill) for efficient
    * loading at session startup.
    */
-  list(projectPath: string): SkillMetadata[] {
+  listLocal(projectPath: string): SkillMetadata[] {
     const skillsDir = this.getSkillsDir(projectPath);
 
     if (!this.hasSkillsDir(projectPath)) {
@@ -175,12 +176,83 @@ export const SkillService = {
   },
 
   /**
+   * List all skills in a project (local + installed from GitHub)
+   *
+   * Merges local skills with installed skills. Local skills take
+   * precedence for name conflicts.
+   */
+  list(projectPath: string): SkillMetadata[] {
+    // Import dynamically to avoid circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { GitHubSkillService } = require("./github-skills.ts");
+
+    // Get local skills
+    const localSkills = this.listLocal(projectPath);
+
+    // Get installed skills from GitHub repos
+    const installedSkills = GitHubSkillService.getInstalledSkills(projectPath);
+
+    // Merge with local taking precedence
+    const skillMap = new Map<string, SkillMetadata>();
+
+    // Add installed first (lower priority)
+    for (const skill of installedSkills) {
+      skillMap.set(skill.name, skill);
+    }
+
+    // Add local skills (higher priority - overwrite)
+    for (const skill of localSkills) {
+      skillMap.set(skill.name, skill);
+    }
+
+    return Array.from(skillMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  },
+
+  /**
    * Get a skill by name with full instructions (Level 2)
    *
    * Returns the complete SKILL.md content including instructions.
+   * Checks local skills first, then installed skills.
    */
   getByName(projectPath: string, skillName: string): SkillWithInstructions | null {
-    const skillsDir = this.getSkillsDir(projectPath);
+    // Check local skills first
+    const localSkill = this.getSkillFromDir(
+      this.getSkillsDir(projectPath),
+      skillName
+    );
+    if (localSkill) {
+      return localSkill;
+    }
+
+    // Check installed skills
+    const installedSkillsDir = getIrisPaths(projectPath).skills;
+    if (fs.existsSync(installedSkillsDir)) {
+      // Search through all installed repos for the skill
+      const owners = fs.readdirSync(installedSkillsDir, { withFileTypes: true });
+      for (const owner of owners) {
+        if (!owner.isDirectory()) continue;
+        const ownerPath = path.join(installedSkillsDir, owner.name);
+        const repos = fs.readdirSync(ownerPath, { withFileTypes: true });
+        for (const repo of repos) {
+          if (!repo.isDirectory()) continue;
+          const repoPath = path.join(ownerPath, repo.name);
+          const skill = this.findSkillInDir(repoPath, skillName);
+          if (skill) {
+            return skill;
+          }
+        }
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * Get a skill from a specific skills directory
+   */
+  getSkillFromDir(skillsDir: string, skillName: string): SkillWithInstructions | null {
     const skillPath = path.join(skillsDir, skillName);
     const skillMdPath = path.join(skillPath, SKILL_FILE);
 
@@ -188,6 +260,56 @@ export const SkillService = {
       return null;
     }
 
+    return this.loadSkillFromPath(skillPath, skillMdPath, skillName);
+  },
+
+  /**
+   * Recursively find a skill by name in a directory
+   */
+  findSkillInDir(dir: string, skillName: string): SkillWithInstructions | null {
+    if (!fs.existsSync(dir)) {
+      return null;
+    }
+
+    // Check if this directory is the skill
+    const skillMdPath = path.join(dir, SKILL_FILE);
+    if (fs.existsSync(skillMdPath)) {
+      const directoryName = path.basename(dir);
+      if (directoryName === skillName) {
+        return this.loadSkillFromPath(dir, skillMdPath, skillName);
+      }
+      return null; // Don't recurse into skill directories
+    }
+
+    // Search subdirectories
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith(".")) continue;
+
+      const result = this.findSkillInDir(path.join(dir, entry.name), skillName);
+      if (result) {
+        return result;
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * Load skill data from a path
+   */
+  loadSkillFromPath(
+    skillPath: string,
+    skillMdPath: string,
+    skillName: string
+  ): SkillWithInstructions | null {
     try {
       const content = fs.readFileSync(skillMdPath, "utf-8");
       const parsed = matter(content);

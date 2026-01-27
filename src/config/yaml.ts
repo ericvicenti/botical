@@ -189,6 +189,7 @@ export function ensureIrisDir(projectPath: string): void {
     path.join(irisDir, "services"),
     path.join(irisDir, "agents"),
     path.join(irisDir, "plans"),
+    path.join(irisDir, "skills"),
   ];
 
   for (const dir of dirs) {
@@ -211,10 +212,12 @@ export function getIrisPaths(projectPath: string) {
     services: path.join(irisDir, "services"),
     agents: path.join(irisDir, "agents"),
     plans: path.join(irisDir, "plans"),
+    skills: path.join(irisDir, "skills"),
 
     workflow: (name: string) => path.join(irisDir, "workflows", `${name}.yaml`),
     service: (name: string) => path.join(irisDir, "services", `${name}.yaml`),
     agent: (name: string) => path.join(irisDir, "agents", `${name}.yaml`),
     plan: (name: string) => path.join(irisDir, "plans", `${name}.md`),
+    skillRepo: (repo: string) => path.join(irisDir, "skills", ...repo.split("/")),
   };
 }

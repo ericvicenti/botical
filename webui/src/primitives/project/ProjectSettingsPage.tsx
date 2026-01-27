@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProject, useUpdateProject } from "@/lib/api/queries";
+import { useProject, useUpdateProject, useInstalledSkills, useInstallSkill, useUninstallSkill, useToggleSkillEnabled, useSkills } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { apiClient } from "@/lib/api/client";
 import {
@@ -13,9 +13,14 @@ import {
   Info,
   X,
   GitBranch,
+  Wand2,
+  Trash2,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GitIdentity } from "@/components/git";
+import type { InstalledSkill, Skill } from "@/lib/api/types";
 
 interface ProjectSettingsPageProps {
   params: {
@@ -65,6 +70,94 @@ function CollapsibleSection({
   );
 }
 
+interface InstalledSkillCardProps {
+  installed: InstalledSkill;
+  projectId: string;
+  onToggle: (enabled: boolean) => void;
+  onUninstall: () => void;
+}
+
+function InstalledSkillCard({ installed, onToggle, onUninstall }: InstalledSkillCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-3 p-3 bg-bg-elevated">
+        {/* Expand/collapse */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-text-muted hover:text-text-primary transition-colors"
+        >
+          {isExpanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </button>
+
+        {/* Enable/disable toggle */}
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={installed.enabled}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-9 h-5 bg-bg-primary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted peer-checked:after:bg-accent-primary after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-primary/20 border border-border"></div>
+        </label>
+
+        {/* Repo name */}
+        <div className="flex-1 min-w-0">
+          <a
+            href={`https://github.com/${installed.repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-sm text-text-primary hover:text-accent-primary transition-colors inline-flex items-center gap-1"
+          >
+            {installed.repo}
+            <ExternalLink className="w-3 h-3" />
+          </a>
+          {installed.ref && (
+            <span className="ml-2 text-xs text-text-muted">@{installed.ref}</span>
+          )}
+        </div>
+
+        {/* Skills count badge */}
+        <span className="text-xs px-2 py-0.5 rounded-full bg-bg-primary text-text-muted">
+          {installed.skills.length} skill{installed.skills.length !== 1 ? "s" : ""}
+        </span>
+
+        {/* Uninstall button */}
+        <button
+          onClick={onUninstall}
+          className="p-1.5 text-text-muted hover:text-accent-error hover:bg-accent-error/10 rounded transition-colors"
+          title="Uninstall"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Expanded details */}
+      {isExpanded && installed.skills.length > 0 && (
+        <div className="border-t border-border p-3 bg-bg-primary space-y-1">
+          {installed.skills.map((skill) => (
+            <div
+              key={skill.name}
+              className="flex items-start gap-2 text-sm py-1"
+            >
+              <Wand2 className="w-4 h-4 text-accent-primary shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium text-text-primary">{skill.name}</span>
+                <p className="text-text-muted text-xs">{skill.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps) {
   const { projectId } = params;
   const { data: project, isLoading } = useProject(projectId);
@@ -77,6 +170,14 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState<{ title: string; message: string } | null>(null);
+
+  // Skills state
+  const [skillRepoInput, setSkillRepoInput] = useState("");
+  const { data: installedSkills, isLoading: isLoadingInstalled } = useInstalledSkills(projectId);
+  const { data: allSkills } = useSkills(projectId);
+  const installSkill = useInstallSkill();
+  const uninstallSkill = useUninstallSkill();
+  const toggleSkillEnabled = useToggleSkillEnabled();
 
   // Initialize name when project loads
   useEffect(() => {
@@ -306,6 +407,144 @@ export default function ProjectSettingsPage({ params }: ProjectSettingsPageProps
           icon={<GitBranch className="w-4 h-4" />}
         >
           <GitIdentity />
+        </CollapsibleSection>
+
+        {/* Skills Section */}
+        <CollapsibleSection
+          title="Skills"
+          icon={<Wand2 className="w-4 h-4" />}
+          badge={installedSkills?.length ? `${installedSkills.length}` : undefined}
+        >
+          <div className="space-y-6">
+            {/* Install from GitHub */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Install from GitHub
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={skillRepoInput}
+                  onChange={(e) => setSkillRepoInput(e.target.value)}
+                  placeholder="owner/repo (e.g., anthropics/skills)"
+                  className="flex-1 px-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/50 font-mono text-sm"
+                />
+                <button
+                  onClick={async () => {
+                    if (!skillRepoInput.match(/^[\w.-]+\/[\w.-]+$/)) return;
+                    try {
+                      await installSkill.mutateAsync({
+                        projectId,
+                        repo: skillRepoInput,
+                      });
+                      setSkillRepoInput("");
+                    } catch (err) {
+                      console.error("Failed to install skill:", err);
+                      alert(`Failed to install skill: ${err instanceof Error ? err.message : "Unknown error"}`);
+                    }
+                  }}
+                  disabled={installSkill.isPending || !skillRepoInput.match(/^[\w.-]+\/[\w.-]+$/)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                    installSkill.isPending || !skillRepoInput.match(/^[\w.-]+\/[\w.-]+$/)
+                      ? "bg-bg-elevated text-text-muted cursor-not-allowed"
+                      : "bg-accent-primary text-white hover:bg-accent-primary/90"
+                  )}
+                >
+                  {installSkill.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Install"
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-text-muted mt-2">
+                Install skills from a public GitHub repository containing SKILL.md files.
+                <a
+                  href="https://agentskills.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent-primary hover:underline ml-1 inline-flex items-center gap-1"
+                >
+                  Learn more <ExternalLink className="w-3 h-3" />
+                </a>
+              </p>
+            </div>
+
+            {/* Installed Skills */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Installed Skills
+              </label>
+              {isLoadingInstalled ? (
+                <div className="flex items-center gap-2 text-text-muted text-sm py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : installedSkills?.length === 0 ? (
+                <p className="text-sm text-text-muted py-2">
+                  No skills installed yet. Install skills from GitHub to extend agent capabilities.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {installedSkills?.map((installed) => (
+                    <InstalledSkillCard
+                      key={installed.repo}
+                      installed={installed}
+                      projectId={projectId}
+                      onToggle={(enabled) => {
+                        toggleSkillEnabled.mutate(
+                          { projectId, repo: installed.repo, enabled },
+                          {
+                            onError: (err) => {
+                              console.error("Failed to toggle skill:", err);
+                              alert(`Failed to toggle skill: ${err.message}`);
+                            },
+                          }
+                        );
+                      }}
+                      onUninstall={() => {
+                        if (!confirm(`Uninstall skills from ${installed.repo}?`)) return;
+                        uninstallSkill.mutate(
+                          { projectId, repo: installed.repo },
+                          {
+                            onError: (err) => {
+                              console.error("Failed to uninstall skill:", err);
+                              alert(`Failed to uninstall: ${err.message}`);
+                            },
+                          }
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Local Skills */}
+            {allSkills && allSkills.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  All Available Skills
+                </label>
+                <p className="text-xs text-text-muted mb-2">
+                  Skills available to agents (from installed repos and local skills/ directory)
+                </p>
+                <div className="space-y-1">
+                  {allSkills.map((skill) => (
+                    <div
+                      key={skill.name}
+                      className="flex items-center gap-2 px-3 py-2 bg-bg-elevated rounded-lg text-sm"
+                    >
+                      <Wand2 className="w-4 h-4 text-accent-primary shrink-0" />
+                      <span className="font-medium text-text-primary">{skill.name}</span>
+                      <span className="text-text-muted truncate">- {skill.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </CollapsibleSection>
 
         {/* Danger Zone */}

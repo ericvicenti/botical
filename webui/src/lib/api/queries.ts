@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientRaw } from "./client";
-import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails, CoreTool, Skill, SkillDetails } from "./types";
+import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails, CoreTool, Skill, SkillDetails, InstalledSkill, SkillInstallResult } from "./types";
 
 // Projects
 export function useProjects() {
@@ -1509,5 +1509,95 @@ export function useSkillDetails(projectId: string, skillName: string) {
       return response.data;
     },
     enabled: !!projectId && !!skillName,
+  });
+}
+
+// Installed Skills (from GitHub)
+
+export function useInstalledSkills(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "skills", "installed"],
+    queryFn: async () => {
+      const response = await apiClientRaw<InstalledSkill[]>(
+        `/api/projects/${projectId}/skills/installed`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useInstallSkill() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      repo,
+      ref,
+    }: {
+      projectId: string;
+      repo: string;
+      ref?: string;
+    }) =>
+      apiClient<SkillInstallResult>(
+        `/api/projects/${projectId}/skills/install`,
+        {
+          method: "POST",
+          body: JSON.stringify({ repo, ref }),
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "skills"],
+      });
+    },
+  });
+}
+
+export function useUninstallSkill() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, repo }: { projectId: string; repo: string }) =>
+      apiClient<{ repo: string; uninstalled: boolean }>(
+        `/api/projects/${projectId}/skills/installed/${encodeURIComponent(repo)}`,
+        {
+          method: "DELETE",
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "skills"],
+      });
+    },
+  });
+}
+
+export function useToggleSkillEnabled() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      repo,
+      enabled,
+    }: {
+      projectId: string;
+      repo: string;
+      enabled: boolean;
+    }) =>
+      apiClient<{ repo: string; enabled: boolean }>(
+        `/api/projects/${projectId}/skills/installed/${encodeURIComponent(repo)}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ enabled }),
+        }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "skills"],
+      });
+    },
   });
 }
