@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { UIProvider } from "@/contexts/ui";
 import { TabsProvider } from "@/contexts/tabs";
+import { FilePaletteProvider } from "@/contexts/file-palette";
 
 // Create a fresh query client for each test
 function createTestQueryClient() {
@@ -73,7 +74,9 @@ export function TestProvidersNoRouter({
     <QueryClientProvider client={queryClient}>
       <MockWebSocketProvider>
         <UIProvider>
-          <TabsProvider>{children}</TabsProvider>
+          <TabsProvider>
+            <FilePaletteProvider>{children}</FilePaletteProvider>
+          </TabsProvider>
         </UIProvider>
       </MockWebSocketProvider>
     </QueryClientProvider>
@@ -117,7 +120,9 @@ function customRender(
       <MockWebSocketProvider>
         <UIProvider>
           <TabsProvider>
-            <RouterProvider router={router} />
+            <FilePaletteProvider>
+              <RouterProvider router={router} />
+            </FilePaletteProvider>
           </TabsProvider>
         </UIProvider>
       </MockWebSocketProvider>

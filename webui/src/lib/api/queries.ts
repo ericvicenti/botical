@@ -463,6 +463,23 @@ export function useFiles(projectId: string, dirPath: string = "") {
   });
 }
 
+/**
+ * Get all files in project recursively for file palette
+ */
+export function useFileTree(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "files", "tree"],
+    queryFn: async () => {
+      const response = await apiClientRaw<string[]>(
+        `/api/projects/${projectId}/files/tree`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+    staleTime: 60000, // Cache for 1 minute
+  });
+}
+
 export function useFolderDetails(projectId: string, folderPath: string = "", commit?: string) {
   return useQuery({
     queryKey: ["projects", projectId, "folders", folderPath, commit],

@@ -8,6 +8,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomPanel } from "@/components/layout/BottomPanel";
 import { CommandProvider } from "@/commands/context";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
+import { FilePaletteProvider } from "@/contexts/file-palette";
+import { FilePalette } from "@/components/file-palette/FilePalette";
 import { BackendActionsLoader } from "@/commands/BackendActionsLoader";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ResultDialogProvider } from "@/components/ui/ResultDialog";
@@ -51,6 +53,9 @@ function RootLayoutInner() {
       {/* Command Palette */}
       <CommandPalette />
 
+      {/* File Palette */}
+      <FilePalette />
+
       {/* New Task Modal */}
       {showNewTaskModal && selectedProjectId && (
         <NewTaskModal
@@ -66,10 +71,12 @@ function RootLayout() {
   return (
     <ToastProvider>
       <ResultDialogProvider>
-        <CommandProvider>
-          <BackendActionsLoader />
-          <RootLayoutInner />
-        </CommandProvider>
+        <FilePaletteProvider>
+          <CommandProvider>
+            <BackendActionsLoader />
+            <RootLayoutInner />
+          </CommandProvider>
+        </FilePaletteProvider>
       </ResultDialogProvider>
     </ToastProvider>
   );

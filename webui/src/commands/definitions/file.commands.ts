@@ -2,6 +2,17 @@ import type { Command } from "../types";
 
 export const fileCommands: Command[] = [
   {
+    id: "file.goToFile",
+    label: "Go to File",
+    description: "Quick open a file in the project",
+    category: "file",
+    shortcut: { key: "p", mod: true },
+    when: (ctx) => ctx.selectedProjectId !== null,
+    execute: async () => {
+      window.dispatchEvent(new CustomEvent("iris:file-palette:open"));
+    },
+  },
+  {
     id: "file.create",
     label: "Create File",
     description: "Create a new file in the current project",

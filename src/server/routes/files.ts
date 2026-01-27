@@ -9,6 +9,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import * as fs from "fs/promises";
 import * as path from "path";
+import * as fsSync from "fs";
+import simpleGit from "simple-git";
 import { ProjectService } from "@/services/projects.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { GitService } from "@/services/git.ts";
@@ -127,6 +129,118 @@ async function calculateDirSize(dirPath: string): Promise<number> {
   }
   return totalSize;
 }
+
+/**
+ * Directories to skip when walking the file tree
+ */
+const IGNORED_DIRS = new Set([
+  "node_modules",
+  ".git",
+  ".hg",
+  ".svn",
+  "__pycache__",
+  ".next",
+  ".nuxt",
+  "dist",
+  "build",
+  ".cache",
+  "coverage",
+  ".turbo",
+]);
+
+/**
+ * Maximum number of files to return from file tree
+ */
+const MAX_FILE_TREE_SIZE = 10000;
+
+/**
+ * Recursively collect all file paths in a directory
+ */
+async function collectFilesRecursively(
+  basePath: string,
+  currentPath: string,
+  files: string[],
+  maxFiles: number
+): Promise<void> {
+  if (files.length >= maxFiles) return;
+
+  const fullPath = path.join(basePath, currentPath);
+
+  try {
+    const entries = await fs.readdir(fullPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (files.length >= maxFiles) break;
+
+      // Skip hidden files and ignored directories
+      if (entry.name.startsWith(".")) continue;
+      if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) continue;
+
+      const relativePath = currentPath ? path.join(currentPath, entry.name) : entry.name;
+
+      if (entry.isDirectory()) {
+        await collectFilesRecursively(basePath, relativePath, files, maxFiles);
+      } else if (entry.isFile()) {
+        files.push(relativePath);
+      }
+    }
+  } catch {
+    // Skip directories we can't read
+  }
+}
+
+/**
+ * GET /api/projects/:projectId/files/tree
+ * List all files recursively for file palette
+ * For git repos, uses git ls-files to respect .gitignore
+ * For non-git repos, walks the filesystem skipping common ignored dirs
+ */
+files.get("/:projectId/files/tree", async (c) => {
+  const { projectId } = c.req.param();
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    return c.json({ data: [] });
+  }
+
+  const projectPath = project.path;
+
+  // Check if this is a git repo
+  const gitDir = path.join(projectPath, ".git");
+  const isGitRepo = fsSync.existsSync(gitDir);
+
+  let fileList: string[] = [];
+
+  if (isGitRepo) {
+    // Use git ls-files to get tracked files (respects .gitignore)
+    try {
+      const git = simpleGit(projectPath);
+      const result = await git.raw(["ls-files", "--cached", "--others", "--exclude-standard"]);
+      fileList = result
+        .trim()
+        .split("\n")
+        .filter((f) => f.length > 0)
+        .slice(0, MAX_FILE_TREE_SIZE);
+    } catch {
+      // Fall back to filesystem walk if git command fails
+      await collectFilesRecursively(projectPath, "", fileList, MAX_FILE_TREE_SIZE);
+    }
+  } else {
+    // Walk filesystem for non-git repos
+    await collectFilesRecursively(projectPath, "", fileList, MAX_FILE_TREE_SIZE);
+  }
+
+  // Sort alphabetically
+  fileList.sort((a, b) => a.localeCompare(b));
+
+  return c.json({ data: fileList });
+});
 
 /**
  * GET /api/projects/:projectId/files
