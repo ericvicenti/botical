@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession, useSettings, useProject, useCoreTools } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
+import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
 import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
@@ -10,6 +11,7 @@ import { ToolCall } from "@/components/ui/ToolCall";
 import { ContentHeader } from "@/components/layout/ContentHeader";
 import { ToolsPanel } from "./ToolsPanel";
 import { SkillsPanel } from "./SkillsPanel";
+import type { Skill } from "@/lib/api/types";
 
 interface TaskChatProps {
   sessionId: string;
@@ -43,6 +45,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
   const { data: project } = useProject(projectId);
   const { data: settings } = useSettings();
+  const { openTab } = useTabs();
   const {
     messages,
     streamingMessage,
@@ -60,6 +63,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [toolsInitialized, setToolsInitialized] = useState(false);
+  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -85,6 +89,44 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
         next.add(toolName);
       }
       return next;
+    });
+  };
+
+  // Detect which skills have been loaded by the agent (read_skill tool calls)
+  const loadedSkills = useMemo(() => {
+    const loaded = new Set<string>();
+    for (const message of messages) {
+      for (const part of message.parts) {
+        if (part.type === "tool-call" && part.toolName === "read_skill") {
+          const content = part.content as { args?: { name?: string } } | undefined;
+          const skillName = content?.args?.name;
+          if (skillName) {
+            loaded.add(skillName);
+          }
+        }
+      }
+    }
+    return loaded;
+  }, [messages]);
+
+  const handleToggleSkill = (skillName: string, enabled: boolean) => {
+    setEnabledSkills(prev => {
+      const next = new Set(prev);
+      if (enabled) {
+        next.add(skillName);
+      } else {
+        next.delete(skillName);
+      }
+      return next;
+    });
+  };
+
+  const handleOpenSkillFile = (skill: Skill) => {
+    // Open the SKILL.md file in a new tab
+    openTab({
+      type: "file",
+      path: `${skill.path}/SKILL.md`,
+      projectId,
     });
   };
 
@@ -312,11 +354,10 @@ You have access to tools for reading, writing, and editing files, as well as exe
         <div className="px-4 py-3 border-b border-border bg-bg-secondary">
           <SkillsPanel
             projectId={projectId}
-            onSelectSkill={(skill) => {
-              setInput(`Use the ${skill.name} skill to help with `);
-              setShowSkillsPanel(false);
-              inputRef.current?.focus();
-            }}
+            enabledSkills={enabledSkills}
+            loadedSkills={loadedSkills}
+            onToggleSkill={handleToggleSkill}
+            onOpenSkillFile={handleOpenSkillFile}
           />
         </div>
       )}

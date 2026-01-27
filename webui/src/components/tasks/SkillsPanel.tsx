@@ -5,23 +5,32 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
-  BookOpen,
   Code,
   FileText,
   Package,
+  Check,
 } from "lucide-react";
 import type { Skill } from "@/lib/api/types";
 
 interface SkillsPanelProps {
   projectId: string;
-  onSelectSkill?: (skill: Skill) => void;
+  enabledSkills: Set<string>;
+  loadedSkills: Set<string>;
+  onToggleSkill: (skillName: string, enabled: boolean) => void;
+  onOpenSkillFile: (skill: Skill) => void;
 }
 
-export function SkillsPanel({ projectId, onSelectSkill }: SkillsPanelProps) {
-  const { data: skills, isLoading, error } = useSkills(projectId);
+export function SkillsPanel({
+  projectId,
+  enabledSkills,
+  loadedSkills,
+  onToggleSkill,
+  onOpenSkillFile,
+}: SkillsPanelProps) {
+  const { data: skills, isLoading } = useSkills(projectId);
   const [expandedSkills, setExpandedSkills] = useState<Set<string>>(new Set());
 
-  const toggleSkill = (name: string) => {
+  const toggleExpanded = (name: string) => {
     setExpandedSkills((prev) => {
       const next = new Set(prev);
       if (next.has(name)) {
@@ -68,26 +77,70 @@ export function SkillsPanel({ projectId, onSelectSkill }: SkillsPanelProps) {
       <div className="divide-y divide-border">
         {skills.map((skill) => {
           const isExpanded = expandedSkills.has(skill.name);
+          const isLoaded = loadedSkills.has(skill.name);
+          const isEnabled = enabledSkills.has(skill.name) || isLoaded;
 
           return (
             <div key={skill.name}>
-              <button
-                onClick={() => toggleSkill(skill.name)}
-                className="w-full px-3 py-2 flex items-center gap-2 hover:bg-bg-tertiary/50 transition-colors"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-text-muted" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-text-muted" />
-                )}
-                <Package className="w-4 h-4 text-accent-primary" />
-                <span className="flex-1 text-left text-sm font-medium text-text-primary font-mono">
-                  {skill.name}
-                </span>
-              </button>
+              <div className="flex items-center">
+                {/* Checkbox */}
+                <label
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 cursor-pointer",
+                    isLoaded && "cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isEnabled}
+                    disabled={isLoaded}
+                    onChange={(e) => onToggleSkill(skill.name, e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={cn(
+                      "w-4 h-4 rounded border flex items-center justify-center transition-colors",
+                      isEnabled
+                        ? "bg-accent-primary border-accent-primary"
+                        : "border-border hover:border-text-muted"
+                    )}
+                  >
+                    {isEnabled && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                </label>
+
+                {/* Expand/collapse button */}
+                <button
+                  onClick={() => toggleExpanded(skill.name)}
+                  className="p-2 hover:bg-bg-tertiary/50 transition-colors rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-text-muted" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-text-muted" />
+                  )}
+                </button>
+
+                {/* Skill name - clickable to open file */}
+                <button
+                  onClick={() => onOpenSkillFile(skill)}
+                  className="flex-1 flex items-center gap-2 py-2 pr-3 hover:bg-bg-tertiary/50 transition-colors text-left"
+                  title="Open SKILL.md"
+                >
+                  <Package className="w-4 h-4 text-accent-primary" />
+                  <span className="text-sm font-medium text-text-primary font-mono hover:underline">
+                    {skill.name}
+                  </span>
+                  {isLoaded && (
+                    <span className="text-xs text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded">
+                      loaded
+                    </span>
+                  )}
+                </button>
+              </div>
 
               {isExpanded && (
-                <div className="px-3 pb-3 ml-6 space-y-2">
+                <div className="px-3 pb-3 ml-10 space-y-2">
                   <p className="text-xs text-text-secondary">
                     {skill.description}
                   </p>
@@ -112,19 +165,6 @@ export function SkillsPanel({ projectId, onSelectSkill }: SkillsPanelProps) {
                       <FileText className="w-3 h-3" />
                       <span>License: {skill.license}</span>
                     </div>
-                  )}
-
-                  {onSelectSkill && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectSkill(skill);
-                      }}
-                      className="flex items-center gap-1 text-xs text-accent-primary hover:underline"
-                    >
-                      <BookOpen className="w-3 h-3" />
-                      Use this skill
-                    </button>
                   )}
                 </div>
               )}

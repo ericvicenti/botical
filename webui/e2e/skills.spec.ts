@@ -178,7 +178,7 @@ test.describe("Skills Panel", () => {
     await expect(page.getByText("2 available")).toBeVisible();
   });
 
-  test("should display skill list with names", async ({ page }) => {
+  test("should display skill list with names and checkboxes", async ({ page }) => {
     await page.goto("/task/session-1?projectId=project-1");
     await page.waitForLoadState("networkidle");
 
@@ -188,17 +188,22 @@ test.describe("Skills Panel", () => {
     // Should show skill names
     await expect(page.getByText("code-review")).toBeVisible();
     await expect(page.getByText("testing")).toBeVisible();
+
+    // Should show checkboxes (unchecked by default)
+    const checkboxes = page.locator('input[type="checkbox"]');
+    await expect(checkboxes).toHaveCount(2);
   });
 
-  test("should expand skill to show description", async ({ page }) => {
+  test("should expand skill to show description using chevron", async ({ page }) => {
     await page.goto("/task/session-1?projectId=project-1");
     await page.waitForLoadState("networkidle");
 
     // Open skills panel
     await page.getByTitle("View available skills").click();
 
-    // Click to expand code-review skill
-    await page.getByText("code-review").click();
+    // Click the chevron button to expand (first skill's chevron)
+    const chevronButtons = page.locator('button').filter({ has: page.locator('svg.lucide-chevron-right') });
+    await chevronButtons.first().click();
 
     // Should show description
     await expect(
@@ -206,19 +211,41 @@ test.describe("Skills Panel", () => {
     ).toBeVisible();
   });
 
-  test("should show allowed tools for a skill", async ({ page }) => {
+  test("should show allowed tools for a skill when expanded", async ({ page }) => {
     await page.goto("/task/session-1?projectId=project-1");
     await page.waitForLoadState("networkidle");
 
     // Open skills panel
     await page.getByTitle("View available skills").click();
 
-    // Expand code-review skill
-    await page.getByText("code-review").click();
+    // Click chevron to expand code-review skill
+    const chevronButtons = page.locator('button').filter({ has: page.locator('svg.lucide-chevron-right') });
+    await chevronButtons.first().click();
 
     // Should show allowed tools
     await expect(page.getByText("read", { exact: true })).toBeVisible();
     await expect(page.getByText("grep", { exact: true })).toBeVisible();
+  });
+
+  test("should toggle skill checkbox", async ({ page }) => {
+    await page.goto("/task/session-1?projectId=project-1");
+    await page.waitForLoadState("networkidle");
+
+    // Open skills panel
+    await page.getByTitle("View available skills").click();
+
+    // Find the first checkbox
+    const checkbox = page.locator('input[type="checkbox"]').first();
+
+    // Initially unchecked
+    await expect(checkbox).not.toBeChecked();
+
+    // Click the label/checkbox area to toggle
+    const checkboxLabel = page.locator('label').filter({ has: page.locator('input[type="checkbox"]') }).first();
+    await checkboxLabel.click();
+
+    // Should now be checked
+    await expect(checkbox).toBeChecked();
   });
 
   test("should show empty state when no skills available", async ({ page }) => {
@@ -257,5 +284,17 @@ test.describe("Skills Panel", () => {
 
     // Panel should be hidden
     await expect(page.getByText("2 available")).not.toBeVisible();
+  });
+
+  test("should have clickable skill names with title tooltip", async ({ page }) => {
+    await page.goto("/task/session-1?projectId=project-1");
+    await page.waitForLoadState("networkidle");
+
+    // Open skills panel
+    await page.getByTitle("View available skills").click();
+
+    // Skill name should have "Open SKILL.md" title
+    const skillNameButton = page.getByTitle("Open SKILL.md").first();
+    await expect(skillNameButton).toBeVisible();
   });
 });
