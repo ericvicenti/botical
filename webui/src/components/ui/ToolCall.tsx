@@ -98,15 +98,19 @@ export function ToolCall({
   const isFileOperation = ["read", "write", "edit"].includes(name.toLowerCase()) && filePath;
 
   // Parse result content
-  const resultObj = typeof result === "object" && result !== null ? result as Record<string, unknown> : null;
+  // Tool-result content is stored as { result: <actual tool result> } - unwrap it
+  const contentWrapper = typeof result === "object" && result !== null ? result as Record<string, unknown> : null;
+  const unwrappedResult = contentWrapper?.result;
+  const resultObj = typeof unwrappedResult === "object" && unwrappedResult !== null
+    ? unwrappedResult as Record<string, unknown>
+    : (typeof result === "object" && result !== null ? result as Record<string, unknown> : null);
   const resultTitle = resultObj?.title as string | undefined;
   const resultOutput = resultObj?.output as string | undefined;
-  const resultResult = resultObj?.result as string | undefined;
   const resultMetadata = resultObj?.metadata as Record<string, unknown> | undefined;
   const resultFilePath = resultMetadata?.path as string | undefined;
 
   // Get the actual result content
-  const rawResult = resultOutput || resultResult || (typeof result === "string" ? result : null);
+  const rawResult = resultOutput || (typeof unwrappedResult === "string" ? unwrappedResult : null) || (typeof result === "string" ? result : null);
 
   const handleOpenFile = (path: string) => {
     openPreviewTab({
@@ -208,8 +212,8 @@ export function ToolCall({
       );
     }
 
-    // Default: show raw result or JSON
-    const resultStr = rawResult || (result ? JSON.stringify(result, null, 2) : "");
+    // Default: show raw result or JSON (prefer unwrapped result for cleaner display)
+    const resultStr = rawResult || (resultObj ? JSON.stringify(resultObj, null, 2) : (result ? JSON.stringify(result, null, 2) : ""));
     const maxResultLength = 500;
     const resultTruncated = resultStr.length > maxResultLength;
     const displayResult = expanded ? resultStr : resultStr.slice(0, maxResultLength) + (resultTruncated ? "..." : "");
