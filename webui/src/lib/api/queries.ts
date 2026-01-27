@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientRaw } from "./client";
-import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails, CoreTool } from "./types";
+import type { Project, Session, Mission, Task, Process, MessageWithParts, MessagePart, FolderDetails, CoreTool, Skill, SkillDetails } from "./types";
 
 // Projects
 export function useProjects() {
@@ -1481,5 +1481,33 @@ export function useExeExec() {
         method: "POST",
         body: JSON.stringify({ command, timeout }),
       }),
+  });
+}
+
+// Skills
+
+export function useSkills(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "skills"],
+    queryFn: async () => {
+      const response = await apiClientRaw<Skill[]>(
+        `/api/projects/${projectId}/skills`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useSkillDetails(projectId: string, skillName: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "skills", skillName],
+    queryFn: async () => {
+      const response = await apiClientRaw<SkillDetails>(
+        `/api/projects/${projectId}/skills/${encodeURIComponent(skillName)}`
+      );
+      return response.data;
+    },
+    enabled: !!projectId && !!skillName,
   });
 }

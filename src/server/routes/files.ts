@@ -581,11 +581,18 @@ files.post("/:projectId/files/*/move", async (c) => {
  */
 files.post("/:projectId/folders/*", async (c) => {
   const { projectId } = c.req.param();
-  const folderPath = c.req.param("*") || "";
+  // Extract folder path from URL using same pattern as files endpoints
+  const folderPath = c.req.path.replace(
+    new RegExp(`^/api/projects/${projectId}/folders/`),
+    ""
+  );
 
   if (!folderPath) {
     throw new ValidationError("Folder path is required");
   }
+
+  // Decode URL-encoded path (consistent with files endpoints)
+  const decodedPath = decodeURIComponent(folderPath);
 
   const rootDb = DatabaseManager.getRootDb();
   const project = ProjectService.getByIdOrThrow(rootDb, projectId);
@@ -594,13 +601,13 @@ files.post("/:projectId/folders/*", async (c) => {
     throw new ValidationError("Project has no filesystem path");
   }
 
-  const fullPath = resolveProjectPath(project.path, folderPath);
+  const fullPath = resolveProjectPath(project.path, decodedPath);
 
   await fs.mkdir(fullPath, { recursive: true });
 
   return c.json({
     data: {
-      path: folderPath,
+      path: decodedPath,
     },
   }, 201);
 });

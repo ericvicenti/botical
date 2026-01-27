@@ -340,6 +340,7 @@ export class LLM {
     agentPrompt?: string;
     projectContext?: string;
     additionalInstructions?: string[];
+    availableSkills?: Array<{ name: string; description: string }>;
   }): string {
     const parts: string[] = [];
 
@@ -362,6 +363,19 @@ export class LLM {
       parts.push("");
       parts.push("## Project Context");
       parts.push(options.projectContext);
+    }
+
+    // Available skills (if any)
+    if (options.availableSkills?.length) {
+      parts.push("");
+      parts.push("## Available Skills");
+      parts.push(
+        "The project has the following skills available. Use the `read_skill` tool to get detailed instructions for a skill before attempting the task:"
+      );
+      parts.push("");
+      for (const skill of options.availableSkills) {
+        parts.push(`- **${skill.name}**: ${skill.description}`);
+      }
     }
 
     // Agent-specific prompt

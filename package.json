@@ -21,6 +21,7 @@
     "@ai-sdk/google": "^3.0.8",
     "@ai-sdk/openai": "^3.0.10",
     "ai": "^6.0.35",
+    "gray-matter": "^4.0.3",
     "hono": "^4.7.0",
     "js-yaml": "^4.1.1",
     "node-pty": "^1.1.0",

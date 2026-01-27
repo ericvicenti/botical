@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession, useSettings, useProject, useCoreTools } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
 import { ToolCall } from "@/components/ui/ToolCall";
 import { ContentHeader } from "@/components/layout/ContentHeader";
 import { ToolsPanel } from "./ToolsPanel";
+import { SkillsPanel } from "./SkillsPanel";
 
 interface TaskChatProps {
   sessionId: string;
@@ -54,6 +55,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [input, setInput] = useState("");
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [showToolsPanel, setShowToolsPanel] = useState(false);
+  const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
@@ -244,6 +246,18 @@ You have access to tools for reading, writing, and editing files, as well as exe
           <Wrench className="w-5 h-5" />
         </button>
         <button
+          onClick={() => setShowSkillsPanel(!showSkillsPanel)}
+          className={cn(
+            "p-2 rounded-lg transition-colors",
+            showSkillsPanel
+              ? "bg-accent-primary/20 text-accent-primary"
+              : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
+          )}
+          title="View available skills"
+        >
+          <Sparkles className="w-5 h-5" />
+        </button>
+        <button
           onClick={() => setShowSystemPrompt(true)}
           className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
           title="View system prompt"
@@ -289,6 +303,20 @@ You have access to tools for reading, writing, and editing files, as well as exe
           <ToolsPanel
             enabledTools={enabledTools}
             onToggleTool={handleToggleTool}
+          />
+        </div>
+      )}
+
+      {/* Skills Panel */}
+      {showSkillsPanel && (
+        <div className="px-4 py-3 border-b border-border bg-bg-secondary">
+          <SkillsPanel
+            projectId={projectId}
+            onSelectSkill={(skill) => {
+              setInput(`Use the ${skill.name} skill to help with `);
+              setShowSkillsPanel(false);
+              inputRef.current?.focus();
+            }}
           />
         </div>
       )}

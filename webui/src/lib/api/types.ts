@@ -265,6 +265,28 @@ export interface CoreTool {
   requiresCodeExecution: boolean;
 }
 
+// Skill types
+
+export interface Skill {
+  name: string;
+  description: string;
+  path: string;
+  license?: string;
+  compatibility?: string;
+  metadata?: Record<string, string>;
+  allowedTools?: string[];
+}
+
+export interface SkillResource {
+  path: string;
+  type: "script" | "reference" | "asset";
+}
+
+export interface SkillDetails extends Skill {
+  instructions: string;
+  resources: SkillResource[];
+}
+
 // Backend Action types (from /api/actions)
 
 export interface BackendActionParam {

@@ -26,6 +26,7 @@ import { AgentRegistry } from "./registry.ts";
 import { SubAgentRunner } from "./subagent-runner.ts";
 import type { TaskParams } from "@/tools/task.ts";
 import { EventBus } from "@/bus/index.ts";
+import { SkillService } from "@/services/skills.ts";
 
 /**
  * Options for running an agent
@@ -227,10 +228,17 @@ export class AgentOrchestrator {
       };
     }
 
-    // Build system prompt with project context
+    // Load available skills for the project
+    const availableSkills = SkillService.list(projectPath).map((skill) => ({
+      name: skill.name,
+      description: skill.description,
+    }));
+
+    // Build system prompt with project context and skills
     const systemPrompt = LLM.buildSystemPrompt({
       agentPrompt: effectivePrompt,
       projectContext: `Working directory: ${projectPath}`,
+      availableSkills,
     });
 
     // Create stream processor

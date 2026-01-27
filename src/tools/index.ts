@@ -18,6 +18,7 @@ import { serviceTool } from "./service.ts";
 import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
+import { readSkillTool } from "./read-skill.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -68,6 +69,11 @@ export function registerCoreTools(): void {
     requiresCodeExecution: false, // Task tool itself doesn't execute code
   });
 
+  ToolRegistry.register(readSkillTool, {
+    category: "agent",
+    requiresCodeExecution: false, // Just reads skill files
+  });
+
   // Note: Git operations are now handled via ActionRegistry
   // See src/actions/git.ts for git actions
 }
@@ -81,4 +87,5 @@ export { serviceTool } from "./service.ts";
 export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";
+export { readSkillTool } from "./read-skill.ts";
 // Git actions moved to src/actions/git.ts
