@@ -70,31 +70,61 @@ export function ProjectSelector() {
     setIsOpen(false);
   };
 
+  const handleGoToProjectHome = () => {
+    if (selectedProject) {
+      openPreviewTab({
+        type: "project",
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+      });
+      navigate({ to: "/projects/$projectId", params: { projectId: selectedProject.id } });
+    }
+    setIsOpen(false);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
+      <div
         className={cn(
-          "w-full h-9 flex items-center justify-between gap-2 px-3",
-          "bg-bg-elevated hover:bg-bg-elevated/80 transition-colors",
-          "text-sm text-text-primary border-b border-border"
+          "w-full h-9 flex items-center justify-between",
+          "bg-bg-elevated text-sm text-text-primary border-b border-border"
         )}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        {/* Project name - clicking navigates to project home */}
+        <button
+          onClick={handleGoToProjectHome}
+          className={cn(
+            "flex-1 h-full flex items-center gap-2 px-3 min-w-0",
+            "hover:bg-bg-secondary/50 transition-colors",
+            !selectedProject && "pointer-events-none"
+          )}
+          title={selectedProject ? `Go to ${selectedProject.name}` : undefined}
+        >
           <FolderTree className="w-4 h-4 text-accent-primary shrink-0" />
           <span className="truncate">
             {isLoading
               ? "Loading..."
               : selectedProject?.name ?? "Select a project"}
           </span>
-        </div>
-        <ChevronDown
+        </button>
+        {/* Dropdown toggle button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "w-4 h-4 text-text-secondary shrink-0 transition-transform",
-            isOpen && "rotate-180"
+            "h-full px-2 flex items-center justify-center",
+            "hover:bg-bg-secondary/50 transition-colors",
+            "border-l border-border/50"
           )}
-        />
-      </button>
+          title="Switch project"
+        >
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-text-secondary shrink-0 transition-transform",
+              isOpen && "rotate-180"
+            )}
+          />
+        </button>
+      </div>
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-50 bg-bg-elevated border border-border rounded-b-lg shadow-lg max-h-64 overflow-auto">
