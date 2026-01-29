@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { X, Plus, Trash2, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 import { useCreateContainer, useStartContainer, type CreateContainerInput } from "../api";
 
 interface NewContainerModalProps {

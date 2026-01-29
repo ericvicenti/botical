@@ -6,5 +6,5 @@ export const Route = createFileRoute("/docker/images")({
 });
 
 function ImagesRoute() {
-  return <ImageBrowserPage params={{}} />;
+  return <ImageBrowserPage />;
 }

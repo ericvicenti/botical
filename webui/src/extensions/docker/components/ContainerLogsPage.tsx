@@ -6,7 +6,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Terminal, Loader2, AlertCircle, RefreshCw, Download } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 import { useDockerContainerLogs } from "../api";
 
 interface ContainerLogsPageProps {

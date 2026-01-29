@@ -5,7 +5,16 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { apiClient } from "@/lib/api/client";
+
+// Helper types for API responses
+interface ApiResponse<T> {
+  data: T;
+}
+
+interface AvailableResponse {
+  available: boolean;
+}
 
 // ============================================================================
 // Types
@@ -139,8 +148,8 @@ export function useDockerAvailable() {
   return useQuery({
     queryKey: dockerKeys.available(),
     queryFn: async () => {
-      const response = await api.get("/extensions/docker/info/available");
-      return response.available as boolean;
+      const response = await apiClient<AvailableResponse>("/extensions/docker/info/available");
+      return response.available;
     },
     staleTime: 30000,
   });
@@ -153,8 +162,8 @@ export function useDockerInfo() {
   return useQuery({
     queryKey: dockerKeys.info(),
     queryFn: async () => {
-      const response = await api.get("/extensions/docker/info");
-      return response.data as DockerInfo;
+      const response = await apiClient<ApiResponse<DockerInfo>>("/extensions/docker/info");
+      return response.data;
     },
     staleTime: 30000,
   });
@@ -171,8 +180,8 @@ export function useDockerContainers(options?: { all?: boolean }) {
     queryKey: [...dockerKeys.containers(), { all: options?.all }],
     queryFn: async () => {
       const url = `/extensions/docker/containers${params.toString() ? `?${params}` : ""}`;
-      const response = await api.get(url);
-      return response.data as DockerContainer[];
+      const response = await apiClient<ApiResponse<DockerContainer[]>>(url);
+      return response.data;
     },
     refetchInterval: 5000, // Refresh every 5 seconds
   });
@@ -185,8 +194,8 @@ export function useDockerContainer(containerId: string) {
   return useQuery({
     queryKey: dockerKeys.container(containerId),
     queryFn: async () => {
-      const response = await api.get(`/extensions/docker/containers/${containerId}`);
-      return response.data as DockerContainerDetail;
+      const response = await apiClient<ApiResponse<DockerContainerDetail>>(`/extensions/docker/containers/${containerId}`);
+      return response.data;
     },
     enabled: !!containerId,
   });
@@ -222,8 +231,8 @@ export function useDockerImages() {
   return useQuery({
     queryKey: dockerKeys.images(),
     queryFn: async () => {
-      const response = await api.get("/extensions/docker/images");
-      return response.data as DockerImage[];
+      const response = await apiClient<ApiResponse<DockerImage[]>>("/extensions/docker/images");
+      return response.data;
     },
     staleTime: 30000,
   });
@@ -241,7 +250,9 @@ export function useStartContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await api.post(`/extensions/docker/containers/${containerId}/start`);
+      await apiClient(`/extensions/docker/containers/${containerId}/start`, {
+        method: "POST",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
@@ -257,7 +268,9 @@ export function useStopContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await api.post(`/extensions/docker/containers/${containerId}/stop`);
+      await apiClient(`/extensions/docker/containers/${containerId}/stop`, {
+        method: "POST",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
@@ -273,7 +286,9 @@ export function useRestartContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await api.post(`/extensions/docker/containers/${containerId}/restart`);
+      await apiClient(`/extensions/docker/containers/${containerId}/restart`, {
+        method: "POST",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
@@ -290,7 +305,7 @@ export function useRemoveContainer() {
   return useMutation({
     mutationFn: async ({ containerId, force }: { containerId: string; force?: boolean }) => {
       const url = `/extensions/docker/containers/${containerId}${force ? "?force=true" : ""}`;
-      await api.delete(url);
+      await apiClient(url, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
@@ -306,8 +321,15 @@ export function useCreateContainer() {
 
   return useMutation({
     mutationFn: async (input: CreateContainerInput) => {
-      const response = await api.post("/extensions/docker/containers", input);
-      return response.data as { id: string; warnings: string[] };
+      const response = await apiClient<ApiResponse<{ id: string; warnings: string[] }>>(
+        "/extensions/docker/containers",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        }
+      );
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
@@ -323,7 +345,11 @@ export function usePullImage() {
 
   return useMutation({
     mutationFn: async ({ image, tag }: { image: string; tag?: string }) => {
-      await api.post("/extensions/docker/images/pull", { image, tag });
+      await apiClient("/extensions/docker/images/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, tag }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.images() });
@@ -340,7 +366,7 @@ export function useRemoveImage() {
   return useMutation({
     mutationFn: async ({ imageId, force }: { imageId: string; force?: boolean }) => {
       const url = `/extensions/docker/images/${imageId}${force ? "?force=true" : ""}`;
-      await api.delete(url);
+      await apiClient(url, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.images() });

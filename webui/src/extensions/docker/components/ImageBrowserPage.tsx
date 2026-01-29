@@ -13,7 +13,7 @@ import {
   AlertCircle,
   Search,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 import {
   useDockerImages,
   usePullImage,

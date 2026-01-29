@@ -18,7 +18,7 @@ import {
   HardDrive,
   Settings,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 import { usePageOpener } from "@/primitives/hooks";
 import {
   useDockerContainer,
