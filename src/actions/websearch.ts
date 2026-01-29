@@ -42,8 +42,8 @@ export const webSearch = defineAction({
       );
     }
 
-    // Build the search URL
-    const searchUrl = new URL(`${extensionUrl}/search/`);
+    // Build the search URL (no trailing slash - Hono is strict)
+    const searchUrl = new URL(`${extensionUrl}/search`);
     searchUrl.searchParams.set("q", query);
     searchUrl.searchParams.set("limit", String(Math.min(limit, MAX_RESULTS)));
 

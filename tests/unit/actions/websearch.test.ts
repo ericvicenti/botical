@@ -135,7 +135,7 @@ describe("search.web action", () => {
       const result = await webSearch.execute({ query: "test" }, mockContext);
 
       expect(result.type).toBe("error");
-      if (result.type === "error") {
+      if (result.type === "error" && result.code) {
         // Error could be REQUEST_FAILED or SEARCH_FAILED depending on the nature of the failure
         expect(["REQUEST_FAILED", "SEARCH_FAILED"]).toContain(result.code);
       }

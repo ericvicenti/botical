@@ -120,7 +120,7 @@ export function useSearch(query: string, options: SearchOptions = {}) {
         params.set("time_range", options.timeRange);
       }
 
-      const url = `/api/extensions/search/search/?${params.toString()}`;
+      const url = `/api/extensions/search/search?${params.toString()}`;
       return apiClient<SearchResponse>(url);
     },
     enabled: !!query && query.length > 0,
@@ -232,7 +232,7 @@ export function useSearchMutation() {
         params.set("time_range", options.timeRange);
       }
 
-      const url = `/api/extensions/search/search/?${params.toString()}`;
+      const url = `/api/extensions/search/search?${params.toString()}`;
       return apiClient<SearchResponse>(url);
     },
   });
