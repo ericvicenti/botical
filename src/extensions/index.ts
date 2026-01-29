@@ -23,7 +23,17 @@ export {
   type ExtensionsConfig,
   type SidebarConfig,
   type ExtensionServer,
+  type ExtensionFrontendConfig,
+  type ExtensionSidebarConfig,
 } from "./types.ts";
+export {
+  loadManifest,
+  loadManifestFromDir,
+  loadExtension,
+  manifestToDefinition,
+  ExtensionManifestSchema,
+  type ExtensionManifest,
+} from "./manifest.ts";
 
 // Register built-in extensions
 import "./docker/index.ts";

@@ -365,3 +365,32 @@ export interface Workflow {
   };
   steps: unknown[];
 }
+
+// Extension types
+
+export interface ExtensionSidebarConfig {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface ExtensionFrontendConfig {
+  sidebar?: ExtensionSidebarConfig;
+  routes?: string[];
+}
+
+export interface Extension {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  icon: string;
+  category?: string;
+  frontend?: ExtensionFrontendConfig;
+  status: "starting" | "running" | "stopped" | "error";
+  port?: number;
+}
+
+export interface ProjectExtensions {
+  enabled: string[];
+}

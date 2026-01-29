@@ -22,6 +22,8 @@ router.get("/", (c) => {
       description: ext.description,
       version: ext.version,
       icon: ext.icon,
+      category: ext.category,
+      frontend: ext.frontend,
       status: state?.status || "stopped",
       port: state?.port,
     };

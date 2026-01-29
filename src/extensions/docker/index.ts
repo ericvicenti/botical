@@ -8,25 +8,15 @@
  * - Log viewing
  */
 
-import { defineExtension } from "../types.ts";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { loadExtension } from "../manifest.ts";
 import { ExtensionRegistry } from "../registry.ts";
 
-const dockerExtension = defineExtension({
-  id: "docker",
-  name: "Docker",
-  description: "Manage Docker containers, images, and networks",
-  version: "1.0.0",
-  icon: "container",
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-  // Server configuration
-  defaultPort: 4101,
-  serverEntry: "server.ts",
-
-  // Default settings
-  defaultSettings: {
-    socketPath: "/var/run/docker.sock",
-  },
-});
+// Load the extension from extension.json
+const dockerExtension = await loadExtension(__dirname);
 
 // Register the extension
 ExtensionRegistry.register(dockerExtension);

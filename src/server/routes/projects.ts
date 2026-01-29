@@ -33,6 +33,7 @@ import {
 } from "@/services/projects.ts";
 import { requireProjectAccess } from "@/auth/middleware.ts";
 import { ValidationError, ForbiddenError } from "@/utils/errors.ts";
+import { ProjectConfigService } from "@/config/project.ts";
 
 const projects = new Hono();
 
@@ -341,6 +342,131 @@ projects.delete("/:id/members/:userId", requireProjectAccess("admin"), async (c)
 
   return c.json({
     data: { removed: true },
+  });
+});
+
+// ============================================
+// EXTENSIONS CONFIGURATION ROUTES
+// ============================================
+
+/**
+ * GET /api/projects/:id/extensions
+ * Get enabled extensions for a project
+ */
+projects.get("/:id/extensions", async (c) => {
+  const projectId = c.req.param("id");
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  if (!project.path) {
+    return c.json({
+      data: {
+        enabled: [],
+      },
+    });
+  }
+
+  const enabledExtensions = ProjectConfigService.getEnabledExtensions(project.path);
+
+  return c.json({
+    data: {
+      enabled: enabledExtensions,
+    },
+  });
+});
+
+/**
+ * Schema for updating project extensions
+ */
+const UpdateExtensionsSchema = z.object({
+  enabled: z.array(z.string()),
+});
+
+/**
+ * PUT /api/projects/:id/extensions
+ * Update enabled extensions for a project
+ */
+projects.put("/:id/extensions", async (c) => {
+  const projectId = c.req.param("id");
+  const body = await c.req.json();
+
+  const result = UpdateExtensionsSchema.safeParse(body);
+  if (!result.success) {
+    throw new ValidationError(
+      result.error.errors[0]?.message || "Invalid input",
+      result.error.errors
+    );
+  }
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  if (!project.path) {
+    throw new ValidationError("Project does not have a local path");
+  }
+
+  // Update the project config with new enabled extensions
+  ProjectConfigService.update(project.path, {
+    extensions: {
+      enabled: result.data.enabled,
+    },
+  });
+
+  return c.json({
+    data: {
+      enabled: result.data.enabled,
+    },
+  });
+});
+
+/**
+ * POST /api/projects/:id/extensions/:extensionId/enable
+ * Enable a single extension for a project
+ */
+projects.post("/:id/extensions/:extensionId/enable", async (c) => {
+  const projectId = c.req.param("id");
+  const extensionId = c.req.param("extensionId");
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  if (!project.path) {
+    throw new ValidationError("Project does not have a local path");
+  }
+
+  ProjectConfigService.enableExtension(project.path, extensionId);
+
+  return c.json({
+    data: {
+      enabled: true,
+      extensionId,
+    },
+  });
+});
+
+/**
+ * POST /api/projects/:id/extensions/:extensionId/disable
+ * Disable a single extension for a project
+ */
+projects.post("/:id/extensions/:extensionId/disable", async (c) => {
+  const projectId = c.req.param("id");
+  const extensionId = c.req.param("extensionId");
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  if (!project.path) {
+    throw new ValidationError("Project does not have a local path");
+  }
+
+  ProjectConfigService.disableExtension(project.path, extensionId);
+
+  return c.json({
+    data: {
+      enabled: false,
+      extensionId,
+    },
   });
 });
 

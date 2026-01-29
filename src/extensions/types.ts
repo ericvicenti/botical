@@ -13,6 +13,23 @@ import type { Hono } from "hono";
 // ============================================================================
 
 /**
+ * Frontend sidebar configuration
+ */
+export interface ExtensionSidebarConfig {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+/**
+ * Frontend configuration for an extension
+ */
+export interface ExtensionFrontendConfig {
+  sidebar?: ExtensionSidebarConfig;
+  routes?: string[];
+}
+
+/**
  * Extension definition - the manifest for an extension
  */
 export interface ExtensionDefinition {
@@ -31,6 +48,9 @@ export interface ExtensionDefinition {
   /** Icon name (lucide icon) */
   icon: string;
 
+  /** Extension category (e.g., "infrastructure", "devtools") */
+  category?: string;
+
   /** Default port for the extension server (0 = auto-assign) */
   defaultPort?: number;
 
@@ -42,6 +62,12 @@ export interface ExtensionDefinition {
 
   /** Default settings values */
   defaultSettings?: Record<string, unknown>;
+
+  /** Frontend configuration (sidebar, routes) */
+  frontend?: ExtensionFrontendConfig;
+
+  /** Directory where the extension is located */
+  extensionDir?: string;
 }
 
 /**

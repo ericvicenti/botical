@@ -1,0 +1,27 @@
+{
+  "id": "docker",
+  "name": "Docker",
+  "description": "Manage Docker containers, images, and networks",
+  "version": "1.0.0",
+  "icon": "box",
+  "category": "infrastructure",
+  "backend": {
+    "serverEntry": "server.ts",
+    "defaultPort": 4101
+  },
+  "frontend": {
+    "sidebar": {
+      "id": "docker",
+      "label": "Docker",
+      "icon": "box"
+    },
+    "routes": ["/docker/*"]
+  },
+  "settings": {
+    "socketPath": {
+      "type": "string",
+      "default": "/var/run/docker.sock",
+      "description": "Path to Docker socket"
+    }
+  }
+}

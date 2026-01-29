@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -11,7 +11,10 @@ import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GitPanel as GitPanelComponent } from "@/components/git/GitPanel";
 import { ExePanel } from "@/components/exe/ExePanel";
+import { ExtensionsPanel } from "@/components/extensions/ExtensionsPanel";
+import { DockerSidebarPanel } from "@/extensions/docker/components/DockerSidebarPanel";
 import { useProjects, useWorkflows, useCreateWorkflow, useSettings } from "@/lib/api/queries";
+import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { useNavigate } from "@tanstack/react-router";
 
 const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
@@ -24,6 +27,13 @@ const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; l
 ];
 
 const EXE_PANEL = { id: "exe" as SidebarPanelType, icon: Server, label: "Exe VMs" };
+const EXTENSIONS_PANEL = { id: "extensions" as SidebarPanelType, icon: Puzzle, label: "Extensions" };
+
+// Map of extension icons
+const EXTENSION_ICONS: Record<string, typeof Box> = {
+  box: Box,
+  container: Box,
+};
 
 export function Sidebar() {
   const {
@@ -37,15 +47,34 @@ export function Sidebar() {
   } = useUI();
 
   const { data: settings } = useSettings();
+  const { data: extensions } = useExtensions();
+  const { data: projectExtensions } = useProjectExtensions(selectedProjectId || "");
 
-  // Build panel list based on enabled experiments
+  // Build panel list based on enabled experiments and extensions
   const PROJECT_PANELS = useMemo(() => {
     const panels = [...BASE_PROJECT_PANELS];
     if (settings?.exeEnabled) {
       panels.push(EXE_PANEL);
     }
+
+    // Add enabled extension panels
+    const enabledExtensionIds = projectExtensions?.enabled || [];
+    if (extensions) {
+      for (const ext of extensions) {
+        if (enabledExtensionIds.includes(ext.id) && ext.frontend?.sidebar) {
+          const iconName = ext.frontend.sidebar.icon;
+          const IconComponent = EXTENSION_ICONS[iconName] || Puzzle;
+          panels.push({
+            id: ext.frontend.sidebar.id as SidebarPanelType,
+            icon: IconComponent,
+            label: ext.frontend.sidebar.label,
+          });
+        }
+      }
+    }
+
     return panels;
-  }, [settings?.exeEnabled]);
+  }, [settings?.exeEnabled, extensions, projectExtensions?.enabled]);
 
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -144,6 +173,24 @@ export function Sidebar() {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Extensions button */}
+          {selectedProjectId && (
+            <button
+              onClick={() => sidebarCollapsed ? handleCollapsedIconClick("extensions") : setSidebarPanel("extensions")}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center",
+                "hover:bg-bg-elevated transition-colors",
+                sidebarPanel === "extensions"
+                  ? "text-accent-primary border-l-2 border-accent-primary"
+                  : "text-text-secondary"
+              )}
+              title="Extensions"
+              data-testid="extensions-button"
+            >
+              <Puzzle className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Settings button at bottom */}
           <button
@@ -310,6 +357,16 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       return <WorkflowsPanel selectedProjectId={selectedProjectId} />;
     case "exe":
       return <ExePanel />;
+    case "extensions":
+      return selectedProjectId ? (
+        <ExtensionsPanel projectId={selectedProjectId} />
+      ) : (
+        <div className="p-3 text-sm text-text-muted">
+          Select a project to manage extensions
+        </div>
+      );
+    case "docker":
+      return <DockerSidebarPanel />;
     case "settings":
       return <SettingsPanel />;
     default:
