@@ -1,0 +1,32 @@
+{
+  "id": "search",
+  "name": "Web Search",
+  "description": "Search the web using SearXNG privacy-respecting metasearch engine",
+  "version": "1.0.0",
+  "icon": "search",
+  "category": "search",
+  "backend": {
+    "serverEntry": "server.ts",
+    "defaultPort": 4102
+  },
+  "frontend": {
+    "sidebar": {
+      "id": "search",
+      "label": "Search",
+      "icon": "search"
+    },
+    "routes": ["/search/*"]
+  },
+  "settings": {
+    "searxngPort": {
+      "type": "number",
+      "default": 8888,
+      "description": "Port for the SearXNG container"
+    },
+    "autoProvision": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically provision SearXNG container"
+    }
+  }
+}

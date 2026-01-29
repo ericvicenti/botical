@@ -37,3 +37,4 @@ export {
 
 // Register built-in extensions
 import "./docker/index.ts";
+import "./search/index.ts";

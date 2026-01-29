@@ -7,6 +7,5 @@
 // Load Docker extension
 import "./docker";
 
-// Future extensions would be imported here
-// import "./kubernetes";
-// import "./database";
+// Load Search extension
+import "./search";

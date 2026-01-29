@@ -23,6 +23,7 @@ import { agentActions } from "./agent.ts";
 import { workflowActions } from "./workflow.ts";
 import { projectActions } from "./project.ts";
 import { utilityActions } from "./utility.ts";
+import { webSearchActions } from "./websearch.ts";
 import { ActionRegistry } from "./registry.ts";
 
 /**
@@ -76,6 +77,11 @@ export function registerAllActions(): void {
 
   // Utility actions
   for (const action of utilityActions) {
+    ActionRegistry.register(action);
+  }
+
+  // Web search actions
+  for (const action of webSearchActions) {
     ActionRegistry.register(action);
   }
 }
@@ -148,3 +154,8 @@ export {
   utilityWait,
   utilityActions,
 } from "./utility.ts";
+
+export {
+  webSearch,
+  webSearchActions,
+} from "./websearch.ts";
