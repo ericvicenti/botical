@@ -6,6 +6,7 @@ import { websocket } from "hono/bun";
 import { registerCoreTools } from "../tools/index.ts";
 import { registerAllActions } from "../actions/index.ts";
 import { ServiceRunner } from "../services/service-runner.ts";
+import { ExtensionRegistry, startExtensionServer, stopAllExtensionServers } from "../extensions/index.ts";
 
 export interface ServerOptions {
   port?: number;
@@ -62,12 +63,25 @@ export async function createServer(
     console.error("Failed to start auto-start services:", error);
   });
 
+  // Start extension servers (don't await - let them start in background)
+  (async () => {
+    for (const extension of ExtensionRegistry.getAll()) {
+      try {
+        await startExtensionServer(extension);
+      } catch (error) {
+        console.error(`Failed to start extension ${extension.id}:`, error);
+      }
+    }
+  })();
+
   return {
     port,
     hostname,
     close: async () => {
       // Stop all running services
       await ServiceRunner.stopAllServices();
+      // Stop all extension servers
+      await stopAllExtensionServers();
       teardownBusBridge();
       server.stop();
       DatabaseManager.closeAll();
