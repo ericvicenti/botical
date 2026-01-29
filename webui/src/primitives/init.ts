@@ -30,4 +30,7 @@ import "./workflow/pages";
 // Settings primitives
 import "./settings/pages";
 
+// Extensions (load all frontend extensions)
+import "../extensions";
+
 console.log("[Iris Primitives] Initialized");

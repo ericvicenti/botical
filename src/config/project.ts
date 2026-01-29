@@ -65,6 +65,24 @@ const SkillsConfigSchema = z.object({
 });
 
 /**
+ * Extensions configuration
+ */
+const ExtensionsConfigSchema = z.object({
+  /** Enabled extension IDs */
+  enabled: z.array(z.string()).optional(),
+  /** Per-extension settings overrides */
+  settings: z.record(z.string(), z.record(z.unknown())).optional(),
+});
+
+/**
+ * Sidebar configuration
+ */
+const SidebarConfigSchema = z.object({
+  /** Ordered list of page IDs to show in sidebar */
+  panels: z.array(z.string()).optional(),
+});
+
+/**
  * Project YAML configuration schema
  */
 export const ProjectConfigYamlSchema = z.object({
@@ -92,6 +110,12 @@ export const ProjectConfigYamlSchema = z.object({
 
   // Git settings
   git: GitConfigSchema.optional(),
+
+  // Extensions configuration
+  extensions: ExtensionsConfigSchema.optional(),
+
+  // Sidebar layout configuration
+  sidebar: SidebarConfigSchema.optional(),
 
   // Custom settings (extensible)
   settings: z.record(z.unknown()).optional(),
@@ -146,6 +170,13 @@ export interface ProjectConfig {
     branch?: string;
     autoCommit?: boolean;
     commitMessagePrefix?: string;
+  };
+  extensions?: {
+    enabled?: string[];
+    settings?: Record<string, Record<string, unknown>>;
+  };
+  sidebar?: {
+    panels?: string[];
   };
   settings?: Record<string, unknown>;
 }
@@ -303,6 +334,91 @@ export const ProjectConfigService = {
   },
 
   /**
+   * Get extensions configuration
+   */
+  getExtensionsConfig(projectPath: string): ProjectConfig["extensions"] | undefined {
+    const config = this.load(projectPath);
+    return config.extensions;
+  },
+
+  /**
+   * Get enabled extension IDs
+   */
+  getEnabledExtensions(projectPath: string): string[] {
+    const config = this.load(projectPath);
+    return config.extensions?.enabled || [];
+  },
+
+  /**
+   * Enable an extension
+   */
+  enableExtension(projectPath: string, extensionId: string): void {
+    const config = this.load(projectPath);
+    config.extensions = config.extensions || {};
+    config.extensions.enabled = config.extensions.enabled || [];
+    if (!config.extensions.enabled.includes(extensionId)) {
+      config.extensions.enabled.push(extensionId);
+      this.save(projectPath, config);
+    }
+  },
+
+  /**
+   * Disable an extension
+   */
+  disableExtension(projectPath: string, extensionId: string): void {
+    const config = this.load(projectPath);
+    if (config.extensions?.enabled) {
+      config.extensions.enabled = config.extensions.enabled.filter((id) => id !== extensionId);
+      this.save(projectPath, config);
+    }
+  },
+
+  /**
+   * Get extension settings
+   */
+  getExtensionSettings(projectPath: string, extensionId: string): Record<string, unknown> | undefined {
+    const config = this.load(projectPath);
+    return config.extensions?.settings?.[extensionId];
+  },
+
+  /**
+   * Set extension settings
+   */
+  setExtensionSettings(projectPath: string, extensionId: string, settings: Record<string, unknown>): void {
+    const config = this.load(projectPath);
+    config.extensions = config.extensions || {};
+    config.extensions.settings = config.extensions.settings || {};
+    config.extensions.settings[extensionId] = settings;
+    this.save(projectPath, config);
+  },
+
+  /**
+   * Get sidebar configuration
+   */
+  getSidebarConfig(projectPath: string): ProjectConfig["sidebar"] | undefined {
+    const config = this.load(projectPath);
+    return config.sidebar;
+  },
+
+  /**
+   * Get sidebar panels
+   */
+  getSidebarPanels(projectPath: string): string[] {
+    const config = this.load(projectPath);
+    return config.sidebar?.panels || ["files", "tasks", "git", "run"];
+  },
+
+  /**
+   * Set sidebar panels
+   */
+  setSidebarPanels(projectPath: string, panels: string[]): void {
+    const config = this.load(projectPath);
+    config.sidebar = config.sidebar || {};
+    config.sidebar.panels = panels;
+    this.save(projectPath, config);
+  },
+
+  /**
    * Merge two configurations
    */
   mergeConfig(base: ProjectConfig, updates: Partial<ProjectConfig>): ProjectConfig {
@@ -327,6 +443,12 @@ export const ProjectConfigService = {
       git: updates.git
         ? { ...base.git, ...updates.git }
         : base.git,
+      extensions: updates.extensions
+        ? { ...base.extensions, ...updates.extensions }
+        : base.extensions,
+      sidebar: updates.sidebar
+        ? { ...base.sidebar, ...updates.sidebar }
+        : base.sidebar,
       settings: updates.settings
         ? { ...base.settings, ...updates.settings }
         : base.settings,
@@ -366,6 +488,18 @@ export const ProjectConfigService = {
 
     if (config.git && Object.keys(config.git).length > 0) {
       cleaned.git = this.cleanObject(config.git);
+    }
+
+    if (config.extensions && (config.extensions.enabled?.length || config.extensions.settings)) {
+      cleaned.extensions = {};
+      if (config.extensions.enabled?.length) cleaned.extensions.enabled = config.extensions.enabled;
+      if (config.extensions.settings && Object.keys(config.extensions.settings).length > 0) {
+        cleaned.extensions.settings = config.extensions.settings;
+      }
+    }
+
+    if (config.sidebar?.panels?.length) {
+      cleaned.sidebar = { panels: config.sidebar.panels };
     }
 
     if (config.settings && Object.keys(config.settings).length > 0) {

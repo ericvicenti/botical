@@ -3,6 +3,7 @@ import type {
   ActionDefinition,
   PageDefinition,
   PageCategory,
+  PageSize,
   ActionContext,
   ActionResult,
 } from "./types";
@@ -45,6 +46,22 @@ export function getPagesByCategory(category: PageCategory): PageDefinition[] {
   return Array.from(pageRegistry.values()).filter(
     (page) => page.category === category
   );
+}
+
+/**
+ * Get pages filtered by size
+ */
+export function getPagesBySize(size: PageSize): PageDefinition[] {
+  return Array.from(pageRegistry.values()).filter(
+    (page) => (page.size ?? "full") === size
+  );
+}
+
+/**
+ * Get all sidebar pages (size: "sidebar")
+ */
+export function getSidebarPages(): PageDefinition[] {
+  return getPagesBySize("sidebar");
 }
 
 /**

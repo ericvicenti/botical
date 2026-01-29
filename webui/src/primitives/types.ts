@@ -22,7 +22,23 @@ export type PageCategory =
   | "workflow"
   | "task"
   | "settings"
+  | "docker"
   | "other";
+
+/**
+ * Page size determines where/how the page renders
+ * - sidebar: Narrow panel for sidebar (240-300px)
+ * - medium: Medium width panel (400-600px)
+ * - full: Full main content area
+ * - modal-sm/md/lg: Modal dialogs of various sizes
+ */
+export type PageSize =
+  | "sidebar"
+  | "medium"
+  | "full"
+  | "modal-sm"
+  | "modal-md"
+  | "modal-lg";
 
 /**
  * Page definition - an addressable UI surface with typed parameters
@@ -39,6 +55,12 @@ export interface PageDefinition<
 
   /** Icon name (lucide icon) */
   icon: string;
+
+  /**
+   * Page size - determines rendering location
+   * Defaults to "full" if not specified
+   */
+  size?: PageSize;
 
   /** Generate label from params (used for tabs) */
   getLabel: (params: z.infer<TParams>, search?: unknown) => string;
