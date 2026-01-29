@@ -148,7 +148,7 @@ export function useDockerAvailable() {
   return useQuery({
     queryKey: dockerKeys.available(),
     queryFn: async () => {
-      const response = await apiClient<AvailableResponse>("/extensions/docker/info/available");
+      const response = await apiClient<AvailableResponse>("/api/extensions/docker/info/available");
       return response.available;
     },
     staleTime: 30000,
@@ -162,7 +162,7 @@ export function useDockerInfo() {
   return useQuery({
     queryKey: dockerKeys.info(),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerInfo>>("/extensions/docker/info");
+      const response = await apiClient<ApiResponse<DockerInfo>>("/api/extensions/docker/info");
       return response.data;
     },
     staleTime: 30000,
@@ -179,7 +179,7 @@ export function useDockerContainers(options?: { all?: boolean }) {
   return useQuery({
     queryKey: [...dockerKeys.containers(), { all: options?.all }],
     queryFn: async () => {
-      const url = `/extensions/docker/containers${params.toString() ? `?${params}` : ""}`;
+      const url = `/api/extensions/docker/containers${params.toString() ? `?${params}` : ""}`;
       const response = await apiClient<ApiResponse<DockerContainer[]>>(url);
       return response.data;
     },
@@ -194,7 +194,7 @@ export function useDockerContainer(containerId: string) {
   return useQuery({
     queryKey: dockerKeys.container(containerId),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerContainerDetail>>(`/extensions/docker/containers/${containerId}`);
+      const response = await apiClient<ApiResponse<DockerContainerDetail>>(`/api/extensions/docker/containers/${containerId}`);
       return response.data;
     },
     enabled: !!containerId,
@@ -215,7 +215,7 @@ export function useDockerContainerLogs(
   return useQuery({
     queryKey: [...dockerKeys.containerLogs(containerId), options],
     queryFn: async () => {
-      const url = `/extensions/docker/containers/${containerId}/logs${params.toString() ? `?${params}` : ""}`;
+      const url = `/api/extensions/docker/containers/${containerId}/logs${params.toString() ? `?${params}` : ""}`;
       const response = await fetch(`/api${url}`);
       return response.text();
     },
@@ -231,7 +231,7 @@ export function useDockerImages() {
   return useQuery({
     queryKey: dockerKeys.images(),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerImage[]>>("/extensions/docker/images");
+      const response = await apiClient<ApiResponse<DockerImage[]>>("/api/extensions/docker/images");
       return response.data;
     },
     staleTime: 30000,
@@ -250,7 +250,7 @@ export function useStartContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await apiClient(`/extensions/docker/containers/${containerId}/start`, {
+      await apiClient(`/api/extensions/docker/containers/${containerId}/start`, {
         method: "POST",
       });
     },
@@ -268,7 +268,7 @@ export function useStopContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await apiClient(`/extensions/docker/containers/${containerId}/stop`, {
+      await apiClient(`/api/extensions/docker/containers/${containerId}/stop`, {
         method: "POST",
       });
     },
@@ -286,7 +286,7 @@ export function useRestartContainer() {
 
   return useMutation({
     mutationFn: async (containerId: string) => {
-      await apiClient(`/extensions/docker/containers/${containerId}/restart`, {
+      await apiClient(`/api/extensions/docker/containers/${containerId}/restart`, {
         method: "POST",
       });
     },
@@ -304,7 +304,7 @@ export function useRemoveContainer() {
 
   return useMutation({
     mutationFn: async ({ containerId, force }: { containerId: string; force?: boolean }) => {
-      const url = `/extensions/docker/containers/${containerId}${force ? "?force=true" : ""}`;
+      const url = `/api/extensions/docker/containers/${containerId}${force ? "?force=true" : ""}`;
       await apiClient(url, { method: "DELETE" });
     },
     onSuccess: () => {
@@ -322,7 +322,7 @@ export function useCreateContainer() {
   return useMutation({
     mutationFn: async (input: CreateContainerInput) => {
       const response = await apiClient<ApiResponse<{ id: string; warnings: string[] }>>(
-        "/extensions/docker/containers",
+        "/api/extensions/docker/containers",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -345,7 +345,7 @@ export function usePullImage() {
 
   return useMutation({
     mutationFn: async ({ image, tag }: { image: string; tag?: string }) => {
-      await apiClient("/extensions/docker/images/pull", {
+      await apiClient("/api/extensions/docker/images/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, tag }),
@@ -365,7 +365,7 @@ export function useRemoveImage() {
 
   return useMutation({
     mutationFn: async ({ imageId, force }: { imageId: string; force?: boolean }) => {
-      const url = `/extensions/docker/images/${imageId}${force ? "?force=true" : ""}`;
+      const url = `/api/extensions/docker/images/${imageId}${force ? "?force=true" : ""}`;
       await apiClient(url, { method: "DELETE" });
     },
     onSuccess: () => {
