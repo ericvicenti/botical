@@ -8,10 +8,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 
 // Helper types for API responses
-interface ApiResponse<T> {
-  data: T;
-}
-
 interface AvailableResponse {
   available: boolean;
 }
@@ -162,8 +158,8 @@ export function useDockerInfo() {
   return useQuery({
     queryKey: dockerKeys.info(),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerInfo>>("/api/extensions/docker/info");
-      return response.data;
+      // apiClient already unwraps the data property
+      return apiClient<DockerInfo>("/api/extensions/docker/info");
     },
     staleTime: 30000,
   });
@@ -180,8 +176,8 @@ export function useDockerContainers(options?: { all?: boolean }) {
     queryKey: [...dockerKeys.containers(), { all: options?.all }],
     queryFn: async () => {
       const url = `/api/extensions/docker/containers${params.toString() ? `?${params}` : ""}`;
-      const response = await apiClient<ApiResponse<DockerContainer[]>>(url);
-      return response.data;
+      // apiClient already unwraps the data property
+      return apiClient<DockerContainer[]>(url);
     },
     refetchInterval: 5000, // Refresh every 5 seconds
   });
@@ -194,8 +190,8 @@ export function useDockerContainer(containerId: string) {
   return useQuery({
     queryKey: dockerKeys.container(containerId),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerContainerDetail>>(`/api/extensions/docker/containers/${containerId}`);
-      return response.data;
+      // apiClient already unwraps the data property
+      return apiClient<DockerContainerDetail>(`/api/extensions/docker/containers/${containerId}`);
     },
     enabled: !!containerId,
   });
@@ -231,8 +227,8 @@ export function useDockerImages() {
   return useQuery({
     queryKey: dockerKeys.images(),
     queryFn: async () => {
-      const response = await apiClient<ApiResponse<DockerImage[]>>("/api/extensions/docker/images");
-      return response.data;
+      // apiClient already unwraps the data property
+      return apiClient<DockerImage[]>("/api/extensions/docker/images");
     },
     staleTime: 30000,
   });
@@ -321,7 +317,8 @@ export function useCreateContainer() {
 
   return useMutation({
     mutationFn: async (input: CreateContainerInput) => {
-      const response = await apiClient<ApiResponse<{ id: string; warnings: string[] }>>(
+      // apiClient already unwraps the data property
+      return apiClient<{ id: string; warnings: string[] }>(
         "/api/extensions/docker/containers",
         {
           method: "POST",
@@ -329,7 +326,6 @@ export function useCreateContainer() {
           body: JSON.stringify(input),
         }
       );
-      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dockerKeys.containers() });
