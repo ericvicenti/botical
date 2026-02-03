@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useServices, useCreateService } from "@/lib/api/queries";
+import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { ServiceItem } from "@/components/processes/ServiceItem";
-import type { Service } from "@/lib/api/types";
+import type { Service, Extension } from "@/lib/api/types";
 import { cn } from "@/lib/utils/cn";
-import { Plus, Radio, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Radio, ChevronDown, ChevronRight, Box, Search, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 
 interface ServicesPanelProps {
   projectId: string;
@@ -11,10 +12,24 @@ interface ServicesPanelProps {
 
 export function ServicesPanel({ projectId }: ServicesPanelProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const { data: services, isLoading } = useServices(projectId);
+  const { data: services, isLoading: servicesLoading } = useServices(projectId);
+  const { data: extensions, isLoading: extensionsLoading } = useExtensions();
+  const { data: projectExtensions } = useProjectExtensions(projectId);
 
+  const isLoading = servicesLoading || extensionsLoading;
   const running = services?.filter((s) => s.isRunning) || [];
   const stopped = services?.filter((s) => !s.isRunning) || [];
+
+  // Filter extensions that have backend services and are enabled for this project
+  const enabledExtensionIds = projectExtensions?.enabled || [];
+  const extensionServices = extensions?.filter(
+    (ext) => ext.port && enabledExtensionIds.includes(ext.id)
+  ) || [];
+
+  const runningExtensions = extensionServices.filter((e) => e.status === "running");
+  const stoppedExtensions = extensionServices.filter((e) => e.status !== "running");
+
+  const hasAnyContent = (services && services.length > 0) || extensionServices.length > 0;
 
   return (
     <div className="h-full flex flex-col">
@@ -49,10 +64,33 @@ export function ServicesPanel({ projectId }: ServicesPanelProps) {
           <div className="py-2 text-sm text-text-muted text-center">
             Loading services...
           </div>
-        ) : !services || services.length === 0 ? (
+        ) : !hasAnyContent ? (
           <EmptyState onCreateClick={() => setShowCreateForm(true)} />
         ) : (
           <div className="space-y-2">
+            {/* Extension Services */}
+            {extensionServices.length > 0 && (
+              <>
+                {runningExtensions.length > 0 && (
+                  <ExtensionServiceSection
+                    title="Extensions (Running)"
+                    count={runningExtensions.length}
+                    extensions={runningExtensions}
+                    defaultOpen
+                  />
+                )}
+                {stoppedExtensions.length > 0 && (
+                  <ExtensionServiceSection
+                    title="Extensions (Stopped)"
+                    count={stoppedExtensions.length}
+                    extensions={stoppedExtensions}
+                    defaultOpen={runningExtensions.length === 0}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Project Services */}
             {running.length > 0 && (
               <ServiceSection
                 title="Running"
@@ -66,7 +104,7 @@ export function ServicesPanel({ projectId }: ServicesPanelProps) {
                 title="Stopped"
                 count={stopped.length}
                 services={stopped}
-                defaultOpen={running.length === 0}
+                defaultOpen={running.length === 0 && runningExtensions.length === 0}
               />
             )}
           </div>
@@ -106,6 +144,92 @@ function ServiceSection({ title, count, services, defaultOpen = true }: ServiceS
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface ExtensionServiceSectionProps {
+  title: string;
+  count: number;
+  extensions: Extension[];
+  defaultOpen?: boolean;
+}
+
+function ExtensionServiceSection({ title, count, extensions, defaultOpen = true }: ExtensionServiceSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-2 py-1 flex items-center gap-1 text-xs text-text-muted uppercase tracking-wide hover:text-text-secondary"
+      >
+        {isOpen ? (
+          <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronRight className="w-3 h-3" />
+        )}
+        {title} ({count})
+      </button>
+      {isOpen && (
+        <div>
+          {extensions.map((extension) => (
+            <ExtensionServiceItem key={extension.id} extension={extension} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExtensionServiceItem({ extension }: { extension: Extension }) {
+  const getStatusIcon = () => {
+    switch (extension.status) {
+      case "running":
+        return <CheckCircle className="w-3 h-3 text-green-500" />;
+      case "starting":
+        return <Loader2 className="w-3 h-3 text-yellow-500 animate-spin" />;
+      case "error":
+        return <AlertCircle className="w-3 h-3 text-red-500" />;
+      default:
+        return <XCircle className="w-3 h-3 text-text-muted" />;
+    }
+  };
+
+  const getExtensionIcon = () => {
+    switch (extension.icon) {
+      case "search":
+        return <Search className="w-4 h-4" />;
+      case "box":
+      case "container":
+        return <Box className="w-4 h-4" />;
+      default:
+        return <Radio className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 px-2 py-1.5 rounded",
+        "hover:bg-bg-elevated transition-colors cursor-pointer"
+      )}
+    >
+      <div className={cn(
+        "w-6 h-6 flex items-center justify-center rounded",
+        extension.status === "running" ? "text-accent-primary" : "text-text-muted"
+      )}>
+        {getExtensionIcon()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-text-primary truncate">{extension.name}</div>
+        <div className="text-xs text-text-muted">
+          {extension.port ? `Port ${extension.port}` : "Extension"}
+        </div>
+      </div>
+      <div className="flex items-center gap-1" title={`Status: ${extension.status}`}>
+        {getStatusIcon()}
+      </div>
     </div>
   );
 }

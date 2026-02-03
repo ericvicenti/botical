@@ -129,9 +129,10 @@ describe("search.web action", () => {
     });
 
     it("returns error when search request fails", async () => {
-      mockGetExtensionServerUrl.mockReturnValue("http://localhost:4102");
+      // Use a port that's unlikely to have a server running
+      mockGetExtensionServerUrl.mockReturnValue("http://localhost:59999");
 
-      // The fetch will fail because no server is actually running
+      // The fetch will fail because no server is running on this port
       const result = await webSearch.execute({ query: "test" }, mockContext);
 
       expect(result.type).toBe("error");

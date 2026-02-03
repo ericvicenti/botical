@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { Extension } from "@/lib/api/types";
-import { useSearchStatus, useProvisionSearch, useStopSearch, useSearchMutation, type SearchResult } from "@/extensions/search/api";
+import { useSearchStatus, useProvisionSearch, useStopSearch } from "@/extensions/search/api";
+import { useExecuteAction, type ActionResult } from "@/lib/api/actions";
 
 interface ExtensionDetailViewProps {
   extension: Extension;
@@ -54,7 +55,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SearchResultItem({ result }: { result: SearchResult }) {
+interface SearchResultData {
+  title: string;
+  url: string;
+  snippet?: string;
+  engine: string;
+}
+
+function SearchResultItem({ result }: { result: SearchResultData }) {
   return (
     <a
       href={result.url}
@@ -64,8 +72,8 @@ function SearchResultItem({ result }: { result: SearchResult }) {
     >
       <div className="text-sm text-accent-primary hover:underline truncate">{result.title}</div>
       <div className="text-xs text-text-muted truncate">{result.url}</div>
-      {result.content && (
-        <div className="text-xs text-text-secondary mt-1 line-clamp-2">{result.content}</div>
+      {result.snippet && (
+        <div className="text-xs text-text-secondary mt-1 line-clamp-2">{result.snippet}</div>
       )}
     </a>
   );
@@ -75,11 +83,12 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
   const { data: status, isLoading, refetch } = useSearchStatus();
   const provisionMutation = useProvisionSearch();
   const stopMutation = useStopSearch();
-  const searchMutation = useSearchMutation();
+  const executeAction = useExecuteAction();
   const [showProvisionOutput, setShowProvisionOutput] = useState(false);
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResultData[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchOutput, setSearchOutput] = useState<string | null>(null);
 
   const handleProvision = async () => {
     setShowProvisionOutput(true);
@@ -101,18 +110,32 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
   const handleSearch = useCallback(async () => {
     if (!query.trim()) return;
     setSearchError(null);
+    setSearchOutput(null);
     try {
-      const result = await searchMutation.mutateAsync({
-        query: query.trim(),
-        options: { limit: 5 },
+      // Execute the search.web action - same as command palette and agent tools
+      const result = await executeAction.mutateAsync({
+        actionId: "search.web",
+        params: {
+          query: query.trim(),
+          limit: 5,
+        },
       });
-      setSearchResults(result.results);
+
+      if (result.type === "error") {
+        setSearchError(result.message || "Search failed");
+        setSearchResults([]);
+      } else if (result.type === "success") {
+        // Extract results from metadata
+        const metadata = result.metadata as { results?: SearchResultData[] } | undefined;
+        setSearchResults(metadata?.results || []);
+        setSearchOutput(result.output || null);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Search failed";
       setSearchError(message);
       setSearchResults([]);
     }
-  }, [query, searchMutation]);
+  }, [query, executeAction]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -153,14 +176,14 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
             </div>
             <button
               onClick={handleSearch}
-              disabled={searchMutation.isPending || !query.trim()}
+              disabled={executeAction.isPending || !query.trim()}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
                 "bg-accent-primary text-white hover:bg-accent-primary/90",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
-              {searchMutation.isPending ? (
+              {executeAction.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Search className="w-3.5 h-3.5" />
