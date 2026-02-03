@@ -9,7 +9,7 @@
  * - Recent activity/diagnostics
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   ArrowLeft,
   Server,
@@ -23,10 +23,11 @@ import {
   Globe,
   ExternalLink,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { Extension } from "@/lib/api/types";
-import { useSearchStatus, useProvisionSearch, useStopSearch } from "@/extensions/search/api";
+import { useSearchStatus, useProvisionSearch, useStopSearch, useSearchMutation, type SearchResult } from "@/extensions/search/api";
 
 interface ExtensionDetailViewProps {
   extension: Extension;
@@ -53,11 +54,32 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function SearchResultItem({ result }: { result: SearchResult }) {
+  return (
+    <a
+      href={result.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block p-2 rounded hover:bg-bg-primary"
+    >
+      <div className="text-sm text-accent-primary hover:underline truncate">{result.title}</div>
+      <div className="text-xs text-text-muted truncate">{result.url}</div>
+      {result.content && (
+        <div className="text-xs text-text-secondary mt-1 line-clamp-2">{result.content}</div>
+      )}
+    </a>
+  );
+}
+
 function SearchExtensionDetail({ extension, enabled }: { extension: Extension; enabled: boolean }) {
   const { data: status, isLoading, refetch } = useSearchStatus();
   const provisionMutation = useProvisionSearch();
   const stopMutation = useStopSearch();
+  const searchMutation = useSearchMutation();
   const [showProvisionOutput, setShowProvisionOutput] = useState(false);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const handleProvision = async () => {
     setShowProvisionOutput(true);
@@ -76,6 +98,28 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
     }
   };
 
+  const handleSearch = useCallback(async () => {
+    if (!query.trim()) return;
+    setSearchError(null);
+    try {
+      const result = await searchMutation.mutateAsync({
+        query: query.trim(),
+        options: { limit: 5 },
+      });
+      setSearchResults(result.results);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Search failed";
+      setSearchError(message);
+      setSearchResults([]);
+    }
+  }, [query, searchMutation]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -86,6 +130,64 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
 
   return (
     <div className="space-y-4">
+      {/* Search Input - only show when available */}
+      {status?.available && (
+        <div className="p-3 rounded-lg bg-bg-elevated border border-border">
+          <div className="text-xs font-medium text-text-secondary uppercase mb-2">Search the Web</div>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter search query..."
+                className={cn(
+                  "w-full pl-8 pr-3 py-1.5 text-sm rounded",
+                  "bg-bg-primary border border-border",
+                  "focus:outline-none focus:border-accent-primary",
+                  "placeholder:text-text-muted"
+                )}
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={searchMutation.isPending || !query.trim()}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
+                "bg-accent-primary text-white hover:bg-accent-primary/90",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              {searchMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              Search
+            </button>
+          </div>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="mt-3 space-y-1">
+              <div className="text-xs text-text-muted mb-2">{searchResults.length} results</div>
+              {searchResults.map((result, i) => (
+                <SearchResultItem key={i} result={result} />
+              ))}
+            </div>
+          )}
+
+          {/* Search Error */}
+          {searchError && (
+            <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20">
+              <div className="text-xs text-red-500">{searchError}</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SearXNG Status */}
       <div className="p-3 rounded-lg bg-bg-elevated border border-border">
         <div className="flex items-center justify-between mb-2">
