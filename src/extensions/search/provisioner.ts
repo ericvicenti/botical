@@ -7,12 +7,38 @@
 
 import { DockerClient } from "../docker/client.ts";
 import { SearxngClient } from "./client.ts";
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as os from "os";
+import * as crypto from "crypto";
 
 // Container labels to identify managed containers
 const EXTENSION_LABEL = "iris.extension";
 const EXTENSION_VALUE = "search";
 const CONTAINER_NAME = "iris-searxng";
 const SEARXNG_IMAGE = "searxng/searxng:latest";
+
+// SearXNG settings that enable JSON API access
+const SEARXNG_SETTINGS = `# SearXNG settings for Iris
+# See https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+general:
+  instance_name: "Iris Search"
+
+search:
+  safe_search: 0
+  autocomplete: "google"
+  formats:
+    - html
+    - json
+
+server:
+  limiter: false
+  image_proxy: true
+  secret_key: "REPLACE_WITH_SECRET"
+`;
 
 export interface ProvisionerOptions {
   /** Port to expose SearXNG on (default: 8888) */
@@ -32,6 +58,38 @@ export interface ProvisionerStatus {
   containerId?: string;
   /** Error message if any */
   error?: string;
+}
+
+/**
+ * Get the Iris data directory for storing SearXNG config
+ */
+function getConfigDir(): string {
+  const homeDir = os.homedir();
+  return path.join(homeDir, ".iris", "searxng");
+}
+
+/**
+ * Ensure SearXNG settings file exists with proper config
+ */
+async function ensureSettingsFile(): Promise<string> {
+  const configDir = getConfigDir();
+  const settingsPath = path.join(configDir, "settings.yml");
+
+  try {
+    // Check if settings already exist
+    await fs.access(settingsPath);
+    return configDir;
+  } catch {
+    // Create directory and settings file
+    await fs.mkdir(configDir, { recursive: true });
+
+    // Generate a random secret key
+    const secretKey = crypto.randomBytes(32).toString("hex");
+    const settings = SEARXNG_SETTINGS.replace("REPLACE_WITH_SECRET", secretKey);
+
+    await fs.writeFile(settingsPath, settings, "utf-8");
+    return configDir;
+  }
 }
 
 /**
@@ -100,6 +158,20 @@ export async function ensureSearxngRunning(
     };
   }
 
+  // Ensure settings file exists
+  let configDir: string;
+  try {
+    configDir = await ensureSettingsFile();
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      available: false,
+      containerExists: false,
+      containerRunning: false,
+      error: `Failed to create SearXNG config: ${error}`,
+    };
+  }
+
   // Look for existing container
   const containers = await DockerClient.listContainers({ all: true, socketPath });
   const existingContainer = containers.find(
@@ -144,7 +216,7 @@ export async function ensureSearxngRunning(
     // Pull the image first
     await DockerClient.pullImage("searxng/searxng", { tag: "latest", socketPath });
 
-    // Create the container
+    // Create the container with settings mount
     const result = await DockerClient.createContainer({
       Image: SEARXNG_IMAGE,
       name: CONTAINER_NAME,
@@ -155,6 +227,9 @@ export async function ensureSearxngRunning(
         PortBindings: {
           "8080/tcp": [{ HostPort: String(port) }],
         },
+        Binds: [
+          `${configDir}:/etc/searxng:rw`,
+        ],
         RestartPolicy: {
           Name: "unless-stopped",
           MaximumRetryCount: 0,

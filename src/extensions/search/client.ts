@@ -22,8 +22,8 @@ export const SearchResultSchema = z.object({
   parsed_url: z.array(z.string()).optional(),
   category: z.string().optional(),
   score: z.number().optional(),
-  thumbnail: z.string().optional(),
-  publishedDate: z.string().optional(),
+  thumbnail: z.string().nullable().optional(),
+  publishedDate: z.string().nullable().optional(),
 });
 
 /**
