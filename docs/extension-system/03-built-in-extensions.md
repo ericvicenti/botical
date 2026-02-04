@@ -50,6 +50,29 @@ Implementation notes:
 - Configuration files for SearXNG are written under `~/.iris/searxng`.
 - The manifest defines `searxngPort` and `autoProvision` settings with defaults.
 
+## Exe.dev Extension
+
+Source: `src/extensions/exe`.
+
+- Manifest: `src/extensions/exe/extension.json`.
+- Default port: `4103`.
+- Server entry: `src/extensions/exe/server.ts`.
+- Routes are mounted under `/api/extensions/exe/*` via the proxy.
+
+Key endpoints exposed by the extension server:
+
+- `GET /status`
+- `GET /vms`
+- `POST /vms`
+- `DELETE /vms/:name`
+- `POST /vms/:name/restart`
+- `POST /vms/:name/exec`
+
+Implementation notes:
+
+- The exe.dev integration shells out to `ssh exe.dev` commands in `src/extensions/exe/exe-service.ts`.
+- VM command execution uses `ssh exe.dev ssh <vm> -- <command>` to avoid flag parsing issues.
+
 ## Cross-Extension Dependency
 
 - The Search extension uses the Docker extension's client to create and manage the SearXNG container.

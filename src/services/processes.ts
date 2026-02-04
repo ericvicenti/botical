@@ -133,6 +133,25 @@ export const SpawnProcessSchema = z.object({
 export type SpawnProcessInput = z.infer<typeof SpawnProcessSchema>;
 
 /**
+ * Command record input schema (for non-PTY commands)
+ */
+const StartCommandRecordSchema = z.object({
+  projectId: z.string().min(1),
+  command: z.string().min(1).max(10000),
+  cwd: z.string().optional(),
+  env: z.record(z.string()).optional(),
+  cols: z.number().int().min(1).max(1000).optional().default(80),
+  rows: z.number().int().min(1).max(1000).optional().default(24),
+  scope: z.enum(["task", "mission", "project"]),
+  scopeId: z.string().min(1),
+  label: z.string().max(200).optional(),
+  createdBy: z.string().min(1),
+  startedAt: z.number().int().optional(),
+});
+
+export type StartCommandRecordInput = z.input<typeof StartCommandRecordSchema>;
+
+/**
  * Process filter options
  */
 export interface ProcessFilters {
@@ -285,6 +304,88 @@ export class ProcessService {
     });
 
     return this.getByIdOrThrow(db, id);
+  }
+
+  /**
+   * Start a command record for non-PTY commands (actions/tools)
+   */
+  static startCommandRecord(
+    db: Database,
+    input: StartCommandRecordInput,
+    projectPath: string
+  ): Process {
+    const data = StartCommandRecordSchema.parse(input);
+    const now = data.startedAt ?? Date.now();
+    const id = generateId(IdPrefixes.process);
+    const cwd = data.cwd || projectPath;
+
+    db.prepare(
+      `INSERT INTO processes (
+        id, project_id, type, command, cwd, env, cols, rows,
+        scope, scope_id, status, label, service_id, log_path, created_by, created_at, started_at
+      ) VALUES (?, ?, 'command', ?, ?, ?, ?, ?, ?, ?, 'running', ?, NULL, NULL, ?, ?, ?)`
+    ).run(
+      id,
+      data.projectId,
+      data.command,
+      cwd,
+      data.env ? JSON.stringify(data.env) : null,
+      data.cols,
+      data.rows,
+      data.scope,
+      data.scopeId,
+      data.label || null,
+      data.createdBy,
+      now,
+      now
+    );
+
+    const process = this.getByIdOrThrow(db, id);
+    EventBus.publish(data.projectId, {
+      type: "process.spawned",
+      payload: process,
+    });
+
+    return process;
+  }
+
+  /**
+   * Append output for a process (non-PTY commands)
+   */
+  static appendOutput(
+    db: Database,
+    processId: string,
+    projectId: string,
+    data: string,
+    stream: StreamType
+  ): void {
+    if (!data) return;
+    const timestamp = Date.now();
+    db.prepare(
+      `INSERT INTO process_output (process_id, timestamp, data, stream)
+       VALUES (?, ?, ?, ?)`
+    ).run(processId, timestamp, data, stream);
+
+    EventBus.publish(projectId, {
+      type: "process.output",
+      payload: {
+        id: processId,
+        data,
+        stream,
+      },
+    });
+  }
+
+  /**
+   * Mark a command record as completed/failed
+   */
+  static finishCommandRecord(
+    db: Database,
+    processId: string,
+    projectId: string,
+    exitCode: number
+  ): void {
+    this.markExited(db, processId, projectId, exitCode);
   }
 
   /**

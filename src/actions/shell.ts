@@ -7,6 +7,8 @@
 import { z } from "zod";
 import { spawn } from "child_process";
 import { defineAction, success, error } from "./types.ts";
+import { DatabaseManager } from "@/database/index.ts";
+import { ProcessService } from "@/services/processes.ts";
 
 const DEFAULT_TIMEOUT = 120000; // 2 minutes
 const MAX_TIMEOUT = 600000; // 10 minutes
@@ -83,12 +85,49 @@ export const shellRun = defineAction({
   }),
 
   execute: async ({ command, timeout = DEFAULT_TIMEOUT }, context) => {
+    const projectId = context.projectId;
+    let processDb: ReturnType<typeof DatabaseManager.getProjectDb> | null = null;
+    let processId: string | null = null;
+
+    if (projectId) {
+      try {
+        processDb = DatabaseManager.getProjectDb(projectId);
+        const scopeId = context.sessionId || projectId;
+        const scope = context.sessionId ? "task" : "project";
+        const process = ProcessService.startCommandRecord(
+          processDb,
+          {
+            projectId,
+            command,
+            cwd: context.projectPath,
+            scope,
+            scopeId,
+            createdBy: context.userId || "ui",
+          },
+          context.projectPath
+        );
+        processId = process.id;
+      } catch (err) {
+        console.error("[shell.run] Failed to record command process", err);
+      }
+    }
+
     const result = await executeCommand(
       command,
       context.projectPath,
       timeout,
       context.abortSignal
     );
+
+    if (processDb && processId && projectId) {
+      if (result.stdout) {
+        ProcessService.appendOutput(processDb, processId, projectId, result.stdout, "stdout");
+      }
+      if (result.stderr) {
+        ProcessService.appendOutput(processDb, processId, projectId, result.stderr, "stderr");
+      }
+      ProcessService.finishCommandRecord(processDb, processId, projectId, result.exitCode);
+    }
 
     let output = "";
     if (result.timedOut) output += `Command timed out after ${timeout / 1000}s\n\n`;

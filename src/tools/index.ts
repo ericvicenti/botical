@@ -19,6 +19,7 @@ import { globTool } from "./glob.ts";
 import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
 import { readSkillTool } from "./read-skill.ts";
+import { scheduleTool } from "./schedule.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -74,6 +75,12 @@ export function registerCoreTools(): void {
     requiresCodeExecution: false, // Just reads skill files
   });
 
+  // Schedule tool (project automation)
+  ToolRegistry.register(scheduleTool, {
+    category: "other",
+    requiresCodeExecution: false, // Manages schedules, doesn't execute code directly
+  });
+
   // Note: Git operations are now handled via ActionRegistry
   // See src/actions/git.ts for git actions
 }
@@ -88,4 +95,5 @@ export { globTool } from "./glob.ts";
 export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";
 export { readSkillTool } from "./read-skill.ts";
+export { scheduleTool } from "./schedule.ts";
 // Git actions moved to src/actions/git.ts

@@ -22,7 +22,7 @@ import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { requireAuth } from "../auth/middleware.ts";
-import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -103,6 +103,8 @@ export function createApp() {
   app.route("/api/skills", skills); // Skills search route (non-project-scoped)
   app.route("/api/templates", templates); // Task templates routes
   app.route("/api/extensions", extensionsRouter); // Extension proxy routes
+  app.route("/api/projects", projectSchedules); // Project-scoped schedule routes
+  app.route("/api/schedules", schedules); // Individual schedule routes
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

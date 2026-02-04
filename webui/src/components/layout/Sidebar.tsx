@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search, Clock } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -14,7 +14,8 @@ import { ExeSidebarPanel } from "@/extensions/exe/components/ExeSidebarPanel";
 import { ExtensionsPanel } from "@/components/extensions/ExtensionsPanel";
 import { DockerSidebarPanel } from "@/extensions/docker/components/DockerSidebarPanel";
 import { SearchSidebarPanel } from "@/extensions/search/components/SearchSidebarPanel";
-import { useProjects, useWorkflows, useCreateWorkflow } from "@/lib/api/queries";
+import { useProjects, useWorkflows, useCreateWorkflow, useSchedules, useCreateSchedule } from "@/lib/api/queries";
+import { SchedulesPanel } from "@/components/schedules";
 import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -25,6 +26,7 @@ const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; l
   { id: "run", icon: Play, label: "Run" },
   { id: "services", icon: Radio, label: "Services" },
   { id: "workflows", icon: Workflow, label: "Workflows" },
+  { id: "schedules", icon: Clock, label: "Schedules" },
 ];
 
 // Map of extension icons
@@ -350,6 +352,14 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       return <ServicesPanelWrapper selectedProjectId={selectedProjectId} />;
     case "workflows":
       return <WorkflowsPanel selectedProjectId={selectedProjectId} />;
+    case "schedules":
+      return selectedProjectId ? (
+        <SchedulesPanel projectId={selectedProjectId} />
+      ) : (
+        <div className="p-3 text-sm text-text-muted">
+          Select a project to manage schedules
+        </div>
+      );
     case "exe":
       return <ExeSidebarPanel />;
     case "extensions":

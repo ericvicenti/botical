@@ -20,11 +20,13 @@ This document summarizes how the web UI surfaces the extension system today.
 - `webui/src/components/layout/Sidebar.tsx` inserts extension panels based on enabled extensions.
 - The extension list uses `frontend.sidebar` metadata coming from the backend.
 - A dedicated Extensions panel is always available when a project is selected.
+- Sidebar icon mapping now includes extension-specific icons like `search` and `server`.
 
 ## Extension Frontend Modules
 
 - `webui/src/extensions/docker` provides Docker pages, panels, and API hooks.
 - `webui/src/extensions/search` provides Search pages, panels, and API hooks.
+- `webui/src/extensions/exe` provides exe.dev VM management UI and API hooks.
 - `webui/src/extensions/index.ts` registers these modules on startup.
 
 ## Test Coverage

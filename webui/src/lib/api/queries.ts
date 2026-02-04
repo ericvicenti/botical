@@ -1676,3 +1676,255 @@ export function useToggleSkillEnabled() {
     },
   });
 }
+
+// ============================================
+// SCHEDULES
+// ============================================
+
+import type { Schedule, ScheduleRun, ScheduleActionType, ActionConfig, WorkflowConfig } from "./types";
+
+export function useSchedules(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "schedules"],
+    queryFn: async () => {
+      const response = await apiClientRaw<Schedule[]>(
+        `/api/projects/${projectId}/schedules`
+      );
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useSchedule(scheduleId: string, projectId: string) {
+  return useQuery({
+    queryKey: ["schedules", scheduleId],
+    queryFn: () =>
+      apiClient<Schedule>(
+        `/api/schedules/${scheduleId}?projectId=${encodeURIComponent(projectId)}`
+      ),
+    enabled: !!scheduleId && !!projectId,
+  });
+}
+
+export function useCreateSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      description,
+      actionType,
+      actionConfig,
+      cronExpression,
+      timezone,
+      enabled,
+      maxRuntimeMs,
+    }: {
+      projectId: string;
+      name: string;
+      description?: string;
+      actionType: ScheduleActionType;
+      actionConfig: ActionConfig | WorkflowConfig;
+      cronExpression: string;
+      timezone?: string;
+      enabled?: boolean;
+      maxRuntimeMs?: number;
+    }) =>
+      apiClient<Schedule>(`/api/projects/${projectId}/schedules`, {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          description,
+          actionType,
+          actionConfig,
+          cronExpression,
+          timezone,
+          enabled,
+          maxRuntimeMs,
+        }),
+      }),
+    onSuccess: (schedule) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", schedule.projectId, "schedules"],
+      });
+    },
+  });
+}
+
+export function useUpdateSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      scheduleId,
+      projectId,
+      name,
+      description,
+      actionConfig,
+      cronExpression,
+      timezone,
+      enabled,
+      maxRuntimeMs,
+    }: {
+      scheduleId: string;
+      projectId: string;
+      name?: string;
+      description?: string | null;
+      actionConfig?: ActionConfig | WorkflowConfig;
+      cronExpression?: string;
+      timezone?: string;
+      enabled?: boolean;
+      maxRuntimeMs?: number;
+    }) =>
+      apiClient<Schedule>(`/api/schedules/${scheduleId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          projectId,
+          name,
+          description,
+          actionConfig,
+          cronExpression,
+          timezone,
+          enabled,
+          maxRuntimeMs,
+        }),
+      }),
+    onSuccess: (schedule) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", schedule.projectId, "schedules"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["schedules", schedule.id],
+      });
+    },
+  });
+}
+
+export function useDeleteSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      scheduleId,
+      projectId,
+    }: {
+      scheduleId: string;
+      projectId: string;
+    }) =>
+      apiClient<{ deleted: boolean }>(
+        `/api/schedules/${scheduleId}?projectId=${encodeURIComponent(projectId)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "schedules"],
+      });
+    },
+  });
+}
+
+export function useEnableSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      scheduleId,
+      projectId,
+    }: {
+      scheduleId: string;
+      projectId: string;
+    }) =>
+      apiClient<Schedule>(
+        `/api/schedules/${scheduleId}/enable?projectId=${encodeURIComponent(projectId)}`,
+        { method: "POST" }
+      ),
+    onSuccess: (schedule) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", schedule.projectId, "schedules"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["schedules", schedule.id],
+      });
+    },
+  });
+}
+
+export function useDisableSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      scheduleId,
+      projectId,
+    }: {
+      scheduleId: string;
+      projectId: string;
+    }) =>
+      apiClient<Schedule>(
+        `/api/schedules/${scheduleId}/disable?projectId=${encodeURIComponent(projectId)}`,
+        { method: "POST" }
+      ),
+    onSuccess: (schedule) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", schedule.projectId, "schedules"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["schedules", schedule.id],
+      });
+    },
+  });
+}
+
+export function useTriggerSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      scheduleId,
+      projectId,
+    }: {
+      scheduleId: string;
+      projectId: string;
+    }) =>
+      apiClient<{ triggered: boolean; runId: string }>(
+        `/api/schedules/${scheduleId}/run?projectId=${encodeURIComponent(projectId)}`,
+        { method: "POST" }
+      ),
+    onSuccess: (_, { projectId, scheduleId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "schedules"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["schedules", scheduleId, "runs"],
+      });
+    },
+  });
+}
+
+export function useScheduleRuns(scheduleId: string, projectId: string) {
+  return useQuery({
+    queryKey: ["schedules", scheduleId, "runs"],
+    queryFn: async () => {
+      const response = await apiClientRaw<ScheduleRun[]>(
+        `/api/schedules/${scheduleId}/runs?projectId=${encodeURIComponent(projectId)}`
+      );
+      return response.data;
+    },
+    enabled: !!scheduleId && !!projectId,
+  });
+}
+
+export function useValidateCron() {
+  return useMutation({
+    mutationFn: ({ expression }: { expression: string }) =>
+      apiClient<{ valid: boolean; error?: string; nextRun: number | null }>(
+        "/api/schedules/validate-cron",
+        {
+          method: "POST",
+          body: JSON.stringify({ expression }),
+        }
+      ),
+  });
+}

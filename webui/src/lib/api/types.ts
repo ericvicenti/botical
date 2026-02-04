@@ -394,3 +394,51 @@ export interface Extension {
 export interface ProjectExtensions {
   enabled: string[];
 }
+
+// Schedule types
+
+export type ScheduleActionType = "action" | "workflow";
+export type ScheduleRunStatus = "pending" | "running" | "success" | "failed" | "timeout";
+
+export interface ActionConfig {
+  actionId: string;
+  actionParams?: Record<string, unknown>;
+}
+
+export interface WorkflowConfig {
+  workflowId: string;
+  workflowInput?: Record<string, unknown>;
+}
+
+export interface Schedule {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  actionType: ScheduleActionType;
+  actionConfig: ActionConfig | WorkflowConfig;
+  cronExpression: string;
+  timezone: string;
+  enabled: boolean;
+  nextRunAt: number | null;
+  lastRunAt: number | null;
+  lastRunStatus: ScheduleRunStatus | null;
+  lastRunError: string | null;
+  maxRuntimeMs: number;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ScheduleRun {
+  id: string;
+  scheduleId: string;
+  projectId: string;
+  status: ScheduleRunStatus;
+  sessionId: string | null;
+  scheduledFor: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  output: string | null;
+  error: string | null;
+}

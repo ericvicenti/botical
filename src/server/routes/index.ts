@@ -18,3 +18,4 @@ export { filesystem } from "./filesystem.ts";
 export { skills } from "./skills.ts";
 export { templates } from "./templates.ts";
 export { extensionsRouter } from "./extensions.ts";
+export { projectSchedules, schedules } from "./schedules.ts";

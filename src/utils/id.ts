@@ -129,6 +129,8 @@ export const IdPrefixes = {
   process: "proc",
   service: "svc",
   workflow: "wf",
+  schedule: "sched",
+  scheduleRun: "schedrun",
   // Auth-related prefixes
   emailToken: "emltkn",
   authSession: "authsess",

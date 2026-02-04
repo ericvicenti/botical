@@ -43,10 +43,12 @@ extensions:
   enabled:
     - docker
     - search
+    - exe
   settings:
     search:
       searxngPort: 8888
       autoProvision: true
+    exe: {}
 
 sidebar:
   panels:

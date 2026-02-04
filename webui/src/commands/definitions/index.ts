@@ -4,6 +4,7 @@ import { tabCommands } from "./tab.commands";
 import { fileCommands } from "./file.commands";
 import { projectCommands } from "./project.commands";
 import { taskCommands } from "./task.commands";
+import { scheduleCommands } from "./schedule.commands";
 import { getQueryCommands, runCustomQueryCommand } from "./query.commands";
 
 // Ensure primitives are registered before we generate commands from them
@@ -22,6 +23,7 @@ export function registerAllCommands() {
     ...fileCommands,
     ...projectCommands,
     ...taskCommands,
+    ...scheduleCommands,
     ...getPrimitiveCommands(),
     ...getQueryCommands(),
     runCustomQueryCommand,

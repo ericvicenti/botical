@@ -488,4 +488,62 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 8,
+    name: "schedules",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- SCHEDULES
+        -- Recurring or one-time scheduled tasks
+        -- ============================================
+
+        CREATE TABLE schedules (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          action_type TEXT NOT NULL,
+          action_config TEXT NOT NULL,
+          cron_expression TEXT NOT NULL,
+          timezone TEXT NOT NULL DEFAULT 'UTC',
+          enabled INTEGER NOT NULL DEFAULT 1,
+          next_run_at INTEGER,
+          last_run_at INTEGER,
+          last_run_status TEXT,
+          last_run_error TEXT,
+          max_runtime_ms INTEGER DEFAULT 3600000,
+          created_by TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_schedules_project ON schedules(project_id);
+        CREATE INDEX idx_schedules_enabled ON schedules(enabled) WHERE enabled = 1;
+        CREATE INDEX idx_schedules_next_run ON schedules(next_run_at) WHERE enabled = 1;
+
+        -- ============================================
+        -- SCHEDULE RUNS
+        -- Execution history for schedules
+        -- ============================================
+
+        CREATE TABLE schedule_runs (
+          id TEXT PRIMARY KEY,
+          schedule_id TEXT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+          project_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          session_id TEXT,
+          scheduled_for INTEGER NOT NULL,
+          started_at INTEGER,
+          completed_at INTEGER,
+          output TEXT,
+          error TEXT
+        );
+
+        CREATE INDEX idx_schedule_runs_schedule ON schedule_runs(schedule_id);
+        CREATE INDEX idx_schedule_runs_status ON schedule_runs(status);
+        CREATE INDEX idx_schedule_runs_scheduled ON schedule_runs(scheduled_for DESC);
+      `);
+    },
+  },
 ];
