@@ -4,31 +4,27 @@
  * Shows detailed information about a selected extension including:
  * - Server status (running, stopped, error)
  * - Port information
- * - Pages/routes available
- * - Action buttons (for extension-specific actions)
- * - Recent activity/diagnostics
+ * - Extension actions (from the action registry)
+ * - Service controls (start/stop)
  */
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   Server,
   Play,
   Square,
-  RotateCcw,
   CheckCircle,
   XCircle,
   AlertCircle,
   Loader2,
-  Globe,
-  ExternalLink,
   RefreshCw,
-  Search,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { Extension } from "@/lib/api/types";
 import { useSearchStatus, useProvisionSearch, useStopSearch } from "@/extensions/search/api";
-import { useExecuteAction, type ActionResult } from "@/lib/api/actions";
+import { useActions, useExecuteAction } from "@/lib/api/actions";
 
 interface ExtensionDetailViewProps {
   extension: Extension;
@@ -55,43 +51,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-interface SearchResultData {
-  title: string;
-  url: string;
-  snippet?: string;
-  engine: string;
-}
-
-function SearchResultItem({ result }: { result: SearchResultData }) {
-  return (
-    <a
-      href={result.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block p-2 rounded hover:bg-bg-primary"
-    >
-      <div className="text-sm text-accent-primary hover:underline truncate">{result.title}</div>
-      <div className="text-xs text-text-muted truncate">{result.url}</div>
-      {result.snippet && (
-        <div className="text-xs text-text-secondary mt-1 line-clamp-2">{result.snippet}</div>
-      )}
-    </a>
-  );
-}
-
-function SearchExtensionDetail({ extension, enabled }: { extension: Extension; enabled: boolean }) {
+/**
+ * Search extension service management (SearXNG Docker container)
+ */
+function SearchServiceDetail({ enabled }: { enabled: boolean }) {
   const { data: status, isLoading, refetch } = useSearchStatus();
   const provisionMutation = useProvisionSearch();
   const stopMutation = useStopSearch();
-  const executeAction = useExecuteAction();
-  const [showProvisionOutput, setShowProvisionOutput] = useState(false);
-  const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResultData[]>([]);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchOutput, setSearchOutput] = useState<string | null>(null);
 
   const handleProvision = async () => {
-    setShowProvisionOutput(true);
     try {
       await provisionMutation.mutateAsync();
     } catch (err) {
@@ -107,205 +75,189 @@ function SearchExtensionDetail({ extension, enabled }: { extension: Extension; e
     }
   };
 
-  const handleSearch = useCallback(async () => {
-    if (!query.trim()) return;
-    setSearchError(null);
-    setSearchOutput(null);
-    try {
-      // Execute the search.web action - same as command palette and agent tools
-      const result = await executeAction.mutateAsync({
-        actionId: "search.web",
-        params: {
-          query: query.trim(),
-          limit: 5,
-        },
-      });
-
-      if (result.type === "error") {
-        setSearchError(result.message || "Search failed");
-        setSearchResults([]);
-      } else if (result.type === "success") {
-        // Extract results from metadata
-        const metadata = result.metadata as { results?: SearchResultData[] } | undefined;
-        setSearchResults(metadata?.results || []);
-        setSearchOutput(result.output || null);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Search failed";
-      setSearchError(message);
-      setSearchResults([]);
-    }
-  }, [query, executeAction]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-text-secondary" />
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="w-4 h-4 animate-spin text-text-secondary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Search Input - only show when available */}
-      {status?.available && (
-        <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-          <div className="text-xs font-medium text-text-secondary uppercase mb-2">Search the Web</div>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Enter search query..."
-                className={cn(
-                  "w-full pl-8 pr-3 py-1.5 text-sm rounded",
-                  "bg-bg-primary border border-border",
-                  "focus:outline-none focus:border-accent-primary",
-                  "placeholder:text-text-muted"
-                )}
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={executeAction.isPending || !query.trim()}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
-                "bg-accent-primary text-white hover:bg-accent-primary/90",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            >
-              {executeAction.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Search className="w-3.5 h-3.5" />
-              )}
-              Search
-            </button>
-          </div>
-
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="mt-3 space-y-1">
-              <div className="text-xs text-text-muted mb-2">{searchResults.length} results</div>
-              {searchResults.map((result, i) => (
-                <SearchResultItem key={i} result={result} />
-              ))}
-            </div>
-          )}
-
-          {/* Search Error */}
-          {searchError && (
-            <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20">
-              <div className="text-xs text-red-500">{searchError}</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* SearXNG Status */}
-      <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-medium text-text-secondary uppercase">SearXNG Engine</div>
-          <button
-            onClick={() => refetch()}
-            className="p-1 rounded hover:bg-bg-primary text-text-secondary"
-            title="Refresh status"
-          >
-            <RefreshCw className="w-3 h-3" />
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-text-secondary">Available:</span>
-            <span className={cn("text-sm font-medium", status?.available ? "text-green-500" : "text-red-500")}>
-              {status?.available ? "Yes" : "No"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-text-secondary">Container:</span>
-            <span className="text-sm font-medium">
-              {status?.containerRunning ? "Running" : status?.containerExists ? "Stopped" : "Not created"}
-            </span>
-          </div>
-          {status?.containerId && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-text-secondary">Container ID:</span>
-              <span className="text-sm font-mono text-text-muted">{status.containerId.slice(0, 12)}</span>
-            </div>
-          )}
-          {status?.error && (
-            <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20">
-              <div className="text-xs text-red-500">{status.error}</div>
-            </div>
-          )}
-        </div>
+    <div className="p-3 rounded-lg bg-bg-elevated border border-border">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs font-medium text-text-secondary uppercase">SearXNG Service</div>
+        <button
+          onClick={() => refetch()}
+          className="p-1 rounded hover:bg-bg-primary text-text-secondary"
+          title="Refresh status"
+        >
+          <RefreshCw className="w-3 h-3" />
+        </button>
       </div>
 
-      {/* Actions */}
-      <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-        <div className="text-xs font-medium text-text-secondary uppercase mb-2">Actions</div>
-        <div className="flex flex-wrap gap-2">
-          {!status?.available && (
-            <button
-              onClick={handleProvision}
-              disabled={provisionMutation.isPending || !enabled}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
-                "bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            >
-              {provisionMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Play className="w-3.5 h-3.5" />
-              )}
-              Start SearXNG
-            </button>
-          )}
-          {status?.containerRunning && (
-            <button
-              onClick={handleStop}
-              disabled={stopMutation.isPending}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
-                "bg-red-500/20 text-red-500 hover:bg-red-500/30",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            >
-              {stopMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Square className="w-3.5 h-3.5" />
-              )}
-              Stop SearXNG
-            </button>
-          )}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-text-secondary">Status:</span>
+          <span className={cn("text-sm font-medium", status?.available ? "text-green-500" : "text-text-muted")}>
+            {status?.containerRunning ? "Running" : status?.containerExists ? "Stopped" : "Not created"}
+          </span>
         </div>
-        {!enabled && (
-          <div className="mt-2 text-xs text-text-muted">
-            Enable this extension to use SearXNG actions
+        {status?.error && (
+          <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
+            <div className="text-xs text-red-500">{status.error}</div>
           </div>
         )}
       </div>
 
-      {/* Provision Output */}
-      {showProvisionOutput && provisionMutation.error && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-          <div className="text-xs font-medium text-red-500 mb-1">Provisioning Error</div>
-          <div className="text-xs text-red-400 font-mono">
-            {provisionMutation.error instanceof Error ? provisionMutation.error.message : "Unknown error"}
+      {/* Service controls */}
+      <div className="flex gap-2 mt-3">
+        {!status?.containerRunning && (
+          <button
+            onClick={handleProvision}
+            disabled={provisionMutation.isPending || !enabled}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
+              "bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {provisionMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Play className="w-3.5 h-3.5" />
+            )}
+            Start
+          </button>
+        )}
+        {status?.containerRunning && (
+          <button
+            onClick={handleStop}
+            disabled={stopMutation.isPending}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm",
+              "bg-red-500/20 text-red-500 hover:bg-red-500/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {stopMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Square className="w-3.5 h-3.5" />
+            )}
+            Stop
+          </button>
+        )}
+      </div>
+      {!enabled && (
+        <div className="mt-2 text-xs text-text-muted">
+          Enable this extension to manage the service
+        </div>
+      )}
+      {provisionMutation.error && (
+        <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20">
+          <div className="text-xs text-red-500">
+            {provisionMutation.error instanceof Error ? provisionMutation.error.message : "Failed to start"}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Extension actions list - shows actions provided by this extension
+ */
+function ExtensionActions({ extensionId, enabled }: { extensionId: string; enabled: boolean }) {
+  const { data: actions, isLoading } = useActions();
+  const executeAction = useExecuteAction();
+  const [lastResult, setLastResult] = useState<{ actionId: string; message: string; type: "success" | "error" } | null>(null);
+
+  // Filter actions that belong to this extension (by category matching extension id)
+  const extensionActions = actions?.filter((action) => action.category === extensionId) || [];
+
+  const handleExecuteAction = async (actionId: string, label: string) => {
+    // For actions that need parameters, we'd normally open a dialog
+    // For now, actions without required params can be executed directly
+    try {
+      const result = await executeAction.mutateAsync({
+        actionId,
+        params: {},
+      });
+      if (result.type === "error") {
+        setLastResult({ actionId, message: result.message || "Action failed", type: "error" });
+      } else {
+        setLastResult({ actionId, message: result.title || result.output || "Action completed", type: "success" });
+      }
+    } catch (err) {
+      setLastResult({
+        actionId,
+        message: err instanceof Error ? err.message : "Action failed",
+        type: "error"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="w-4 h-4 animate-spin text-text-secondary" />
+      </div>
+    );
+  }
+
+  if (extensionActions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="p-3 rounded-lg bg-bg-elevated border border-border">
+      <div className="text-xs font-medium text-text-secondary uppercase mb-2">Actions</div>
+      <div className="space-y-1">
+        {extensionActions.map((action) => {
+          // Check if action has required params (excluding projectId which is auto-filled)
+          const hasRequiredParams = action.params.some(
+            (p) => p.required && p.name !== "projectId"
+          );
+
+          return (
+            <button
+              key={action.id}
+              onClick={() => !hasRequiredParams && handleExecuteAction(action.id, action.label)}
+              disabled={!enabled || executeAction.isPending || hasRequiredParams}
+              className={cn(
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-left",
+                "hover:bg-bg-primary transition-colors",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                !hasRequiredParams && "cursor-pointer"
+              )}
+              title={hasRequiredParams ? "Use command palette (Cmd+K) to provide parameters" : action.description}
+            >
+              <Zap className="w-3.5 h-3.5 text-accent-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-text-primary">{action.label}</div>
+                <div className="text-xs text-text-muted truncate">{action.description}</div>
+              </div>
+              {hasRequiredParams && (
+                <span className="text-xs text-text-muted">Cmd+K</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {lastResult && (
+        <div className={cn(
+          "mt-2 p-2 rounded text-xs",
+          lastResult.type === "error"
+            ? "bg-red-500/10 border border-red-500/20 text-red-500"
+            : "bg-green-500/10 border border-green-500/20 text-green-500"
+        )}>
+          {lastResult.message}
+        </div>
+      )}
+      {!enabled && (
+        <div className="mt-2 text-xs text-text-muted">
+          Enable this extension to use actions
         </div>
       )}
     </div>
@@ -330,87 +282,40 @@ export function ExtensionDetailView({ extension, enabled, onBack }: ExtensionDet
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-3 space-y-4">
-        {/* Status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-text-secondary" />
-            <span className="text-sm text-text-primary">Server Status</span>
-          </div>
-          <StatusBadge status={extension.status} />
-        </div>
-
-        {/* Port */}
-        {extension.port && (
+        {/* Status & Info */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-text-secondary">Port</span>
-            <span className="text-sm font-mono text-text-primary">{extension.port}</span>
+            <div className="flex items-center gap-2">
+              <Server className="w-4 h-4 text-text-secondary" />
+              <span className="text-sm text-text-primary">Server</span>
+            </div>
+            <StatusBadge status={extension.status} />
           </div>
-        )}
 
-        {/* Version */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-text-secondary">Version</span>
-          <span className="text-sm text-text-primary">{extension.version}</span>
-        </div>
+          {extension.port && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-text-secondary">Port</span>
+              <span className="text-sm font-mono text-text-primary">{extension.port}</span>
+            </div>
+          )}
 
-        {/* Category */}
-        {extension.category && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-text-secondary">Category</span>
-            <span className="text-sm text-text-primary capitalize">{extension.category}</span>
+            <span className="text-sm text-text-secondary">Version</span>
+            <span className="text-sm text-text-primary">{extension.version}</span>
           </div>
-        )}
+        </div>
 
         {/* Description */}
         <div className="p-3 rounded-lg bg-bg-elevated border border-border">
           <div className="text-xs text-text-muted">{extension.description}</div>
         </div>
 
-        {/* Routes */}
-        {extension.frontend?.routes && extension.frontend.routes.length > 0 && (
-          <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-            <div className="text-xs font-medium text-text-secondary uppercase mb-2">Routes</div>
-            <div className="space-y-1">
-              {extension.frontend.routes.map((route) => (
-                <div key={route} className="flex items-center gap-2 text-sm">
-                  <Globe className="w-3 h-3 text-text-muted" />
-                  <code className="text-text-primary">{route}</code>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Extension Actions */}
+        <ExtensionActions extensionId={extension.id} enabled={enabled} />
 
-        {/* Sidebar Panel */}
-        {extension.frontend?.sidebar && (
-          <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-            <div className="text-xs font-medium text-text-secondary uppercase mb-2">Sidebar Panel</div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-text-secondary">Label:</span>
-              <span className="text-text-primary">{extension.frontend.sidebar.label}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Extension-specific details */}
+        {/* Extension-specific service management */}
         {extension.id === "search" && (
-          <SearchExtensionDetail extension={extension} enabled={enabled} />
-        )}
-
-        {/* Health Check Link */}
-        {extension.status === "running" && extension.port && (
-          <div className="p-3 rounded-lg bg-bg-elevated border border-border">
-            <div className="text-xs font-medium text-text-secondary uppercase mb-2">Quick Links</div>
-            <a
-              href={`http://localhost:${extension.port}/health`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-accent-primary hover:underline"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Health Check Endpoint
-            </a>
-          </div>
+          <SearchServiceDetail enabled={enabled} />
         )}
       </div>
     </div>
