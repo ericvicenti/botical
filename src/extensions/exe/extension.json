@@ -1,0 +1,20 @@
+{
+  "id": "exe",
+  "name": "exe.dev VMs",
+  "description": "Manage lightweight exe.dev virtual machines",
+  "version": "1.0.0",
+  "icon": "server",
+  "category": "infrastructure",
+  "backend": {
+    "serverEntry": "server.ts",
+    "defaultPort": 4103
+  },
+  "frontend": {
+    "sidebar": {
+      "id": "exe",
+      "label": "Exe VMs",
+      "icon": "server"
+    },
+    "routes": ["/exe/*"]
+  }
+}

@@ -38,6 +38,16 @@ test.describe("Extensions", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("iris:ui", JSON.stringify({
+        selectedProjectId: null,
+        sidebarWidth: 240,
+        sidebarCollapsed: false,
+        sidebarPanel: "extensions",
+        theme: "system",
+      }));
+    });
+
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -75,31 +85,9 @@ test.describe("Extensions", () => {
     });
 
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
   });
 
-  test("should show extensions button in sidebar when project is selected", async ({ page }) => {
-    // Mock project extensions as empty initially
-    await page.route("**/api/projects/*/extensions", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ data: { enabled: [] } }),
-      });
-    });
-
-    await page.goto("/");
-
-    // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-    // Extensions button should be visible in sidebar
-    const extensionsButton = page.getByTestId("extensions-button");
-    await expect(extensionsButton).toBeVisible();
-  });
-
-  test("should show extensions panel when clicking extensions button", async ({ page }) => {
+  test("should show extensions panel when project is selected", async ({ page }) => {
     // Mock project extensions as empty
     await page.route("**/api/projects/*/extensions", async (route) => {
       await route.fulfill({
@@ -113,9 +101,6 @@ test.describe("Extensions", () => {
 
     // Select project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
 
     // Extensions panel should be visible
     await expect(page.getByTestId("extensions-panel")).toBeVisible();
@@ -137,9 +122,6 @@ test.describe("Extensions", () => {
     // Select project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
 
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
-
     // Docker extension should be listed
     await expect(page.getByTestId("extension-card-docker")).toBeVisible();
     await expect(page.getByTestId("extension-card-docker").getByText("Docker", { exact: true })).toBeVisible();
@@ -160,9 +142,6 @@ test.describe("Extensions", () => {
 
     // Select project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
 
     // Toggle label should be visible
     const toggle = page.getByTestId("extension-toggle-docker");
@@ -201,9 +180,6 @@ test.describe("Extensions", () => {
 
     // Select project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
 
     // Click toggle to enable Docker
     const toggle = page.getByTestId("extension-toggle-docker");
@@ -290,9 +266,6 @@ test.describe("Extensions", () => {
     const dockerButton = page.getByRole("button", { name: "Docker" });
     await expect(dockerButton).toBeVisible();
 
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
-
     // Click toggle to disable Docker
     const toggle = page.getByTestId("extension-toggle-docker");
     await toggle.click();
@@ -318,9 +291,6 @@ test.describe("Extensions", () => {
 
     // Select project
     await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-    // Click extensions button
-    await page.getByTestId("extensions-button").click();
 
     // The checkbox inside the toggle should be checked
     const toggle = page.getByTestId("extension-toggle-docker");

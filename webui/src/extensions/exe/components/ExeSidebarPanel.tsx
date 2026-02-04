@@ -8,7 +8,7 @@ import {
   useRestartExeVM,
   useExeExec,
   type ExeVM,
-} from "@/lib/api/queries";
+} from "../api";
 import {
   Server,
   Plus,
@@ -24,7 +24,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-export function ExePanel() {
+export function ExeSidebarPanel() {
   const { data: status, isLoading: statusLoading } = useExeStatus();
   const { data: vms, isLoading: vmsLoading, refetch: refetchVMs } = useExeVMs();
   const createVM = useCreateExeVM();

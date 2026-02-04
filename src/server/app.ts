@@ -22,7 +22,7 @@ import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { requireAuth } from "../auth/middleware.ts";
-import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, exe, filesystem, skills, templates, extensionsRouter } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -98,7 +98,6 @@ export function createApp() {
   app.route("/api/git", gitIdentity); // Git identity (SSH key) route
   app.route("/api/workflows", workflows); // Workflow routes
   app.route("/api", workflowExecutions); // Workflow execution routes
-  app.route("/api/exe", exe); // Exe.dev VM routes
   app.route("/api/filesystem", filesystem); // Filesystem browsing routes
   app.route("/api/projects", skills); // Project-scoped skills routes
   app.route("/api/skills", skills); // Skills search route (non-project-scoped)

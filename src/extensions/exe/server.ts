@@ -1,38 +1,42 @@
 /**
- * Exe.dev API Routes
+ * Exe.dev Extension Server
  *
- * REST API endpoints for managing exe.dev lightweight VMs.
- *
- * Endpoints:
- * - GET /api/exe/status - Check exe.dev connection status
- * - GET /api/exe/vms - List all VMs
- * - POST /api/exe/vms - Create a new VM
- * - DELETE /api/exe/vms/:name - Delete a VM
- * - POST /api/exe/vms/:name/restart - Restart a VM
- * - POST /api/exe/vms/:name/exec - Run a command in a VM
+ * Standalone HTTP server for the exe.dev extension.
+ * Runs on its own port and provides exe.dev VM management APIs.
  */
 
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { z } from "zod";
-import { ExeService } from "@/services/exe-service.ts";
+import { ExeService } from "./exe-service.ts";
+import { handleError } from "@/server/middleware/error-handler.ts";
 import { ValidationError } from "@/utils/errors.ts";
 
-const exe = new Hono();
+// Get port from environment (set by extension manager)
+const port = parseInt(process.env.EXTENSION_PORT || "4103", 10);
+const extensionId = process.env.EXTENSION_ID || "exe";
+
+const app = new Hono();
+
+app.use("*", cors());
+
+// Health check
+app.get("/health", (c) => c.json({ status: "ok", extension: extensionId }));
 
 /**
- * GET /api/exe/status
+ * GET /status
  * Check exe.dev connection and authentication status
  */
-exe.get("/status", async (c) => {
+app.get("/status", async (c) => {
   const status = await ExeService.checkStatus();
   return c.json({ data: status });
 });
 
 /**
- * GET /api/exe/vms
+ * GET /vms
  * List all VMs
  */
-exe.get("/vms", async (c) => {
+app.get("/vms", async (c) => {
   const result = await ExeService.listVMs();
 
   if (result.error) {
@@ -42,19 +46,16 @@ exe.get("/vms", async (c) => {
   return c.json({ data: result.vms });
 });
 
-/**
- * Schema for creating a VM
- */
 const CreateVMSchema = z.object({
   name: z.string().regex(/^[a-z0-9-]+$/).min(1).max(63).optional(),
   image: z.string().optional(),
 });
 
 /**
- * POST /api/exe/vms
+ * POST /vms
  * Create a new VM
  */
-exe.post("/vms", async (c) => {
+app.post("/vms", async (c) => {
   const body = await c.req.json().catch(() => ({}));
 
   const result = CreateVMSchema.safeParse(body);
@@ -75,10 +76,10 @@ exe.post("/vms", async (c) => {
 });
 
 /**
- * DELETE /api/exe/vms/:name
+ * DELETE /vms/:name
  * Delete a VM
  */
-exe.delete("/vms/:name", async (c) => {
+app.delete("/vms/:name", async (c) => {
   const name = c.req.param("name");
 
   if (!name || !/^[a-z0-9-]+$/.test(name)) {
@@ -95,10 +96,10 @@ exe.delete("/vms/:name", async (c) => {
 });
 
 /**
- * POST /api/exe/vms/:name/restart
+ * POST /vms/:name/restart
  * Restart a VM
  */
-exe.post("/vms/:name/restart", async (c) => {
+app.post("/vms/:name/restart", async (c) => {
   const name = c.req.param("name");
 
   if (!name || !/^[a-z0-9-]+$/.test(name)) {
@@ -114,19 +115,16 @@ exe.post("/vms/:name/restart", async (c) => {
   return c.json({ success: true });
 });
 
-/**
- * Schema for exec command
- */
 const ExecSchema = z.object({
   command: z.string().min(1).max(10000),
   timeout: z.number().int().min(1000).max(300000).optional(),
 });
 
 /**
- * POST /api/exe/vms/:name/exec
+ * POST /vms/:name/exec
  * Run a command inside a VM
  */
-exe.post("/vms/:name/exec", async (c) => {
+app.post("/vms/:name/exec", async (c) => {
   const name = c.req.param("name");
 
   if (!name || !/^[a-z0-9-]+$/.test(name)) {
@@ -159,4 +157,13 @@ exe.post("/vms/:name/exec", async (c) => {
   });
 });
 
-export { exe };
+app.notFound((c) => c.json({ error: "Not found" }, 404));
+
+app.onError((err, c) => handleError(err, c));
+
+console.log(`[${extensionId}] Starting server on port ${port}`);
+
+export default {
+  port,
+  fetch: app.fetch,
+};

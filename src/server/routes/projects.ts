@@ -34,6 +34,11 @@ import {
 import { requireProjectAccess } from "@/auth/middleware.ts";
 import { ValidationError, ForbiddenError } from "@/utils/errors.ts";
 import { ProjectConfigService } from "@/config/project.ts";
+import {
+  ExtensionRegistry,
+  startExtensionServer,
+  stopExtensionServer,
+} from "@/extensions/index.ts";
 
 const projects = new Hono();
 
@@ -437,6 +442,12 @@ projects.post("/:id/extensions/:extensionId/enable", async (c) => {
 
   ProjectConfigService.enableExtension(project.path, extensionId);
 
+  // Start the extension server if not already running
+  const extension = ExtensionRegistry.get(extensionId);
+  if (extension) {
+    await startExtensionServer(extension);
+  }
+
   return c.json({
     data: {
       enabled: true,
@@ -461,6 +472,9 @@ projects.post("/:id/extensions/:extensionId/disable", async (c) => {
   }
 
   ProjectConfigService.disableExtension(project.path, extensionId);
+
+  // Stop the extension server
+  await stopExtensionServer(extensionId);
 
   return c.json({
     data: {

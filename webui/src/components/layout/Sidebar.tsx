@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -10,10 +10,11 @@ import { ProcessesPanel } from "@/components/processes/ProcessesPanel";
 import { ServicesPanel } from "@/components/services/ServicesPanel";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { GitPanel as GitPanelComponent } from "@/components/git/GitPanel";
-import { ExePanel } from "@/components/exe/ExePanel";
+import { ExeSidebarPanel } from "@/extensions/exe/components/ExeSidebarPanel";
 import { ExtensionsPanel } from "@/components/extensions/ExtensionsPanel";
 import { DockerSidebarPanel } from "@/extensions/docker/components/DockerSidebarPanel";
-import { useProjects, useWorkflows, useCreateWorkflow, useSettings } from "@/lib/api/queries";
+import { SearchSidebarPanel } from "@/extensions/search/components/SearchSidebarPanel";
+import { useProjects, useWorkflows, useCreateWorkflow } from "@/lib/api/queries";
 import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -26,13 +27,12 @@ const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; l
   { id: "workflows", icon: Workflow, label: "Workflows" },
 ];
 
-const EXE_PANEL = { id: "exe" as SidebarPanelType, icon: Server, label: "Exe VMs" };
-const EXTENSIONS_PANEL = { id: "extensions" as SidebarPanelType, icon: Puzzle, label: "Extensions" };
-
 // Map of extension icons
 const EXTENSION_ICONS: Record<string, typeof Box> = {
   box: Box,
   container: Box,
+  server: Server,
+  search: Search,
 };
 
 export function Sidebar() {
@@ -46,17 +46,12 @@ export function Sidebar() {
     selectedProjectId,
   } = useUI();
 
-  const { data: settings } = useSettings();
   const { data: extensions } = useExtensions();
   const { data: projectExtensions } = useProjectExtensions(selectedProjectId || "");
 
   // Build panel list based on enabled experiments and extensions
   const PROJECT_PANELS = useMemo(() => {
     const panels = [...BASE_PROJECT_PANELS];
-    if (settings?.exeEnabled) {
-      panels.push(EXE_PANEL);
-    }
-
     // Add enabled extension panels
     const enabledExtensionIds = projectExtensions?.enabled || [];
     if (extensions) {
@@ -74,7 +69,7 @@ export function Sidebar() {
     }
 
     return panels;
-  }, [settings?.exeEnabled, extensions, projectExtensions?.enabled]);
+  }, [extensions, projectExtensions?.enabled]);
 
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -356,7 +351,7 @@ function SidebarPanelContent({ panel }: { panel: string }) {
     case "workflows":
       return <WorkflowsPanel selectedProjectId={selectedProjectId} />;
     case "exe":
-      return <ExePanel />;
+      return <ExeSidebarPanel />;
     case "extensions":
       return selectedProjectId ? (
         <ExtensionsPanel projectId={selectedProjectId} />
@@ -365,6 +360,8 @@ function SidebarPanelContent({ panel }: { panel: string }) {
           Select a project to manage extensions
         </div>
       );
+    case "search":
+      return <SearchSidebarPanel />;
     case "docker":
       return <DockerSidebarPanel />;
     case "settings":
@@ -595,4 +592,3 @@ function WorkflowsPanel({ selectedProjectId }: { selectedProjectId: string | nul
     </div>
   );
 }
-

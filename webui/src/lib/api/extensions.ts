@@ -23,6 +23,8 @@ export function useExtensions() {
       const response = await apiClientRaw<Extension[]>("/api/extensions");
       return response.data;
     },
+    // Poll for status updates every 5 seconds
+    refetchInterval: 5000,
   });
 }
 
@@ -84,6 +86,8 @@ export function useEnableExtension() {
       ),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["projects", projectId, "extensions"] });
+      // Also invalidate extensions list to get updated server status
+      queryClient.invalidateQueries({ queryKey: ["extensions"] });
     },
   });
 }
@@ -102,6 +106,8 @@ export function useDisableExtension() {
       ),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["projects", projectId, "extensions"] });
+      // Also invalidate extensions list to get updated server status
+      queryClient.invalidateQueries({ queryKey: ["extensions"] });
     },
   });
 }

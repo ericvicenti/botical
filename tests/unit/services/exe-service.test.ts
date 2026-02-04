@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll, setSystemTime } from "bun:test";
-import { ExeService, type ExeVM } from "@/services/exe-service";
+import { ExeService, type ExeVM } from "@/extensions/exe/exe-service";
 
 // Helper to wait for a condition
 async function waitFor(

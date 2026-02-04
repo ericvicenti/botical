@@ -183,8 +183,6 @@ export interface AppSettings {
   // Agent Classes
   agentClasses: AgentClass[];
   defaultAgentClass: string; // ID of default agent class
-  // Experiments
-  exeEnabled?: boolean;
 }
 
 export function getSettings(): AppSettings {
@@ -1557,114 +1555,6 @@ export function useGenerateCommitMessage() {
       apiClient<{ message: string }>(`/api/projects/${projectId}/git/generate-message`, {
         method: "POST",
         body: JSON.stringify({ diff, userId, providerId, apiKey }),
-      }),
-  });
-}
-
-// Exe.dev VMs
-export interface ExeVM {
-  name: string;
-  status: "running" | "stopped" | "creating" | "unknown";
-  created?: string;
-  image?: string;
-  cpus?: number;
-  memory?: string;
-  disk?: string;
-  url?: string;
-}
-
-export interface ExeStatus {
-  connected: boolean;
-  authenticated: boolean;
-  error?: string;
-}
-
-export interface ExeExecResult {
-  success: boolean;
-  output: string;
-  error?: string;
-  exitCode: number;
-}
-
-export function useExeStatus() {
-  return useQuery({
-    queryKey: ["exe", "status"],
-    queryFn: async () => {
-      const response = await apiClientRaw<ExeStatus>("/api/exe/status");
-      return response.data;
-    },
-    staleTime: 30000, // Cache for 30 seconds
-  });
-}
-
-export function useExeVMs() {
-  return useQuery({
-    queryKey: ["exe", "vms"],
-    queryFn: async () => {
-      const response = await apiClientRaw<ExeVM[]>("/api/exe/vms");
-      return response.data;
-    },
-    refetchInterval: 10000, // Poll every 10 seconds
-  });
-}
-
-export function useCreateExeVM() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: { name?: string; image?: string } = {}) =>
-      apiClient<ExeVM>("/api/exe/vms", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exe", "vms"] });
-    },
-  });
-}
-
-export function useDeleteExeVM() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ name }: { name: string }) =>
-      apiClient<{ success: boolean }>(`/api/exe/vms/${name}`, {
-        method: "DELETE",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exe", "vms"] });
-    },
-  });
-}
-
-export function useRestartExeVM() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ name }: { name: string }) =>
-      apiClient<{ success: boolean }>(`/api/exe/vms/${name}/restart`, {
-        method: "POST",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exe", "vms"] });
-    },
-  });
-}
-
-export function useExeExec() {
-  return useMutation({
-    mutationFn: ({
-      name,
-      command,
-      timeout,
-    }: {
-      name: string;
-      command: string;
-      timeout?: number;
-    }) =>
-      apiClient<ExeExecResult>(`/api/exe/vms/${name}/exec`, {
-        method: "POST",
-        body: JSON.stringify({ command, timeout }),
       }),
   });
 }

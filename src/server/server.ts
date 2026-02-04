@@ -7,6 +7,8 @@ import { registerCoreTools } from "../tools/index.ts";
 import { registerAllActions } from "../actions/index.ts";
 import { ServiceRunner } from "../services/service-runner.ts";
 import { ExtensionRegistry, startExtensionServer, stopAllExtensionServers } from "../extensions/index.ts";
+import { ProjectService } from "../services/projects.ts";
+import { ProjectConfigService } from "../config/project.ts";
 
 export interface ServerOptions {
   port?: number;
@@ -63,9 +65,29 @@ export async function createServer(
     console.error("Failed to start auto-start services:", error);
   });
 
-  // Start extension servers (don't await - let them start in background)
+  // Start extension servers only for extensions enabled in at least one project
   (async () => {
+    // Get all enabled extensions across all projects
+    const rootDb = DatabaseManager.getRootDb();
+    const projects = ProjectService.list(rootDb, {});
+    const enabledExtensionIds = new Set<string>();
+
+    for (const project of projects) {
+      if (project.path) {
+        const enabled = ProjectConfigService.getEnabledExtensions(project.path);
+        for (const id of enabled) {
+          enabledExtensionIds.add(id);
+        }
+      }
+    }
+
+    // Only start extensions that are enabled in at least one project
     for (const extension of ExtensionRegistry.getAll()) {
+      if (!enabledExtensionIds.has(extension.id)) {
+        console.log(`[ExtensionManager] Skipping extension ${extension.id} (not enabled in any project)`);
+        continue;
+      }
+
       try {
         await startExtensionServer(extension);
       } catch (error) {

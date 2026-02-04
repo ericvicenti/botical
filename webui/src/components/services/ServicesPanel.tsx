@@ -4,7 +4,7 @@ import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { ServiceItem } from "@/components/processes/ServiceItem";
 import type { Service, Extension } from "@/lib/api/types";
 import { cn } from "@/lib/utils/cn";
-import { Plus, Radio, ChevronDown, ChevronRight, Box, Search, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Radio, ChevronDown, ChevronRight, Box, Search, Server, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 
 interface ServicesPanelProps {
   projectId: string;
@@ -198,6 +198,8 @@ function ExtensionServiceItem({ extension }: { extension: Extension }) {
 
   const getExtensionIcon = () => {
     switch (extension.icon) {
+      case "server":
+        return <Server className="w-4 h-4" />;
       case "search":
         return <Search className="w-4 h-4" />;
       case "box":

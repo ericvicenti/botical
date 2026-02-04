@@ -14,7 +14,6 @@ export { default as files } from "./files.ts";
 export { projectGit, gitClone, gitIdentity } from "./git.ts";
 export { workflows } from "./workflows.ts";
 export { workflowExecutions } from "./workflow-executions.ts";
-export { exe } from "./exe.ts";
 export { filesystem } from "./filesystem.ts";
 export { skills } from "./skills.ts";
 export { templates } from "./templates.ts";

@@ -83,6 +83,16 @@ test.describe("Search Extension", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("iris:ui", JSON.stringify({
+        selectedProjectId: null,
+        sidebarWidth: 240,
+        sidebarCollapsed: false,
+        sidebarPanel: "extensions",
+        theme: "system",
+      }));
+    });
+
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -120,8 +130,6 @@ test.describe("Search Extension", () => {
     });
 
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
   });
 
   test.describe("Extension Registration", () => {
@@ -139,9 +147,6 @@ test.describe("Search Extension", () => {
 
       // Select project
       await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-      // Click extensions button
-      await page.getByTestId("extensions-button").click();
 
       // Search extension should be listed
       await expect(page.getByTestId("extension-card-search")).toBeVisible();
@@ -163,9 +168,6 @@ test.describe("Search Extension", () => {
 
       // Select project
       await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-      // Click extensions button
-      await page.getByTestId("extensions-button").click();
 
       // Toggle should be visible
       const toggle = page.getByTestId("extension-toggle-search");
@@ -204,9 +206,6 @@ test.describe("Search Extension", () => {
 
       // Select project
       await page.getByRole("button", { name: "Test Project", exact: true }).click();
-
-      // Click extensions button
-      await page.getByTestId("extensions-button").click();
 
       // Click toggle to enable
       const toggle = page.getByTestId("extension-toggle-search");

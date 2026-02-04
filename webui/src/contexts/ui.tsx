@@ -7,7 +7,7 @@ const DEFAULT_SIDEBAR_WIDTH = 240;
 const MIN_SIDEBAR_WIDTH = 180;
 const MAX_SIDEBAR_WIDTH = 480;
 
-export type SidebarPanel = "tasks" | "files" | "git" | "run" | "services" | "workflows" | "exe" | "settings" | "extensions" | "docker";
+export type SidebarPanel = "tasks" | "files" | "git" | "run" | "services" | "workflows" | "exe" | "settings" | "extensions" | "docker" | "search";
 export type ThemePreference = "dark" | "light" | "system";
 export type ResolvedTheme = "dark" | "light";
 
