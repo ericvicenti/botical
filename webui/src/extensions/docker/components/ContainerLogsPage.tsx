@@ -61,15 +61,21 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
         .join("\n")
     : "";
 
+  const selectClassName = cn(
+    "px-2 py-1 text-sm rounded border border-border",
+    "bg-bg-primary text-text-primary",
+    "focus:outline-none focus:border-accent-primary transition-colors"
+  );
+
   return (
-    <div className="h-full flex flex-col bg-zinc-950">
+    <div className="h-full flex flex-col bg-bg-primary">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
-          <Terminal className="w-5 h-5 text-green-400" />
+          <Terminal className="w-5 h-5 text-accent-success" />
           <div>
-            <h1 className="text-lg font-medium">Logs</h1>
-            <div className="text-xs text-zinc-500">{containerName || containerId}</div>
+            <h1 className="text-lg font-medium text-text-primary">Logs</h1>
+            <div className="text-xs text-text-muted">{containerName || containerId}</div>
           </div>
         </div>
 
@@ -79,7 +85,7 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
           <select
             value={tail}
             onChange={(e) => setTail(Number(e.target.value))}
-            className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-sm"
+            className={selectClassName}
           >
             <option value={50}>Last 50 lines</option>
             <option value={100}>Last 100 lines</option>
@@ -88,12 +94,12 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
           </select>
 
           {/* Auto-scroll toggle */}
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
             <input
               type="checkbox"
               checked={autoScroll}
               onChange={(e) => setAutoScroll(e.target.checked)}
-              className="rounded"
+              className="rounded border-border"
             />
             Auto-scroll
           </label>
@@ -102,7 +108,10 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-2 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-sm"
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded text-sm",
+              "bg-bg-elevated hover:bg-bg-surface text-text-primary transition-colors"
+            )}
           >
             <RefreshCw className={cn("w-3.5 h-3.5", isFetching && "animate-spin")} />
             Refresh
@@ -112,7 +121,11 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
           <button
             onClick={handleDownload}
             disabled={!logs}
-            className="flex items-center gap-2 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-sm disabled:opacity-50"
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded text-sm",
+              "bg-bg-elevated hover:bg-bg-surface text-text-primary transition-colors",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
           >
             <Download className="w-3.5 h-3.5" />
             Download
@@ -124,20 +137,20 @@ export function ContainerLogsPage({ params }: ContainerLogsPageProps) {
       <div className="flex-1 overflow-hidden">
         {isLoading && !logs ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-text-muted" />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
-            <div className="text-zinc-400">Failed to load logs</div>
-            <div className="text-sm text-zinc-500 mt-1">{error.message}</div>
+            <AlertCircle className="w-8 h-8 text-accent-error mb-2" />
+            <div className="text-text-secondary">Failed to load logs</div>
+            <div className="text-sm text-text-muted mt-1">{error.message}</div>
           </div>
         ) : (
           <pre
             ref={logsContainerRef}
-            className="h-full overflow-auto p-4 text-xs font-mono leading-relaxed"
+            className="h-full overflow-auto p-4 text-xs font-mono leading-relaxed text-text-primary"
           >
-            {cleanLogs || <span className="text-zinc-500">No logs available</span>}
+            {cleanLogs || <span className="text-text-muted">No logs available</span>}
           </pre>
         )}
       </div>
