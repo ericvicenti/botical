@@ -438,6 +438,7 @@ export interface FileEntry {
   type: "file" | "directory";
   size?: number;
   modified?: number;
+  isHidden?: boolean;
 }
 
 export interface FileContent {

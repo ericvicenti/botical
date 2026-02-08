@@ -27,6 +27,7 @@ interface FileEntry {
   type: "file" | "directory";
   size?: number;
   modified?: number;
+  isHidden?: boolean;
 }
 
 /**
@@ -172,8 +173,8 @@ async function collectFilesRecursively(
     for (const entry of entries) {
       if (files.length >= maxFiles) break;
 
-      // Skip hidden files and ignored directories
-      if (entry.name.startsWith(".")) continue;
+      // Skip ignored directories but allow hidden files
+      // if (entry.name.startsWith(".")) continue;
       if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) continue;
 
       const relativePath = currentPath ? path.join(currentPath, entry.name) : entry.name;
@@ -285,8 +286,8 @@ files.get("/:projectId/files", async (c) => {
     const fileList: FileEntry[] = [];
 
     for (const entry of entries) {
-      // Skip hidden files and common ignored directories
-      if (entry.name.startsWith(".") || entry.name === "node_modules") {
+      // Skip common ignored directories but allow hidden files
+      if (entry.name === "node_modules") {
         continue;
       }
 
@@ -301,6 +302,7 @@ files.get("/:projectId/files", async (c) => {
           type: entry.isDirectory() ? "directory" : "file",
           size: entry.isFile() ? entryStat.size : undefined,
           modified: entryStat.mtimeMs,
+          isHidden: entry.name.startsWith("."),
         });
       } catch {
         // Skip entries we can't stat

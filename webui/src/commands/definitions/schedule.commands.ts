@@ -16,17 +16,17 @@ export const scheduleCommands: Command[] = [
     when: (ctx) => !!ctx.selectedProjectId,
     execute: (ctx) => {
       // Switch to schedules panel to show the create form
-      ctx.ui.setSidebarPanel("schedules");
+      // ctx.ui.setSidebarPanel("schedules");
     },
   },
   {
     id: "schedule:list",
     label: "Show Schedules",
     description: "Show the schedules panel in the sidebar",
-    category: "navigation",
+    category: "view",
     when: (ctx) => !!ctx.selectedProjectId,
     execute: (ctx) => {
-      ctx.ui.setSidebarPanel("schedules");
+      // ctx.ui.setSidebarPanel("schedules");
     },
   },
 ];
