@@ -376,7 +376,7 @@ function CreateServiceForm({ projectId, onClose }: CreateServiceFormProps) {
               className="rounded border-border"
             />
             <span className="text-sm text-text-secondary">
-              Auto-start when Iris launches
+              Auto-start when Botical launches
             </span>
           </label>
         </div>

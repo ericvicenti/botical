@@ -1,6 +1,6 @@
 # Hosting Infrastructure
 
-This document describes the production hosting setup for Iris on [exe.dev](https://exe.dev), including the current deployment at `iris.vicenti.net`.
+This document describes the production hosting setup for Botical on [exe.dev](https://exe.dev), including the current deployment at `botical.vicenti.net`.
 
 ## Architecture Overview
 
@@ -8,11 +8,11 @@ This document describes the production hosting setup for Iris on [exe.dev](https
 Internet
     │
     ▼
-iris.vicenti.net (custom domain)
+botical.vicenti.net (custom domain)
     │
     │ CNAME
     ▼
-iris-vicenti.exe.xyz (exe.dev hostname)
+botical-vicenti.exe.xyz (exe.dev hostname)
     │
     ▼
 exe.dev Reverse Proxy
@@ -39,31 +39,31 @@ Bun Server (Hono)
 
 ### Port Requirements
 
-exe.dev's reverse proxy only forwards to ports 3000-9999. Iris uses **port 8000** for this reason.
+exe.dev's reverse proxy only forwards to ports 3000-9999. Botical uses **port 8000** for this reason.
 
 ## Components
 
-### 1. Systemd Service (`iris.service`)
+### 1. Systemd Service (`botical.service`)
 
-The Iris server runs as a systemd service for automatic startup and restart on failure.
+The Botical server runs as a systemd service for automatic startup and restart on failure.
 
-**Location on server:** `/etc/systemd/system/iris.service`
+**Location on server:** `/etc/systemd/system/botical.service`
 
 **Configuration:**
 ```ini
 [Unit]
-Description=Iris AI Agent Server
+Description=Botical AI Agent Server
 After=network.target
 
 [Service]
 Type=simple
 User=<auto-detected>
-WorkingDirectory=$HOME/iris
+WorkingDirectory=$HOME/botical
 Environment=NODE_ENV=production
-Environment=IRIS_PORT=8000
-Environment=IRIS_HOST=0.0.0.0
-Environment=IRIS_STATIC_DIR=$HOME/iris/webui/dist
-Environment=IRIS_DATA_DIR=$HOME/.iris
+Environment=BOTICAL_PORT=8000
+Environment=BOTICAL_HOST=0.0.0.0
+Environment=BOTICAL_STATIC_DIR=$HOME/botical/webui/dist
+Environment=BOTICAL_DATA_DIR=$HOME/.botical
 ExecStart=$HOME/.bun/bin/bun run src/index.ts
 Restart=always
 RestartSec=5
@@ -75,16 +75,16 @@ WantedBy=multi-user.target
 **Management commands:**
 ```bash
 # View status
-ssh iris-vicenti.exe.xyz systemctl status iris
+ssh botical-vicenti.exe.xyz systemctl status botical
 
 # View logs
-ssh iris-vicenti.exe.xyz journalctl -u iris -f
+ssh botical-vicenti.exe.xyz journalctl -u botical -f
 
 # Restart service
-ssh iris-vicenti.exe.xyz sudo systemctl restart iris
+ssh botical-vicenti.exe.xyz sudo systemctl restart botical
 
 # Stop service
-ssh iris-vicenti.exe.xyz sudo systemctl stop iris
+ssh botical-vicenti.exe.xyz sudo systemctl stop botical
 ```
 
 ### 2. GitHub Actions Runner
@@ -98,13 +98,13 @@ A self-hosted GitHub Actions runner enables automatic deployment on every push t
 **Management:**
 ```bash
 # View runner status
-ssh iris-vicenti.exe.xyz sudo systemctl status gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl status gh-actions-runner
 
 # View runner logs
-ssh iris-vicenti.exe.xyz sudo journalctl -u gh-actions-runner -f
+ssh botical-vicenti.exe.xyz sudo journalctl -u gh-actions-runner -f
 
 # Restart runner
-ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
 ```
 
 ### 3. Deploy Key (SSH)
@@ -113,10 +113,10 @@ The server uses an SSH deploy key to pull from GitHub. The key is stored at `~/.
 
 To view the public key (if you need to re-add it to GitHub):
 ```bash
-ssh iris-vicenti.exe.xyz cat ~/.ssh/id_ed25519.pub
+ssh botical-vicenti.exe.xyz cat ~/.ssh/id_ed25519.pub
 ```
 
-Add deploy keys at: https://github.com/ericvicenti/iris/settings/keys
+Add deploy keys at: https://github.com/ericvicenti/botical/settings/keys
 
 ### 4. exe.dev Proxy Configuration
 
@@ -126,17 +126,17 @@ The proxy is configured to:
 
 ```bash
 # These commands were run during initial setup:
-ssh exe.dev share port iris-vicenti 8000
-ssh exe.dev share set-public iris-vicenti
+ssh exe.dev share port botical-vicenti 8000
+ssh exe.dev share set-public botical-vicenti
 ```
 
 ## Custom Domain Setup
 
 ### DNS Configuration
 
-For `iris.vicenti.net`, add a CNAME record:
+For `botical.vicenti.net`, add a CNAME record:
 ```
-iris.vicenti.net  CNAME  iris-vicenti.exe.xyz
+botical.vicenti.net  CNAME  botical-vicenti.exe.xyz
 ```
 
 exe.dev automatically provisions TLS certificates when it detects the domain pointing to its servers.
@@ -166,14 +166,14 @@ Triggered on:
 1. **Pull latest code** - `git fetch && git reset --hard origin/main`
 2. **Install dependencies** - `bun install` (root and webui)
 3. **Build frontend** - `cd webui && bun run build`
-4. **Restart service** - `sudo systemctl restart iris`
+4. **Restart service** - `sudo systemctl restart botical`
 5. **Health check** - `curl http://localhost:8000/health`
 
 ### Viewing Deployment Status
 
-- GitHub Actions: https://github.com/ericvicenti/iris/actions
-- Runner status: `ssh iris-vicenti.exe.xyz sudo systemctl status gh-actions-runner`
-- Service logs: `ssh iris-vicenti.exe.xyz journalctl -u iris -f`
+- GitHub Actions: https://github.com/ericvicenti/botical/actions
+- Runner status: `ssh botical-vicenti.exe.xyz sudo systemctl status gh-actions-runner`
+- Service logs: `ssh botical-vicenti.exe.xyz journalctl -u botical -f`
 
 ## Security Configuration
 
@@ -198,24 +198,24 @@ Traffic between the proxy and the app is plain HTTP on localhost.
 ### Data Location
 
 ```
-~/.iris/
-├── iris.db          # Root database (users, projects metadata)
+~/.botical/
+├── botical.db          # Root database (users, projects metadata)
 └── projects/        # Per-project SQLite databases
     └── <project-id>/
         └── project.db
 ```
 
-**Backup recommendation:** Regularly backup `~/.iris/` directory.
+**Backup recommendation:** Regularly backup `~/.botical/` directory.
 
 ## Environment Variables
 
 | Variable | Value | Description |
 |----------|-------|-------------|
 | `NODE_ENV` | `production` | Enables production optimizations |
-| `IRIS_PORT` | `8000` | HTTP port (exe.dev requires 3000-9999) |
-| `IRIS_HOST` | `0.0.0.0` | Listen on all interfaces |
-| `IRIS_STATIC_DIR` | `$HOME/iris/webui/dist` | Built frontend files |
-| `IRIS_DATA_DIR` | `$HOME/.iris` | Database and data storage |
+| `BOTICAL_PORT` | `8000` | HTTP port (exe.dev requires 3000-9999) |
+| `BOTICAL_HOST` | `0.0.0.0` | Listen on all interfaces |
+| `BOTICAL_STATIC_DIR` | `$HOME/botical/webui/dist` | Built frontend files |
+| `BOTICAL_DATA_DIR` | `$HOME/.botical` | Database and data storage |
 
 ## Manual Server Access
 
@@ -223,7 +223,7 @@ Traffic between the proxy and the app is plain HTTP on localhost.
 
 ```bash
 # Direct to VM
-ssh iris-vicenti.exe.xyz
+ssh botical-vicenti.exe.xyz
 
 # Or via exe.dev portal
 ssh exe.dev
@@ -233,11 +233,11 @@ ssh exe.dev
 
 | Path | Description |
 |------|-------------|
-| `~/iris/` | Application code (git repo) |
-| `~/.iris/` | Data directory |
+| `~/botical/` | Application code (git repo) |
+| `~/.botical/` | Data directory |
 | `~/.bun/` | Bun runtime |
 | `~/actions-runner/` | GitHub Actions runner |
-| `/etc/systemd/system/iris.service` | Iris service file |
+| `/etc/systemd/system/botical.service` | Botical service file |
 | `/etc/systemd/system/gh-actions-runner.service` | Runner service file |
 
 ## Troubleshooting
@@ -246,7 +246,7 @@ ssh exe.dev
 
 Check logs for errors:
 ```bash
-ssh iris-vicenti.exe.xyz journalctl -u iris -n 50 --no-pager
+ssh botical-vicenti.exe.xyz journalctl -u botical -n 50 --no-pager
 ```
 
 Common issues:
@@ -257,16 +257,16 @@ Common issues:
 ### Deployment fails
 
 Check GitHub Actions logs:
-https://github.com/ericvicenti/iris/actions
+https://github.com/ericvicenti/botical/actions
 
 Check runner status:
 ```bash
-ssh iris-vicenti.exe.xyz sudo systemctl status gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl status gh-actions-runner
 ```
 
 If runner is offline, restart it:
 ```bash
-ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
 ```
 
 ### SSL certificate issues
@@ -280,7 +280,7 @@ exe.dev handles certificates automatically. If issues occur:
 
 Test locally on server:
 ```bash
-ssh iris-vicenti.exe.xyz curl http://localhost:8000/health
+ssh botical-vicenti.exe.xyz curl http://localhost:8000/health
 ```
 
 If it returns `{"status":"ok"}`, the issue is with the proxy. If it fails, check the service logs.

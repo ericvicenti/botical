@@ -171,9 +171,9 @@ test.describe("Conversation", () => {
     // Set up localStorage with API key
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
       localStorage.setItem(
-        "iris:settings",
+        "botical:settings",
         JSON.stringify({
           defaultProvider: "anthropic",
           userId: "test-user",
@@ -236,9 +236,9 @@ test.describe("Conversation", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
       localStorage.setItem(
-        "iris:settings",
+        "botical:settings",
         JSON.stringify({
           defaultProvider: "anthropic",
           userId: "test-user",
@@ -328,9 +328,9 @@ test.describe("Conversation", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
       localStorage.setItem(
-        "iris:settings",
+        "botical:settings",
         JSON.stringify({
           defaultProvider: "anthropic",
           userId: "test-user",
@@ -394,9 +394,9 @@ test.describe("Conversation", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
       localStorage.setItem(
-        "iris:settings",
+        "botical:settings",
         JSON.stringify({
           defaultProvider: "anthropic",
           userId: "test-user",

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Iris supports multiple users working on the same project with:
+Botical supports multiple users working on the same project with:
 - Email-based magic link authentication (passwordless)
 - Session sharing
 - Role-based access control
@@ -11,7 +11,7 @@ Iris supports multiple users working on the same project with:
 
 ### Magic Link Authentication
 
-Iris uses passwordless email-based authentication with magic links. This provides:
+Botical uses passwordless email-based authentication with magic links. This provides:
 - No passwords to remember or manage
 - Reduced attack surface (no password database)
 - Simple user experience
@@ -227,7 +227,7 @@ export class ApiKeyService {
 
     // Generate random key with prefix
     const keyBytes = randomBytes(32);
-    const apiKey = `iris_${keyBytes.toString('base64url')}`;
+    const apiKey = `botical_${keyBytes.toString('base64url')}`;
     const keyHash = hashSha256(apiKey);
     const keyPrefix = apiKey.slice(0, 12);
 
@@ -257,7 +257,7 @@ export class ApiKeyService {
 
   // Validate API key
   static validate(apiKey: string): ApiKeyValidation | null {
-    if (!apiKey.startsWith('iris_')) return null;
+    if (!apiKey.startsWith('botical_')) return null;
 
     const keyHash = hashSha256(apiKey);
     const rootDb = DatabaseManager.getRootDb();
@@ -316,11 +316,11 @@ export class EmailService {
       body: JSON.stringify({
         from: config.fromEmail,
         to: email,
-        subject: 'Your Iris Login Link',
+        subject: 'Your Botical Login Link',
         html: `
-          <h1>Login to Iris</h1>
+          <h1>Login to Botical</h1>
           <p>Click the link below to log in:</p>
-          <a href="${magicLink}">Log in to Iris</a>
+          <a href="${magicLink}">Log in to Botical</a>
           <p>This link expires in 15 minutes.</p>
         `,
       }),

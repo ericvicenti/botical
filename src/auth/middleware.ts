@@ -6,8 +6,8 @@
  *
  * Supports:
  * - Authorization header: Bearer <token>
- * - Cookie: iris_session=<token>
- * - API keys: iris_<key>
+ * - Cookie: botical_session=<token>
+ * - API keys: botical_<key>
  */
 
 import type { MiddlewareHandler, Context } from "hono";
@@ -40,7 +40,7 @@ function extractToken(c: Context): string | undefined {
   // Check cookie
   const cookieHeader = c.req.header("Cookie");
   if (cookieHeader) {
-    const match = cookieHeader.match(/iris_session=([^;]+)/);
+    const match = cookieHeader.match(/botical_session=([^;]+)/);
     if (match) {
       return match[1];
     }
@@ -63,7 +63,7 @@ function getUser(userId: string): UserRow | null {
 function validateApiKey(
   apiKey: string
 ): { id: string; userId: string; projectId: string | null } | null {
-  if (!apiKey.startsWith("iris_")) {
+  if (!apiKey.startsWith("botical_")) {
     return null;
   }
 
@@ -104,7 +104,7 @@ async function extractAuth(c: Context): Promise<AuthContext | null> {
   if (!token) return null;
 
   // Check if it's an API key
-  if (token.startsWith("iris_")) {
+  if (token.startsWith("botical_")) {
     const validation = validateApiKey(token);
     if (!validation) return null;
 

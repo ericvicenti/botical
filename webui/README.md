@@ -1,10 +1,10 @@
-# Iris Web UI
+# Botical Web UI
 
-Web interface for the Iris AI agent platform - a mission-oriented development environment.
+Web interface for the Botical AI agent platform - a mission-oriented development environment.
 
 ## Vision
 
-Iris Web UI is a **lightweight IDE with AI agents at its core**. Users work across multiple projects via tabs, with AI-powered "missions" handling focused, autonomous work.
+Botical Web UI is a **lightweight IDE with AI agents at its core**. Users work across multiple projects via tabs, with AI-powered "missions" handling focused, autonomous work.
 
 **Key Features:**
 - Mission-first workflow (plan → approve → execute)
@@ -57,7 +57,7 @@ bun install
 bun run dev
 ```
 
-The dev server proxies API calls to the Iris backend.
+The dev server proxies API calls to the Botical backend.
 
 ## Tech Stack
 

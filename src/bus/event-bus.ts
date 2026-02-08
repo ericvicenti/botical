@@ -4,7 +4,7 @@
  * Provides decoupled communication between components using pub/sub pattern.
  * See: docs/knowledge-base/04-patterns.md#event-bus-pattern
  *
- * The event bus is central to Iris's event-driven architecture:
+ * The event bus is central to Botical's event-driven architecture:
  * - Services publish events when state changes
  * - WebSocket bridge subscribes to broadcast to clients
  * - Components can subscribe with pattern matching (e.g., "message.*")
@@ -14,8 +14,8 @@
 
 import { generateId } from "../utils/id.ts";
 import type {
-  IrisEvent,
-  IrisEventType,
+  BoticalEvent,
+  BoticalEventType,
   EventEnvelope,
   EventSubscriber,
   EventPattern,
@@ -73,7 +73,7 @@ class EventBusSingleton {
   /**
    * Publish an event for a specific project
    */
-  publish(projectId: string, event: IrisEvent): EventEnvelope {
+  publish(projectId: string, event: BoticalEvent): EventEnvelope {
     const envelope: EventEnvelope = {
       id: generateId("evt"),
       timestamp: Date.now(),
@@ -88,7 +88,7 @@ class EventBusSingleton {
   /**
    * Publish a global event (not scoped to a project)
    */
-  publishGlobal(event: IrisEvent): EventEnvelope {
+  publishGlobal(event: BoticalEvent): EventEnvelope {
     const envelope: EventEnvelope = {
       id: generateId("evt"),
       timestamp: Date.now(),

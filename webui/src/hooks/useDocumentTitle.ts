@@ -4,7 +4,7 @@ import { useTabs } from "@/contexts/tabs";
 import { parseUrlToTabData, generateTabId } from "@/lib/tabs";
 import type { PageDefinition } from "@/primitives/types";
 
-const APP_NAME = "Iris";
+const APP_NAME = "Botical";
 
 /**
  * Get the document title for a page.
@@ -22,7 +22,7 @@ export function getPageDocumentTitle(
 }
 
 /**
- * Set the document title. Automatically appends " - Iris" suffix.
+ * Set the document title. Automatically appends " - Botical" suffix.
  */
 export function useDocumentTitle(title?: string) {
   useEffect(() => {

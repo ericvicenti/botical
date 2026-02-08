@@ -1,8 +1,8 @@
 /**
- * Iris SSH Identity Service
+ * Botical SSH Identity Service
  *
- * Manages Iris's SSH keypair for git authentication.
- * Generates an ED25519 keypair on first run and stores it in ~/.iris/
+ * Manages Botical's SSH keypair for git authentication.
+ * Generates an ED25519 keypair on first run and stores it in ~/.botical/
  *
  * Users can add the public key to GitHub/GitLab to authenticate git operations.
  * See: docs/knowledge-base/04-patterns.md#ssh-identity
@@ -13,17 +13,17 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, chmodSync } from "f
 import { join } from "path";
 import { homedir } from "os";
 
-// Iris data directory
-const IRIS_DIR = join(homedir(), ".iris");
-const PRIVATE_KEY_PATH = join(IRIS_DIR, "id_ed25519");
-const PUBLIC_KEY_PATH = join(IRIS_DIR, "id_ed25519.pub");
+// Botical data directory
+const BOTICAL_DIR = join(homedir(), ".botical");
+const PRIVATE_KEY_PATH = join(BOTICAL_DIR, "id_ed25519");
+const PUBLIC_KEY_PATH = join(BOTICAL_DIR, "id_ed25519.pub");
 
 /**
- * Ensure the Iris directory exists with proper permissions
+ * Ensure the Botical directory exists with proper permissions
  */
-function ensureIrisDir(): void {
-  if (!existsSync(IRIS_DIR)) {
-    mkdirSync(IRIS_DIR, { recursive: true, mode: 0o700 });
+function ensureBoticalDir(): void {
+  if (!existsSync(BOTICAL_DIR)) {
+    mkdirSync(BOTICAL_DIR, { recursive: true, mode: 0o700 });
   }
 }
 
@@ -59,7 +59,7 @@ function pemToOpenSSH(pemPublicKey: string): string {
     rawKey,
   ]);
 
-  return `ssh-ed25519 ${sshKey.toString("base64")} iris@local`;
+  return `ssh-ed25519 ${sshKey.toString("base64")} botical@local`;
 }
 
 /**
@@ -82,11 +82,11 @@ function calculateFingerprint(publicKeyOpenSSH: string): string {
 }
 
 /**
- * Generate a new ED25519 keypair for Iris
+ * Generate a new ED25519 keypair for Botical
  * Called automatically if no keypair exists
  */
 function generateKeypair(): void {
-  ensureIrisDir();
+  ensureBoticalDir();
 
   const { privateKey, publicKey } = generateKeyPairSync("ed25519", {
     privateKeyEncoding: {
@@ -114,7 +114,7 @@ function generateKeypair(): void {
 }
 
 /**
- * Ensure Iris has a valid SSH identity
+ * Ensure Botical has a valid SSH identity
  * Generates a keypair if one doesn't exist
  */
 export function ensureIdentity(): void {
@@ -152,7 +152,7 @@ export function getFingerprint(): string {
 
 /**
  * Get the SSH command to use for git operations
- * Configures git to use the Iris SSH identity
+ * Configures git to use the Botical SSH identity
  */
 export function getSshCommand(): string {
   const keyPath = getPrivateKeyPath();
@@ -178,7 +178,7 @@ export function getIdentityInfo(): {
 
 // Export paths for testing
 export const IDENTITY_PATHS = {
-  IRIS_DIR,
+  BOTICAL_DIR,
   PRIVATE_KEY_PATH,
   PUBLIC_KEY_PATH,
 };

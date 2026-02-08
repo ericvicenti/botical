@@ -2,7 +2,7 @@
  * Unified Workflow Service
  *
  * Combines workflows from multiple sources:
- * 1. YAML files in .iris/workflows/ (primary, file-based)
+ * 1. YAML files in .botical/workflows/ (primary, file-based)
  * 2. SQLite database (legacy, for backward compatibility)
  *
  * YAML workflows take precedence if there's a name conflict.

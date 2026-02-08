@@ -2,7 +2,7 @@
  * Unified Service Configuration Service
  *
  * Combines services from multiple sources:
- * 1. YAML files in .iris/services/ (primary, file-based)
+ * 1. YAML files in .botical/services/ (primary, file-based)
  * 2. SQLite database (legacy, for backward compatibility)
  *
  * YAML services take precedence if there's a name conflict.

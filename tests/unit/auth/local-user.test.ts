@@ -80,14 +80,14 @@ describe("LocalUserService", () => {
       };
       expect(afterUser).toBeDefined();
       expect(afterUser.id).toBe(LOCAL_USER_ID);
-      expect(afterUser.email).toBe("local@iris.local");
+      expect(afterUser.email).toBe("local@botical.local");
       expect(afterUser.username).toBe("Local User");
       expect(afterUser.is_admin).toBe(1);
       expect(afterUser.can_execute_code).toBe(1);
 
       // Verify auth context
       expect(authContext.userId).toBe(LOCAL_USER_ID);
-      expect(authContext.email).toBe("local@iris.local");
+      expect(authContext.email).toBe("local@botical.local");
       expect(authContext.isAdmin).toBe(true);
       expect(authContext.canExecuteCode).toBe(true);
     });

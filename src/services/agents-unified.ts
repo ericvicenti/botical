@@ -3,7 +3,7 @@
  *
  * Combines agents from multiple sources:
  * 1. Built-in agents (default, explore, plan)
- * 2. YAML files in .iris/agents/ (primary, file-based)
+ * 2. YAML files in .botical/agents/ (primary, file-based)
  * 3. SQLite database (legacy, for backward compatibility)
  *
  * Priority: Built-in > YAML > Database

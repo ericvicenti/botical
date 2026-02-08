@@ -13,7 +13,7 @@ describe("TemplateService", () => {
 
   beforeEach(async () => {
     // Create a temporary directory for tests
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "iris-templates-test-"));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "botical-templates-test-"));
   });
 
   afterEach(async () => {
@@ -28,13 +28,13 @@ describe("TemplateService", () => {
     });
 
     test("returns empty array when templates directory is empty", async () => {
-      await fs.mkdir(path.join(tempDir, ".iris", "templates"), { recursive: true });
+      await fs.mkdir(path.join(tempDir, ".botical", "templates"), { recursive: true });
       const templates = await TemplateService.list(tempDir);
       expect(templates).toEqual([]);
     });
 
-    test("lists templates from .iris/templates directory", async () => {
-      const templatesDir = path.join(tempDir, ".iris", "templates");
+    test("lists templates from .botical/templates directory", async () => {
+      const templatesDir = path.join(tempDir, ".botical", "templates");
       await fs.mkdir(templatesDir, { recursive: true });
 
       // Create test templates
@@ -72,7 +72,7 @@ agentClass: medium
     });
 
     test("returns template with all fields", async () => {
-      const templatesDir = path.join(tempDir, ".iris", "templates");
+      const templatesDir = path.join(tempDir, ".botical", "templates");
       await fs.mkdir(templatesDir, { recursive: true });
 
       await fs.writeFile(
@@ -100,7 +100,7 @@ Focus on code quality.`
     });
 
     test("handles template without frontmatter", async () => {
-      const templatesDir = path.join(tempDir, ".iris", "templates");
+      const templatesDir = path.join(tempDir, ".botical", "templates");
       await fs.mkdir(templatesDir, { recursive: true });
 
       await fs.writeFile(
@@ -116,7 +116,7 @@ Focus on code quality.`
     });
 
     test("handles .yml extension", async () => {
-      const templatesDir = path.join(tempDir, ".iris", "templates");
+      const templatesDir = path.join(tempDir, ".botical", "templates");
       await fs.mkdir(templatesDir, { recursive: true });
 
       await fs.writeFile(
@@ -147,7 +147,7 @@ name: Legacy Template
       expect(template.agentClass).toBe("smart");
 
       // Verify file was created
-      const filePath = path.join(tempDir, ".iris", "templates", "new-template.yaml");
+      const filePath = path.join(tempDir, ".botical", "templates", "new-template.yaml");
       const content = await fs.readFile(filePath, "utf-8");
       expect(content).toContain("name: New Template");
       expect(content).toContain("agentClass: smart");

@@ -126,8 +126,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",
@@ -158,8 +158,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",
@@ -217,8 +217,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",
@@ -266,8 +266,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",
@@ -313,8 +313,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",
@@ -393,8 +393,8 @@ test.describe("Messaging", () => {
 
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
-      localStorage.setItem("iris:settings", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:settings", JSON.stringify({
         defaultProvider: "anthropic",
         userId: "test-user",
         anthropicApiKey: "sk-ant-test-key",

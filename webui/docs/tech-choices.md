@@ -1,8 +1,8 @@
-# Iris Web UI - Technology Choices
+# Botical Web UI - Technology Choices
 
 ## Overview
 
-This document outlines the technology choices for the Iris web interface. The selections prioritize developer experience, performance, and alignment with the Iris backend architecture.
+This document outlines the technology choices for the Botical web interface. The selections prioritize developer experience, performance, and alignment with the Botical backend architecture.
 
 ---
 
@@ -16,7 +16,7 @@ This document outlines the technology choices for the Iris web interface. The se
 | Styling | Tailwind CSS + CSS Modules | Utility-first with component isolation |
 | State Management | TanStack Query + React Context | Server state caching + minimal client state |
 | Routing | TanStack Router | Type-safe routing, excellent DX |
-| WebSocket | Custom hook + reconnection logic | Iris-specific protocol handling |
+| WebSocket | Custom hook + reconnection logic | Botical-specific protocol handling |
 | UI Components | Radix UI primitives + custom | Accessible, unstyled, composable |
 | Icons | Lucide React | Consistent, tree-shakeable, MIT licensed |
 | Testing | Vitest + Playwright | Fast unit tests, reliable E2E |
@@ -30,7 +30,7 @@ This document outlines the technology choices for the Iris web interface. The se
 
 **Why React:**
 - Largest ecosystem and community support
-- React 19 features align well with Iris needs:
+- React 19 features align well with Botical needs:
   - **Server Components** preparation for potential SSR
   - **Suspense** for loading states during streaming
   - **Transitions** for non-blocking UI updates during agent responses
@@ -60,7 +60,7 @@ This document outlines the technology choices for the Iris web interface. The se
 **Configuration Approach:**
 - Use Vite's React plugin (`@vitejs/plugin-react`)
 - Enable SWC for faster transforms in development
-- Configure proxy for API calls to Iris backend during development
+- Configure proxy for API calls to Botical backend during development
 
 ---
 
@@ -72,7 +72,7 @@ This document outlines the technology choices for the Iris web interface. The se
 - Both work seamlessly with Vite
 
 **Design System Approach:**
-- Extend Tailwind config with Iris-specific design tokens
+- Extend Tailwind config with Botical-specific design tokens
 - Use CSS variables for theming (light/dark mode)
 - Create component variants with `class-variance-authority` (cva)
 
@@ -83,7 +83,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        iris: {
+        botical: {
           50: '...', // Brand colors
           // ...
         }
@@ -169,7 +169,7 @@ socket.on('message.created', (data) => {
 ### WebSocket Handling: Custom Implementation
 
 **Why Custom:**
-- Iris has a specific WebSocket protocol (JSON-RPC style)
+- Botical has a specific WebSocket protocol (JSON-RPC style)
 - Need tight integration with TanStack Query for cache updates
 - Need custom reconnection logic with state sync
 
@@ -271,7 +271,7 @@ const useWebSocket = () => useContext(WebSocketContext)
 **Plugins:**
 - `remark-gfm`: GitHub Flavored Markdown (tables, task lists)
 - `rehype-shiki`: Syntax highlighting integration
-- Custom plugin for Iris-specific elements (file links, tool references)
+- Custom plugin for Botical-specific elements (file links, tool references)
 
 ---
 
@@ -374,7 +374,7 @@ webui/
 
 **Strategy:**
 - Create a shared types package or symlink
-- Backend Iris already has Zod schemas
+- Backend Botical already has Zod schemas
 - Use `zod-to-ts` or manual type exports
 
 **Example:**
@@ -430,15 +430,15 @@ interface Message {
 - Deploy to Vercel, Netlify, or Cloudflare Pages
 - Configure proxy/CORS for API calls
 
-### Integrated with Iris Backend
-- Serve static files from Iris server
+### Integrated with Botical Backend
+- Serve static files from Botical server
 - Single deployment unit
 - Simpler CORS configuration
 
 ### Docker
 - Multi-stage build
 - nginx for static serving
-- Can be combined with Iris backend container
+- Can be combined with Botical backend container
 
 ---
 
@@ -451,7 +451,7 @@ interface Message {
    bun run dev
    ```
 
-2. **API Proxy:** Vite dev server proxies `/api` and `/ws` to local Iris server
+2. **API Proxy:** Vite dev server proxies `/api` and `/ws` to local Botical server
 
 3. **Hot Reload:** Full HMR for instant feedback
 

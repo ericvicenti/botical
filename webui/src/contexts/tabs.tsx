@@ -9,8 +9,8 @@ import {
 import type { Tab, TabData } from "@/types/tabs";
 import { generateTabId, generateTabLabel } from "@/lib/tabs";
 
-const STORAGE_KEY = "iris:tabs";
-const DIRTY_CONTENT_KEY = "iris:dirty-content";
+const STORAGE_KEY = "botical:tabs";
+const DIRTY_CONTENT_KEY = "botical:dirty-content";
 
 interface TabsContextValue {
   tabs: Tab[];

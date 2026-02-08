@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document tracks the implementation status of Iris. Each phase has been moved to its respective folder based on status:
+This document tracks the implementation status of Botical. Each phase has been moved to its respective folder based on status:
 - `completed/` - Finished phases
 - `planned/` - Upcoming phases
 - `abandoned/` - Phases no longer planned

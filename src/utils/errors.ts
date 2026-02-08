@@ -1,10 +1,10 @@
 /**
- * Custom Error Types for Iris
+ * Custom Error Types for Botical
  *
  * Typed errors enable consistent error handling across the application.
  * See: docs/knowledge-base/04-patterns.md#error-handling-pattern
  *
- * All errors extend IrisError with:
+ * All errors extend BoticalError with:
  * - code: Machine-readable error identifier
  * - statusCode: HTTP status for API responses
  * - details: Optional structured data for debugging
@@ -14,9 +14,9 @@
  */
 
 /**
- * Base error class for all Iris errors
+ * Base error class for all Botical errors
  */
-export class IrisError extends Error {
+export class BoticalError extends Error {
   constructor(
     message: string,
     public readonly code: string,
@@ -24,7 +24,7 @@ export class IrisError extends Error {
     public readonly details?: unknown
   ) {
     super(message);
-    this.name = "IrisError";
+    this.name = "BoticalError";
     Error.captureStackTrace?.(this, this.constructor);
   }
 
@@ -42,7 +42,7 @@ export class IrisError extends Error {
 /**
  * Resource not found error (404)
  */
-export class NotFoundError extends IrisError {
+export class NotFoundError extends BoticalError {
   constructor(resource: string, id: string) {
     super(`${resource} not found: ${id}`, "NOT_FOUND", 404, { resource, id });
     this.name = "NotFoundError";
@@ -52,7 +52,7 @@ export class NotFoundError extends IrisError {
 /**
  * Validation error for invalid input (400)
  */
-export class ValidationError extends IrisError {
+export class ValidationError extends BoticalError {
   constructor(message: string, details?: unknown) {
     super(message, "VALIDATION_ERROR", 400, details);
     this.name = "ValidationError";
@@ -62,7 +62,7 @@ export class ValidationError extends IrisError {
 /**
  * Authentication error (401)
  */
-export class AuthenticationError extends IrisError {
+export class AuthenticationError extends BoticalError {
   constructor(message: string = "Authentication required") {
     super(message, "AUTHENTICATION_ERROR", 401);
     this.name = "AuthenticationError";
@@ -72,7 +72,7 @@ export class AuthenticationError extends IrisError {
 /**
  * Authorization/permission error (403)
  */
-export class ForbiddenError extends IrisError {
+export class ForbiddenError extends BoticalError {
   constructor(message: string = "Permission denied") {
     super(message, "FORBIDDEN", 403);
     this.name = "ForbiddenError";
@@ -82,7 +82,7 @@ export class ForbiddenError extends IrisError {
 /**
  * Resource conflict error (409)
  */
-export class ConflictError extends IrisError {
+export class ConflictError extends BoticalError {
   constructor(message: string, details?: unknown) {
     super(message, "CONFLICT", 409, details);
     this.name = "ConflictError";
@@ -92,7 +92,7 @@ export class ConflictError extends IrisError {
 /**
  * Database error (500)
  */
-export class DatabaseError extends IrisError {
+export class DatabaseError extends BoticalError {
   constructor(message: string, details?: unknown) {
     super(message, "DATABASE_ERROR", 500, details);
     this.name = "DatabaseError";
@@ -102,7 +102,7 @@ export class DatabaseError extends IrisError {
 /**
  * Configuration error (500)
  */
-export class ConfigurationError extends IrisError {
+export class ConfigurationError extends BoticalError {
   constructor(message: string, details?: unknown) {
     super(message, "CONFIGURATION_ERROR", 500, details);
     this.name = "ConfigurationError";
@@ -110,27 +110,27 @@ export class ConfigurationError extends IrisError {
 }
 
 /**
- * Check if an error is an IrisError
+ * Check if an error is an BoticalError
  */
-export function isIrisError(error: unknown): error is IrisError {
-  return error instanceof IrisError;
+export function isBoticalError(error: unknown): error is BoticalError {
+  return error instanceof BoticalError;
 }
 
 /**
- * Wrap unknown errors in IrisError
+ * Wrap unknown errors in BoticalError
  */
-export function wrapError(error: unknown): IrisError {
-  if (isIrisError(error)) {
+export function wrapError(error: unknown): BoticalError {
+  if (isBoticalError(error)) {
     return error;
   }
 
   if (error instanceof Error) {
-    return new IrisError(error.message, "INTERNAL_ERROR", 500, {
+    return new BoticalError(error.message, "INTERNAL_ERROR", 500, {
       originalName: error.name,
     });
   }
 
-  return new IrisError("An unexpected error occurred", "INTERNAL_ERROR", 500, {
+  return new BoticalError("An unexpected error occurred", "INTERNAL_ERROR", 500, {
     originalError: String(error),
   });
 }

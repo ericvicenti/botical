@@ -1,8 +1,8 @@
-# Plan: Convert Agent Tools to Iris Actions
+# Plan: Convert Agent Tools to Botical Actions
 
 ## Overview
 
-This plan outlines the migration from the current backend tool system to a unified Iris Actions architecture. The goal is to have a single abstraction that works for both:
+This plan outlines the migration from the current backend tool system to a unified Botical Actions architecture. The goal is to have a single abstraction that works for both:
 1. **Agent Tools** - Operations the AI agent can perform
 2. **UI Actions** - Operations users can trigger from the command palette or UI
 
@@ -31,7 +31,7 @@ This plan outlines the migration from the current backend tool system to a unifi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Iris Actions Registry                    │
+│                     Botical Actions Registry                    │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Action Definition                                   │    │
 │  │  - id: string (e.g., "file.read", "git.commit")     │    │

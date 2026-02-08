@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import {
-  IrisError,
+  BoticalError,
   NotFoundError,
   ValidationError,
   AuthenticationError,
@@ -8,35 +8,35 @@ import {
   ConflictError,
   DatabaseError,
   ConfigurationError,
-  isIrisError,
+  isBoticalError,
   wrapError,
 } from "@/utils/errors.ts";
 
-describe("IrisError", () => {
+describe("BoticalError", () => {
   it("creates error with message, code, and statusCode", () => {
-    const error = new IrisError("Test error", "TEST_ERROR", 400);
+    const error = new BoticalError("Test error", "TEST_ERROR", 400);
 
     expect(error.message).toBe("Test error");
     expect(error.code).toBe("TEST_ERROR");
     expect(error.statusCode).toBe(400);
-    expect(error.name).toBe("IrisError");
+    expect(error.name).toBe("BoticalError");
   });
 
   it("defaults to 500 status code", () => {
-    const error = new IrisError("Test error", "TEST_ERROR");
+    const error = new BoticalError("Test error", "TEST_ERROR");
 
     expect(error.statusCode).toBe(500);
   });
 
   it("includes details when provided", () => {
     const details = { field: "email", reason: "invalid format" };
-    const error = new IrisError("Test error", "TEST_ERROR", 400, details);
+    const error = new BoticalError("Test error", "TEST_ERROR", 400, details);
 
     expect(error.details).toEqual(details);
   });
 
   it("serializes to JSON correctly", () => {
-    const error = new IrisError("Test error", "TEST_ERROR", 400, {
+    const error = new BoticalError("Test error", "TEST_ERROR", 400, {
       extra: "info",
     });
     const json = error.toJSON();
@@ -51,10 +51,10 @@ describe("IrisError", () => {
   });
 
   it("is an instance of Error", () => {
-    const error = new IrisError("Test error", "TEST_ERROR");
+    const error = new BoticalError("Test error", "TEST_ERROR");
 
     expect(error instanceof Error).toBe(true);
-    expect(error instanceof IrisError).toBe(true);
+    expect(error instanceof BoticalError).toBe(true);
   });
 });
 
@@ -159,24 +159,24 @@ describe("ConfigurationError", () => {
   });
 });
 
-describe("isIrisError", () => {
-  it("returns true for IrisError instances", () => {
-    expect(isIrisError(new IrisError("test", "TEST"))).toBe(true);
-    expect(isIrisError(new NotFoundError("User", "123"))).toBe(true);
-    expect(isIrisError(new ValidationError("invalid"))).toBe(true);
+describe("isBoticalError", () => {
+  it("returns true for BoticalError instances", () => {
+    expect(isBoticalError(new BoticalError("test", "TEST"))).toBe(true);
+    expect(isBoticalError(new NotFoundError("User", "123"))).toBe(true);
+    expect(isBoticalError(new ValidationError("invalid"))).toBe(true);
   });
 
-  it("returns false for non-IrisError values", () => {
-    expect(isIrisError(new Error("test"))).toBe(false);
-    expect(isIrisError("string")).toBe(false);
-    expect(isIrisError(null)).toBe(false);
-    expect(isIrisError(undefined)).toBe(false);
-    expect(isIrisError({})).toBe(false);
+  it("returns false for non-BoticalError values", () => {
+    expect(isBoticalError(new Error("test"))).toBe(false);
+    expect(isBoticalError("string")).toBe(false);
+    expect(isBoticalError(null)).toBe(false);
+    expect(isBoticalError(undefined)).toBe(false);
+    expect(isBoticalError({})).toBe(false);
   });
 });
 
 describe("wrapError", () => {
-  it("returns IrisError as-is", () => {
+  it("returns BoticalError as-is", () => {
     const original = new NotFoundError("User", "123");
     const wrapped = wrapError(original);
 
@@ -187,7 +187,7 @@ describe("wrapError", () => {
     const original = new Error("Something went wrong");
     const wrapped = wrapError(original);
 
-    expect(wrapped).toBeInstanceOf(IrisError);
+    expect(wrapped).toBeInstanceOf(BoticalError);
     expect(wrapped.message).toBe("Something went wrong");
     expect(wrapped.code).toBe("INTERNAL_ERROR");
     expect(wrapped.statusCode).toBe(500);
@@ -198,13 +198,13 @@ describe("wrapError", () => {
     const original = new TypeError("Cannot read property");
     const wrapped = wrapError(original);
 
-    expect(wrapped).toBeInstanceOf(IrisError);
+    expect(wrapped).toBeInstanceOf(BoticalError);
     expect(wrapped.details).toEqual({ originalName: "TypeError" });
   });
 
   it("wraps non-Error values", () => {
     const wrapped1 = wrapError("string error");
-    expect(wrapped1).toBeInstanceOf(IrisError);
+    expect(wrapped1).toBeInstanceOf(BoticalError);
     expect(wrapped1.message).toBe("An unexpected error occurred");
     expect(wrapped1.details).toEqual({ originalError: "string error" });
 

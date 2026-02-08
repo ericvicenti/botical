@@ -26,7 +26,7 @@ import type {
 import { getSshCommand, ensureIdentity } from "./identity";
 
 // Default workspace directory for cloned repos
-const DEFAULT_WORKSPACES_DIR = path.join(homedir(), ".iris", "workspaces");
+const DEFAULT_WORKSPACES_DIR = path.join(homedir(), ".botical", "workspaces");
 
 /**
  * Ensure workspaces directory exists
@@ -68,13 +68,13 @@ function mapFileStatus(index: string, workingDir: string): FileStatus {
 /**
  * Git Service for version control operations
  *
- * Uses Iris SSH identity for remote operations (push, pull, fetch, clone).
+ * Uses Botical SSH identity for remote operations (push, pull, fetch, clone).
  * See: src/services/identity.ts for SSH key management.
  */
 export class GitService {
   /**
    * Get a SimpleGit instance for a project path
-   * Configures SSH to use Iris identity for remote operations
+   * Configures SSH to use Botical identity for remote operations
    */
   private static getGit(projectPath: string): SimpleGit {
     // Ensure SSH identity exists before any git operation
@@ -84,7 +84,7 @@ export class GitService {
       binary: "git",
       maxConcurrentProcesses: 6,
       trimmed: true,
-      // Configure git to use Iris SSH identity for remote operations
+      // Configure git to use Botical SSH identity for remote operations
       config: [`core.sshCommand=${getSshCommand()}`],
     });
   }
@@ -427,7 +427,7 @@ export class GitService {
 
   /**
    * Clone a repository
-   * Uses Iris SSH identity for authentication
+   * Uses Botical SSH identity for authentication
    */
   static async clone(options: CloneOptions): Promise<CloneResult> {
     ensureWorkspacesDir();
@@ -442,7 +442,7 @@ export class GitService {
       throw new Error(`Target path already exists: ${targetPath}`);
     }
 
-    // Configure git with Iris SSH identity for clone operation
+    // Configure git with Botical SSH identity for clone operation
     const git = simpleGit({
       config: [`core.sshCommand=${getSshCommand()}`],
     });

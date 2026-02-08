@@ -26,7 +26,7 @@ Usage:
 - The process continues running after this tool returns
 - Use bash tool instead for quick commands that need output immediately
 - Use saveAsService=true to save the service configuration for future use
-- Use autoStart=true to automatically restart the service when Iris starts
+- Use autoStart=true to automatically restart the service when Botical starts
 
 Examples:
 - Start dev server: command="npm run dev", label="Dev Server"
@@ -55,7 +55,7 @@ Examples:
     autoStart: z
       .boolean()
       .optional()
-      .describe("If saveAsService is true, automatically start this service when Iris starts"),
+      .describe("If saveAsService is true, automatically start this service when Botical starts"),
   }),
 
   async execute(args, context) {

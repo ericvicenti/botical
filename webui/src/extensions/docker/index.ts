@@ -1,7 +1,7 @@
 /**
  * Docker Extension (Frontend)
  *
- * Provides Docker container management UI for Iris.
+ * Provides Docker container management UI for Botical.
  */
 
 // Register pages with the primitives system

@@ -155,7 +155,7 @@ projects.post("/", async (c) => {
         .prepare(
           "INSERT INTO users (id, username, email, is_admin, can_execute_code, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
         )
-        .run(ownerId, "dev_user", `dev@iris.local`, 1, 1, Date.now(), Date.now());
+        .run(ownerId, "dev_user", `dev@botical.local`, 1, 1, Date.now(), Date.now());
     }
   }
 

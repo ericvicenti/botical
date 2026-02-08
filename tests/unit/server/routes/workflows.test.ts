@@ -63,9 +63,9 @@ describe("Workflows API Routes", () => {
       path: testProjectPath,
     });
     testProjectId = project.id;
-    // Create the .iris directory for YAML workflows
-    const irisDir = path.join(testProjectPath, ".iris", "workflows");
-    fs.mkdirSync(irisDir, { recursive: true });
+    // Create the .botical directory for YAML workflows
+    const boticalDir = path.join(testProjectPath, ".botical", "workflows");
+    fs.mkdirSync(boticalDir, { recursive: true });
   });
 
   afterEach(() => {

@@ -19,7 +19,7 @@ describe("ProjectConfigService", () => {
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
-    fs.mkdirSync(path.join(testProjectPath, ".iris"), { recursive: true });
+    fs.mkdirSync(path.join(testProjectPath, ".botical"), { recursive: true });
   });
 
   afterEach(() => {

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Missions are the core unit of autonomous work in Iris. Unlike simple chat sessions, missions have:
+Missions are the core unit of autonomous work in Botical. Unlike simple chat sessions, missions have:
 - A **planning phase** with a markdown document
 - **Completion criteria** drafted by the agent, approved by the user
 - **Tasks** as granular work units within the mission
@@ -27,7 +27,7 @@ CREATE TABLE missions (
   session_id TEXT,                    -- Created after plan approval
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'planning',
-  plan_path TEXT NOT NULL,            -- e.g., ".iris/missions/auth.md"
+  plan_path TEXT NOT NULL,            -- e.g., ".botical/missions/auth.md"
   plan_approved_at INTEGER,
   plan_approved_by TEXT,
   created_at INTEGER NOT NULL,
@@ -91,7 +91,7 @@ interface MissionService {
 **Mission Lifecycle:**
 ```
 create() → status: 'planning'
-           Agent drafts plan in .iris/missions/{slug}.md
+           Agent drafts plan in .botical/missions/{slug}.md
 
 approvePlan() → status: 'pending'
                 Plan approved, ready to start
@@ -203,7 +203,7 @@ Add to `src/websocket/protocol.ts`:
 
 ### Mission Planning Document
 
-When a mission is created, generate `.iris/missions/{slug}.md`:
+When a mission is created, generate `.botical/missions/{slug}.md`:
 
 ```markdown
 # Mission: {title}
@@ -229,7 +229,7 @@ When a mission is created, generate `.iris/missions/{slug}.md`:
 Additional context...
 
 ---
-*Plan drafted by Iris on {date}*
+*Plan drafted by Botical on {date}*
 ```
 
 ---

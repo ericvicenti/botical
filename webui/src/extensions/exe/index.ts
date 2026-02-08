@@ -1,7 +1,7 @@
 /**
  * Exe.dev Extension (Frontend)
  *
- * Provides exe.dev VM management UI for Iris.
+ * Provides exe.dev VM management UI for Botical.
  */
 
 export { ExeSidebarPanel } from "./components/ExeSidebarPanel";

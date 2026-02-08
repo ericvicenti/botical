@@ -8,7 +8,7 @@ interface AboutPageProps {
 export default function AboutPage(_props: AboutPageProps) {
   return (
     <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold text-text-primary mb-2">About Iris</h1>
+      <h1 className="text-2xl font-bold text-text-primary mb-2">About Botical</h1>
       <p className="text-text-muted mb-8">
         An AI-powered development environment.
       </p>
@@ -63,7 +63,7 @@ export default function AboutPage(_props: AboutPageProps) {
 
         <div className="pt-4 border-t border-border">
           <p className="text-sm text-text-muted flex items-center gap-1">
-            Made with <Heart className="w-4 h-4 text-accent-error" /> by the Iris team
+            Made with <Heart className="w-4 h-4 text-accent-error" /> by the Botical team
           </p>
         </div>
       </div>

@@ -21,8 +21,8 @@ test.describe("Project Pages", () => {
       // Wait for page to load
       await page.waitForLoadState("networkidle");
 
-      // Document title should contain "Projects" or "Iris"
-      await expect(page).toHaveTitle(/Projects|Iris/);
+      // Document title should contain "Projects" or "Botical"
+      await expect(page).toHaveTitle(/Projects|Botical/);
     });
   });
 
@@ -116,7 +116,7 @@ test.describe("Project Pages", () => {
       await page.goto("/create-project");
 
       await page.waitForLoadState("networkidle");
-      await expect(page).toHaveTitle(/Create Project|Iris/);
+      await expect(page).toHaveTitle(/Create Project|Botical/);
     });
 
     test("should show project path field in local mode", async ({ page }) => {

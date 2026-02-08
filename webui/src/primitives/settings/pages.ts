@@ -92,7 +92,7 @@ export const aboutPage = definePage({
   description: "About the application",
 
   getLabel: () => "About",
-  getTitle: () => "About - Iris",
+  getTitle: () => "About - Botical",
 
   params: z.object({}),
 

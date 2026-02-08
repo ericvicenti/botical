@@ -1,6 +1,6 @@
 # Extension System Progress Overview
 
-This folder summarizes the current, code-backed state of the Iris extension system. It is a progress report, not the original plan.
+This folder summarizes the current, code-backed state of the Botical extension system. It is a progress report, not the original plan.
 
 ## Implemented Foundations
 
@@ -9,7 +9,7 @@ This folder summarizes the current, code-backed state of the Iris extension syst
 - Registry for discovery and server state tracking in `src/extensions/registry.ts`.
 - Extension server lifecycle management (spawn, status, ports) in `src/extensions/server-manager.ts`.
 - REST proxy and metadata endpoints under `/api/extensions` in `src/server/routes/extensions.ts`.
-- Project-level enable/disable stored in `.iris/config.yaml` via `src/config/project.ts` and `/api/projects/:id/extensions` routes.
+- Project-level enable/disable stored in `.botical/config.yaml` via `src/config/project.ts` and `/api/projects/:id/extensions` routes.
 - Built-in extensions for Docker, Search, and Exe.dev in `src/extensions/docker`, `src/extensions/search`, and `src/extensions/exe`.
 - Web UI integration to list, enable/disable, and surface extension panels in `webui/src/components/extensions` and `webui/src/components/layout/Sidebar.tsx`, with extension-specific modules under `webui/src/extensions/*`.
 

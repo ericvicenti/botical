@@ -3,7 +3,7 @@
  *
  * REST API endpoints for managing agent configurations.
  * Lists both built-in agents and custom project-specific agents.
- * Custom agents can come from YAML files (.iris/agents/) or SQLite database.
+ * Custom agents can come from YAML files (.botical/agents/) or SQLite database.
  *
  * Endpoints:
  * - GET /api/agents - List all available agents (built-in + custom)

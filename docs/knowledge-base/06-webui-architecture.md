@@ -1,12 +1,12 @@
 # WebUI Architecture
 
-This document describes the frontend architecture for Iris WebUI, including technology choices, patterns, and conventions.
+This document describes the frontend architecture for Botical WebUI, including technology choices, patterns, and conventions.
 
 ---
 
 ## Overview
 
-The WebUI is a React single-page application that communicates with the Iris backend via REST API and WebSocket. It provides a real-time interface for managing projects, sessions, missions, and processes.
+The WebUI is a React single-page application that communicates with the Botical backend via REST API and WebSocket. It provides a real-time interface for managing projects, sessions, missions, and processes.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -26,7 +26,7 @@ The WebUI is a React single-page application that communicates with the Iris bac
               REST API (/api/*) + WebSocket (/ws)
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                      Iris Backend                             │
+│                      Botical Backend                             │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -574,10 +574,10 @@ Use Tailwind utility classes directly in components:
 
 ```bash
 # Terminal 1: Backend
-cd /path/to/iris && bun run dev
+cd /path/to/botical && bun run dev
 
 # Terminal 2: Frontend
-cd /path/to/iris/webui && bun run dev
+cd /path/to/botical/webui && bun run dev
 ```
 
 ### Access URLs

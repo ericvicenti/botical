@@ -2,7 +2,7 @@
 
 ## Overview
 
-WebSocket is the primary communication channel for Iris, enabling:
+WebSocket is the primary communication channel for Botical, enabling:
 - Efficient bidirectional communication
 - Real-time streaming of agent responses
 - Live updates across multiple clients
@@ -572,7 +572,7 @@ For TypeScript clients, we provide type definitions:
 
 ```typescript
 // src/types/client.ts
-export interface IrisClient {
+export interface BoticalClient {
   // Connection
   connect(options: { projectId: string; token: string }): Promise<void>;
   disconnect(): void;

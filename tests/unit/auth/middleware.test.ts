@@ -29,7 +29,7 @@ describe("Auth Middleware", () => {
 
   beforeEach(async () => {
     // Disable single-user mode for these tests
-    process.env.IRIS_SINGLE_USER = "false";
+    process.env.BOTICAL_SINGLE_USER = "false";
 
     // Reset database for each test
     DatabaseManager.closeAll();
@@ -106,7 +106,7 @@ describe("Auth Middleware", () => {
       });
 
       const res = await app.request("/protected", {
-        headers: { Cookie: `iris_session=${userToken}` },
+        headers: { Cookie: `botical_session=${userToken}` },
       });
 
       expect(res.status).toBe(200);
@@ -330,7 +330,7 @@ describe("Auth Middleware", () => {
       const res = await app.request("/test", {
         headers: {
           Authorization: `Bearer ${adminToken}`,
-          Cookie: `iris_session=${userToken}`,
+          Cookie: `botical_session=${userToken}`,
         },
       });
 
@@ -349,7 +349,7 @@ describe("Auth Middleware", () => {
 
       const res = await app.request("/test", {
         headers: {
-          Cookie: `other=value; iris_session=${userToken}; another=test`,
+          Cookie: `other=value; botical_session=${userToken}; another=test`,
         },
       });
 

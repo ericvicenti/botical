@@ -9,7 +9,7 @@ export const fileCommands: Command[] = [
     shortcut: { key: "p", mod: true },
     when: (ctx) => ctx.selectedProjectId !== null,
     execute: async () => {
-      window.dispatchEvent(new CustomEvent("iris:file-palette:open"));
+      window.dispatchEvent(new CustomEvent("botical:file-palette:open"));
     },
   },
   {
@@ -51,7 +51,7 @@ export const fileCommands: Command[] = [
     execute: async () => {
       // File saving will be handled by the file editor component
       // This command triggers the save event
-      window.dispatchEvent(new CustomEvent("iris:file:save"));
+      window.dispatchEvent(new CustomEvent("botical:file:save"));
     },
   },
   {

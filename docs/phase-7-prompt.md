@@ -2,7 +2,7 @@
 
 ## Context
 
-You are continuing implementation of the Iris backend server. Phases 1-6 are complete:
+You are continuing implementation of the Botical backend server. Phases 1-6 are complete:
 
 - **Phase 1**: Database schema, migrations, server setup
 - **Phase 2**: Agent orchestrator, LLM integration, core tools

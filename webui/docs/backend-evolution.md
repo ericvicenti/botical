@@ -1,4 +1,4 @@
-# Iris Backend Evolution Plan
+# Botical Backend Evolution Plan
 
 This document outlines the backend changes needed to support the mission-oriented IDE vision. See [decisions.md](./decisions.md) for architectural decisions.
 
@@ -6,7 +6,7 @@ This document outlines the backend changes needed to support the mission-oriente
 
 ## Executive Summary
 
-The Iris backend evolves from a session-based chat system to a **mission-oriented autonomous agent platform** with full IDE capabilities:
+The Botical backend evolves from a session-based chat system to a **mission-oriented autonomous agent platform** with full IDE capabilities:
 
 1. **Missions** - Planned, autonomous work with documented goals
 2. **Tasks** - Immediate work units (formalize existing todos)
@@ -30,7 +30,7 @@ interface Mission {
   status: MissionStatus
 
   // Planning (the key differentiator from tasks)
-  planPath: string              // Path to planning document, e.g., ".iris/missions/auth.md"
+  planPath: string              // Path to planning document, e.g., ".botical/missions/auth.md"
   planApprovedAt?: string       // NULL until user approves plan
   planApprovedBy?: string       // User who approved
 
@@ -58,7 +58,7 @@ type MissionStatus =
   | 'cancelled'   // User cancelled
 ```
 
-**Mission Planning Document** (`.iris/missions/{slug}.md`):
+**Mission Planning Document** (`.botical/missions/{slug}.md`):
 ```markdown
 # Mission: Implement User Authentication
 
@@ -84,7 +84,7 @@ Add JWT-based authentication to the API with login/logout endpoints.
 - Token expires in 7 days
 
 ---
-*Plan drafted by Iris. Approved by @user on 2025-01-15.*
+*Plan drafted by Botical. Approved by @user on 2025-01-15.*
 ```
 
 ### Task (Formalized from Todos)
@@ -402,13 +402,13 @@ interface GitService {
   push(projectId: string): Promise<void>
 
   // Identity
-  getIdentity(): Promise<GitIdentity>  // Iris's SSH public key
+  getIdentity(): Promise<GitIdentity>  // Botical's SSH public key
 }
 
-// Iris commits with recognizable author
-const IRIS_AUTHOR: GitAuthor = {
-  name: 'Iris',
-  email: 'iris@example.com'  // Or configurable
+// Botical commits with recognizable author
+const BOTICAL_AUTHOR: GitAuthor = {
+  name: 'Botical',
+  email: 'botical@example.com'  // Or configurable
 }
 ```
 
@@ -463,7 +463,7 @@ GET    /api/projects/:projectId/git/log           Commit history
 GET    /api/projects/:projectId/git/diff          Get diff
 POST   /api/projects/:projectId/git/push          Push
 POST   /api/projects/:projectId/git/pull          Pull
-GET    /api/git/identity                          Get Iris SSH public key
+GET    /api/git/identity                          Get Botical SSH public key
 ```
 
 ### WebSocket Events

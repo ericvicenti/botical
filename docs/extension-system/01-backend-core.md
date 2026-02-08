@@ -1,6 +1,6 @@
 # Backend Core Architecture
 
-This document captures the backend pieces that are implemented today for Iris extensions.
+This document captures the backend pieces that are implemented today for Botical extensions.
 
 ## Core Types
 

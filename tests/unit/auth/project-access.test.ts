@@ -32,7 +32,7 @@ describe("requireProjectAccess Middleware", () => {
 
   beforeEach(async () => {
     // Reset environment - disable single-user mode
-    process.env.IRIS_SINGLE_USER = "false";
+    process.env.BOTICAL_SINGLE_USER = "false";
 
     // Reset database for each test
     DatabaseManager.closeAll();

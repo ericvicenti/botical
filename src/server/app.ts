@@ -113,7 +113,7 @@ export function createApp() {
   // API routes (placeholder for future)
   app.get("/api", (c) => {
     return c.json({
-      name: "Iris API",
+      name: "Botical API",
       version: "0.1.0",
       status: "ok",
     });
@@ -121,9 +121,9 @@ export function createApp() {
 
   // Static file serving for production
   // In development, Vite serves the frontend with HMR
-  // In production, the built frontend is served from IRIS_STATIC_DIR
+  // In production, the built frontend is served from BOTICAL_STATIC_DIR
   // See: docs/deployment.md
-  const staticDir = process.env.IRIS_STATIC_DIR;
+  const staticDir = process.env.BOTICAL_STATIC_DIR;
   if (staticDir && existsSync(staticDir)) {
     // Serve static files from the built frontend directory
     app.use(

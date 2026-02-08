@@ -17,8 +17,8 @@ export function FilePaletteProvider({ children }: { children: ReactNode }) {
   // Listen for custom event to open file palette (from command system)
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
-    window.addEventListener("iris:file-palette:open", handleOpen);
-    return () => window.removeEventListener("iris:file-palette:open", handleOpen);
+    window.addEventListener("botical:file-palette:open", handleOpen);
+    return () => window.removeEventListener("botical:file-palette:open", handleOpen);
   }, []);
 
   return (

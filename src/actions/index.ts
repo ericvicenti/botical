@@ -1,5 +1,5 @@
 /**
- * Iris Actions
+ * Botical Actions
  *
  * Central module for the action system. Actions are operations that can be
  * performed by AI agents (as tools) or users (via command palette).

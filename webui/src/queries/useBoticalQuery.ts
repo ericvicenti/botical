@@ -1,5 +1,5 @@
 /**
- * useIrisQuery Hook
+ * useBoticalQuery Hook
  *
  * React hook for executing queries with caching, real-time updates,
  * and automatic refetching.
@@ -79,14 +79,14 @@ async function fetchQuery<T, P>(query: Query<T, P>, params: P): Promise<T> {
 }
 
 /**
- * useIrisQuery hook
+ * useBoticalQuery hook
  *
  * Fetches data using the query definition with:
  * - Automatic caching via TanStack Query
  * - Real-time updates via WebSocket
  * - Type-safe params and return types
  */
-export function useIrisQuery<T, P>(
+export function useBoticalQuery<T, P>(
   query: Query<T, P>,
   params: P,
   options: UseQueryOptions = {}
@@ -144,7 +144,7 @@ export function useIrisQuery<T, P>(
 /**
  * Prefetch a query (for route preloading)
  */
-export async function prefetchIrisQuery<T, P>(
+export async function prefetchBoticalQuery<T, P>(
   queryClient: ReturnType<typeof useQueryClient>,
   query: Query<T, P>,
   params: P

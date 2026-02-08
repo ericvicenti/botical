@@ -10,9 +10,9 @@ import type { QueryContext } from "../../../src/queries/types";
 import * as identityModule from "../../../src/services/identity";
 
 const mockIdentity = {
-  publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey iris@local",
+  publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey botical@local",
   fingerprint: "SHA256:TestFingerprint",
-  keyPath: "/home/user/.iris/id_ed25519.pub",
+  keyPath: "/home/user/.botical/id_ed25519.pub",
 };
 
 describe("gitIdentityQuery", () => {

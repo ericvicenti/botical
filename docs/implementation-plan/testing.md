@@ -116,7 +116,7 @@ const TEST_DATA_DIR = path.join(__dirname, '.test-data');
 beforeAll(async () => {
   // Set test environment
   process.env.NODE_ENV = 'test';
-  process.env.IRIS_DATA_DIR = TEST_DATA_DIR;
+  process.env.BOTICAL_DATA_DIR = TEST_DATA_DIR;
 
   // Create test data directory
   await fs.mkdir(TEST_DATA_DIR, { recursive: true });
@@ -981,7 +981,7 @@ export const projectFactory = Factory.define<Project>(({ sequence, params }) => 
   name: faker.company.name(),
   description: faker.lorem.sentence(),
   type: 'local',
-  path: `/tmp/iris-test-${sequence}`,
+  path: `/tmp/botical-test-${sequence}`,
   ownerId: params.ownerId || generateId('user'),
   settings: {},
   createdAt: Date.now(),

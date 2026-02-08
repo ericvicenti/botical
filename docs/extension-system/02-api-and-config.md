@@ -36,7 +36,7 @@ This document describes the extension-related REST endpoints and the project con
 
 ## Project YAML Schema
 
-Project settings live in `.iris/config.yaml` and are managed by `src/config/project.ts`.
+Project settings live in `.botical/config.yaml` and are managed by `src/config/project.ts`.
 
 ```yaml
 extensions:

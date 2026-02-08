@@ -8,11 +8,11 @@ describe("Config", () => {
 
   beforeEach(() => {
     // Reset environment
-    delete process.env.IRIS_DATA_DIR;
-    delete process.env.IRIS_PORT;
-    delete process.env.IRIS_HOST;
-    delete process.env.IRIS_LOG_LEVEL;
-    delete process.env.IRIS_SINGLE_USER;
+    delete process.env.BOTICAL_DATA_DIR;
+    delete process.env.BOTICAL_PORT;
+    delete process.env.BOTICAL_HOST;
+    delete process.env.BOTICAL_LOG_LEVEL;
+    delete process.env.BOTICAL_SINGLE_USER;
     delete process.env.RESEND_API_KEY;
   });
 
@@ -25,17 +25,17 @@ describe("Config", () => {
     it("uses default values when no env vars set", () => {
       const config = Config.load();
 
-      expect(config.dataDir).toBe(path.join(os.homedir(), ".iris"));
+      expect(config.dataDir).toBe(path.join(os.homedir(), ".botical"));
       expect(config.port).toBe(6001);
       expect(config.host).toBe("localhost");
       expect(config.logLevel).toBe("info");
     });
 
     it("reads from environment variables", () => {
-      process.env.IRIS_DATA_DIR = "/custom/data";
-      process.env.IRIS_PORT = "8080";
-      process.env.IRIS_HOST = "0.0.0.0";
-      process.env.IRIS_LOG_LEVEL = "debug";
+      process.env.BOTICAL_DATA_DIR = "/custom/data";
+      process.env.BOTICAL_PORT = "8080";
+      process.env.BOTICAL_HOST = "0.0.0.0";
+      process.env.BOTICAL_LOG_LEVEL = "debug";
 
       const config = Config.load();
 
@@ -46,7 +46,7 @@ describe("Config", () => {
     });
 
     it("accepts overrides that take precedence", () => {
-      process.env.IRIS_PORT = "8080";
+      process.env.BOTICAL_PORT = "8080";
 
       const config = Config.load({
         port: 3000,
@@ -86,7 +86,7 @@ describe("Config", () => {
     it("returns path to root database", () => {
       Config.load({ dataDir: "/test/data" });
 
-      expect(Config.getRootDbPath()).toBe("/test/data/iris.db");
+      expect(Config.getRootDbPath()).toBe("/test/data/botical.db");
     });
   });
 
@@ -112,7 +112,7 @@ describe("Config", () => {
 
   describe("log levels", () => {
     it("validates log level values", () => {
-      process.env.IRIS_LOG_LEVEL = "invalid";
+      process.env.BOTICAL_LOG_LEVEL = "invalid";
 
       // Should use default instead of invalid value
       expect(() => Config.load()).toThrow();
@@ -121,7 +121,7 @@ describe("Config", () => {
     it("accepts valid log levels", () => {
       const levels = ["debug", "info", "warn", "error"] as const;
       for (const level of levels) {
-        process.env.IRIS_LOG_LEVEL = level;
+        process.env.BOTICAL_LOG_LEVEL = level;
         const config = Config.load();
         expect(config.logLevel).toBe(level);
       }
@@ -129,22 +129,22 @@ describe("Config", () => {
   });
 
   describe("isSingleUserMode", () => {
-    it("returns true when IRIS_SINGLE_USER is explicitly true", () => {
-      process.env.IRIS_SINGLE_USER = "true";
+    it("returns true when BOTICAL_SINGLE_USER is explicitly true", () => {
+      process.env.BOTICAL_SINGLE_USER = "true";
       Config.load();
 
       expect(Config.isSingleUserMode()).toBe(true);
     });
 
-    it("returns false when IRIS_SINGLE_USER is explicitly false", () => {
-      process.env.IRIS_SINGLE_USER = "false";
+    it("returns false when BOTICAL_SINGLE_USER is explicitly false", () => {
+      process.env.BOTICAL_SINGLE_USER = "false";
       Config.load({ host: "localhost" }); // Even with localhost
 
       expect(Config.isSingleUserMode()).toBe(false);
     });
 
     it("auto-detects single-user mode on localhost without resendApiKey", () => {
-      // No explicit IRIS_SINGLE_USER set
+      // No explicit BOTICAL_SINGLE_USER set
       Config.load({ host: "localhost" });
 
       expect(Config.isSingleUserMode()).toBe(true);
@@ -165,8 +165,8 @@ describe("Config", () => {
       expect(Config.isSingleUserMode()).toBe(false);
     });
 
-    it("explicit IRIS_SINGLE_USER=true overrides other conditions", () => {
-      process.env.IRIS_SINGLE_USER = "true";
+    it("explicit BOTICAL_SINGLE_USER=true overrides other conditions", () => {
+      process.env.BOTICAL_SINGLE_USER = "true";
       Config.load({
         host: "0.0.0.0", // Not localhost
         resendApiKey: "re_test123", // Has API key
@@ -175,8 +175,8 @@ describe("Config", () => {
       expect(Config.isSingleUserMode()).toBe(true);
     });
 
-    it("explicit IRIS_SINGLE_USER=false overrides auto-detection", () => {
-      process.env.IRIS_SINGLE_USER = "false";
+    it("explicit BOTICAL_SINGLE_USER=false overrides auto-detection", () => {
+      process.env.BOTICAL_SINGLE_USER = "false";
       Config.load({ host: "localhost" }); // Would normally be single-user
 
       expect(Config.isSingleUserMode()).toBe(false);

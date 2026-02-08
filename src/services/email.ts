@@ -14,7 +14,7 @@ import { z } from "zod";
 
 const EmailConfigSchema = z.object({
   resendApiKey: z.string().optional(),
-  fromEmail: z.string().email().default("noreply@iris.local"),
+  fromEmail: z.string().email().default("noreply@botical.local"),
   appUrl: z.string().url().default("http://localhost:6001"),
 });
 
@@ -87,7 +87,7 @@ class EmailServiceClass {
       body: JSON.stringify({
         from: config.fromEmail,
         to: email,
-        subject: "Your Iris Login Link",
+        subject: "Your Botical Login Link",
         html: `
 <!DOCTYPE html>
 <html>
@@ -97,12 +97,12 @@ class EmailServiceClass {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; background: #f5f5f5;">
   <div style="max-width: 480px; margin: 0 auto; background: white; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <h1 style="margin: 0 0 24px; font-size: 24px; color: #111;">Login to Iris</h1>
+    <h1 style="margin: 0 0 24px; font-size: 24px; color: #111;">Login to Botical</h1>
     <p style="margin: 0 0 24px; color: #444; line-height: 1.5;">
-      Click the button below to log in to your Iris account. This link will expire in 15 minutes.
+      Click the button below to log in to your Botical account. This link will expire in 15 minutes.
     </p>
     <a href="${magicLink}" style="display: inline-block; padding: 12px 24px; background: #111; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
-      Log in to Iris
+      Log in to Botical
     </a>
     <p style="margin: 24px 0 0; color: #888; font-size: 14px; line-height: 1.5;">
       If you didn't request this email, you can safely ignore it.
@@ -111,7 +111,7 @@ class EmailServiceClass {
 </body>
 </html>
         `.trim(),
-        text: `Login to Iris\n\nClick this link to log in: ${magicLink}\n\nThis link expires in 15 minutes.\n\nIf you didn't request this, ignore this email.`,
+        text: `Login to Botical\n\nClick this link to log in: ${magicLink}\n\nThis link expires in 15 minutes.\n\nIf you didn't request this, ignore this email.`,
       }),
     });
 

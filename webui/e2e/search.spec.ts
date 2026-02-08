@@ -84,7 +84,7 @@ test.describe("Search Extension", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem("iris:ui", JSON.stringify({
+      localStorage.setItem("botical:ui", JSON.stringify({
         selectedProjectId: null,
         sidebarWidth: 240,
         sidebarCollapsed: false,

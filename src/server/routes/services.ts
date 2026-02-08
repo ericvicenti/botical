@@ -2,7 +2,7 @@
  * Services API Routes
  *
  * REST API endpoints for managing persistent service configurations.
- * Services can come from YAML files (.iris/services/) or SQLite database.
+ * Services can come from YAML files (.botical/services/) or SQLite database.
  *
  * Project-scoped endpoints:
  * - POST /api/projects/:projectId/services - Create service

@@ -12,7 +12,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import matter from "gray-matter";
 import { z } from "zod";
-import { getIrisPaths } from "../config/yaml.ts";
+import { getBoticalPaths } from "../config/yaml.ts";
 
 // ============================================================================
 // Constants
@@ -227,7 +227,7 @@ export const SkillService = {
     }
 
     // Check installed skills
-    const installedSkillsDir = getIrisPaths(projectPath).skills;
+    const installedSkillsDir = getBoticalPaths(projectPath).skills;
     if (fs.existsSync(installedSkillsDir)) {
       // Search through all installed repos for the skill
       const owners = fs.readdirSync(installedSkillsDir, { withFileTypes: true });

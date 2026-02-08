@@ -2,7 +2,7 @@
  * YAML Configuration Utilities
  *
  * Provides utilities for loading and saving YAML configuration files.
- * Used for workflows, services, agents, and project config stored in .iris/
+ * Used for workflows, services, agents, and project config stored in .botical/
  */
 
 import * as yaml from "js-yaml";
@@ -167,29 +167,29 @@ export function yamlFileExists(filePath: string): boolean {
 }
 
 /**
- * Get the .iris directory path for a project
+ * Get the .botical directory path for a project
  *
  * @param projectPath - The project's root path
- * @returns Path to .iris directory
+ * @returns Path to .botical directory
  */
-export function getIrisDir(projectPath: string): string {
-  return path.join(projectPath, ".iris");
+export function getBoticalDir(projectPath: string): string {
+  return path.join(projectPath, ".botical");
 }
 
 /**
- * Ensure the .iris directory structure exists
+ * Ensure the .botical directory structure exists
  *
  * @param projectPath - The project's root path
  */
-export function ensureIrisDir(projectPath: string): void {
-  const irisDir = getIrisDir(projectPath);
+export function ensureBoticalDir(projectPath: string): void {
+  const boticalDir = getBoticalDir(projectPath);
   const dirs = [
-    irisDir,
-    path.join(irisDir, "workflows"),
-    path.join(irisDir, "services"),
-    path.join(irisDir, "agents"),
-    path.join(irisDir, "plans"),
-    path.join(irisDir, "skills"),
+    boticalDir,
+    path.join(boticalDir, "workflows"),
+    path.join(boticalDir, "services"),
+    path.join(boticalDir, "agents"),
+    path.join(boticalDir, "plans"),
+    path.join(boticalDir, "skills"),
   ];
 
   for (const dir of dirs) {
@@ -200,24 +200,24 @@ export function ensureIrisDir(projectPath: string): void {
 }
 
 /**
- * Get path helpers for a project's .iris directory
+ * Get path helpers for a project's .botical directory
  */
-export function getIrisPaths(projectPath: string) {
-  const irisDir = getIrisDir(projectPath);
+export function getBoticalPaths(projectPath: string) {
+  const boticalDir = getBoticalDir(projectPath);
 
   return {
-    root: irisDir,
-    config: path.join(irisDir, "config.yaml"),
-    workflows: path.join(irisDir, "workflows"),
-    services: path.join(irisDir, "services"),
-    agents: path.join(irisDir, "agents"),
-    plans: path.join(irisDir, "plans"),
-    skills: path.join(irisDir, "skills"),
+    root: boticalDir,
+    config: path.join(boticalDir, "config.yaml"),
+    workflows: path.join(boticalDir, "workflows"),
+    services: path.join(boticalDir, "services"),
+    agents: path.join(boticalDir, "agents"),
+    plans: path.join(boticalDir, "plans"),
+    skills: path.join(boticalDir, "skills"),
 
-    workflow: (name: string) => path.join(irisDir, "workflows", `${name}.yaml`),
-    service: (name: string) => path.join(irisDir, "services", `${name}.yaml`),
-    agent: (name: string) => path.join(irisDir, "agents", `${name}.yaml`),
-    plan: (name: string) => path.join(irisDir, "plans", `${name}.md`),
-    skillRepo: (repo: string) => path.join(irisDir, "skills", ...repo.split("/")),
+    workflow: (name: string) => path.join(boticalDir, "workflows", `${name}.yaml`),
+    service: (name: string) => path.join(boticalDir, "services", `${name}.yaml`),
+    agent: (name: string) => path.join(boticalDir, "agents", `${name}.yaml`),
+    plan: (name: string) => path.join(boticalDir, "plans", `${name}.md`),
+    skillRepo: (repo: string) => path.join(boticalDir, "skills", ...repo.split("/")),
   };
 }

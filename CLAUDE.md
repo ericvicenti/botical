@@ -1,10 +1,10 @@
-# Iris - AI Agent Instructions
+# Botical - AI Agent Instructions
 
-This file provides essential context for AI agents working on the Iris codebase.
+This file provides essential context for AI agents working on the Botical codebase.
 
 ## Quick Start
 
-**What is Iris?** A headless backend server for AI agent workspaces. It provides:
+**What is Botical?** A headless backend server for AI agent workspaces. It provides:
 - WebSocket-first API for real-time agent communication
 - Per-project SQLite databases for isolation
 - Vercel AI SDK integration for LLM interactions
@@ -150,10 +150,10 @@ Core concepts and definitions:
 - [`docs/knowledge-base/05-conventions.md`](docs/knowledge-base/05-conventions.md) - Coding conventions
 
 ### Deployment & Hosting
-Running Iris locally or on a server:
-- [`docs/local-development.md`](docs/local-development.md) - Run locally with `npx iris-ai`
+Running Botical locally or on a server:
+- [`docs/local-development.md`](docs/local-development.md) - Run locally with `npx botical`
 - [`docs/deployment.md`](docs/deployment.md) - Deploy to exe.dev with CI/CD
-- [`docs/hosting-infrastructure.md`](docs/hosting-infrastructure.md) - Production hosting on iris.vicenti.net
+- [`docs/hosting-infrastructure.md`](docs/hosting-infrastructure.md) - Production hosting on botical.vicenti.net
 - [`docs/deployment-guide.md`](docs/deployment-guide.md) - Traditional VPS deployment (Ubuntu/Nginx)
 
 ## Key Concepts
@@ -287,7 +287,7 @@ The command system supports keyboard shortcuts with modifiers:
 - Preview tabs: When URL doesn't match any open tab, shows italic preview tab
 
 ### UI State Persistence
-Stored in localStorage under `iris:ui`:
+Stored in localStorage under `botical:ui`:
 - `selectedProjectId`: Current project
 - `sidebarWidth`: Resizable sidebar width (180-480px)
 - `sidebarCollapsed`: Boolean
@@ -323,30 +323,30 @@ The dev script (`scripts/dev.ts`) handles everything:
 
 **Individual commands:**
 ```bash
-bun dev:server  # Backend only (default port 4096, uses IRIS_PORT env)
+bun dev:server  # Backend only (default port 4096, uses BOTICAL_PORT env)
 bun dev:webui   # Frontend only (default port 5173)
 ```
 
 ## Deployment & Hosting
 
-Iris can be deployed in three ways:
+Botical can be deployed in three ways:
 
 ### 1. Local with npx (Zero Setup)
 ```bash
-npx iris-ai
+npx botical
 ```
-Installs Bun, downloads Iris, and starts a local server. Data stored in `~/.iris/`. See [`docs/local-development.md`](docs/local-development.md).
+Installs Bun, downloads Botical, and starts a local server. Data stored in `~/.botical/`. See [`docs/local-development.md`](docs/local-development.md).
 
 ### 2. exe.dev Deployment (Recommended for Hosting)
 ```bash
-bun scripts/deploy.ts iris-vicenti.exe.xyz
+bun scripts/deploy.ts botical-vicenti.exe.xyz
 ```
 One-command deployment to exe.dev VMs with automatic TLS and CI/CD. See [`docs/deployment.md`](docs/deployment.md).
 
 ### 3. Traditional VPS (Ubuntu/Nginx)
 Manual deployment with systemd, nginx, and certbot. See [`docs/deployment-guide.md`](docs/deployment-guide.md).
 
-### Production Infrastructure (iris.vicenti.net)
+### Production Infrastructure (botical.vicenti.net)
 The production instance runs on exe.dev with:
 - GitHub Actions self-hosted runner for CI/CD
 - Automatic deployment on push to `main`

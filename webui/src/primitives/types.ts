@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Iris Primitives - Core Types
+ * Botical Primitives - Core Types
  *
  * Pages and Actions provide a unified interface for GUI, Agent, and Testing.
  */

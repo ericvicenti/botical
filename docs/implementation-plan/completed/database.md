@@ -2,8 +2,8 @@
 
 ## Overview
 
-Iris uses a multi-database architecture:
-- **Root Database** (`iris.db`): Global data (users, projects, server config)
+Botical uses a multi-database architecture:
+- **Root Database** (`botical.db`): Global data (users, projects, server config)
 - **Project Databases** (`projects/{projectId}/project.db`): Per-project data
 
 This separation provides:
@@ -14,7 +14,7 @@ This separation provides:
 
 ## Root Database Schema
 
-Location: `~/.iris/iris.db`
+Location: `~/.botical/botical.db`
 
 ```sql
 -- ============================================
@@ -180,7 +180,7 @@ CREATE TABLE migrations (
 
 ## Project Database Schema
 
-Location: `~/.iris/projects/{projectId}/project.db`
+Location: `~/.botical/projects/{projectId}/project.db`
 
 ```sql
 -- ============================================

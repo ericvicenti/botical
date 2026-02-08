@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { EventBus } from "@/bus/event-bus.ts";
-import type { IrisEvent, EventEnvelope } from "@/bus/types.ts";
+import type { BoticalEvent, EventEnvelope } from "@/bus/types.ts";
 
 describe("Event Propagation Integration", () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe("Event Propagation Integration", () => {
         EventBus.subscribe("session.created", cb);
       });
 
-      const event: IrisEvent = {
+      const event: BoticalEvent = {
         type: "session.created",
         payload: {
           sessionId: "sess_multi",

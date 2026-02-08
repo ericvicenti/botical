@@ -29,8 +29,8 @@ export {
 } from "./QueryProvider";
 
 // Hooks
-export { useIrisQuery, prefetchIrisQuery } from "./useIrisQuery";
-export { useIrisMutation } from "./useIrisMutation";
+export { useBoticalQuery, prefetchBoticalQuery } from "./useBoticalQuery";
+export { useBoticalMutation } from "./useBoticalMutation";
 
 // ============================================
 // Query Definitions

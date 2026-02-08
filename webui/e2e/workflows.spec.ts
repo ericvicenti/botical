@@ -198,7 +198,7 @@ test.describe("Workflows", () => {
     // Set up localStorage with selected project
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
     // Navigate directly to a non-existent workflow
@@ -354,7 +354,7 @@ test.describe("Workflows", () => {
     // Set up localStorage with selected project
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
     await page.goto(`/workflows/${mockWorkflow.id}`);
@@ -403,7 +403,7 @@ test.describe("Workflows", () => {
     // Set up localStorage with selected project
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
     await page.goto(`/workflows/${mockWorkflow.id}`);
@@ -544,7 +544,7 @@ test.describe("Workflows", () => {
     // Set up localStorage with selected project
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
     await page.goto(`/workflows/${workflowWithWait.id}`);
@@ -611,7 +611,7 @@ test.describe("Workflows", () => {
     // Set up localStorage with selected project
     await page.goto("/");
     await page.evaluate((projectId) => {
-      localStorage.setItem("iris:ui", JSON.stringify({ selectedProjectId: projectId }));
+      localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
     await page.goto(`/workflows/${mockWorkflow.id}`);

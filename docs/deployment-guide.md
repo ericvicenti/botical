@@ -1,11 +1,11 @@
 # Deployment Guide - Ubuntu VPS with systemd
 
-This guide covers deploying Iris to a traditional Ubuntu VPS with systemd and Nginx.
+This guide covers deploying Botical to a traditional Ubuntu VPS with systemd and Nginx.
 
 > **Other deployment options:**
-> - [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+> - [Local Development](./local-development.md) - Run locally with `npx botical`
 > - [exe.dev Deployment](./deployment.md) - One-command deployment with CI/CD
-> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
+> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for botical.vicenti.net
 
 ## Prerequisites
 
@@ -22,20 +22,20 @@ source ~/.bashrc
 bun --version  # Verify installation
 ```
 
-## 2. Create Iris User (Optional but Recommended)
+## 2. Create Botical User (Optional but Recommended)
 
 ```bash
-sudo useradd -r -m -s /bin/bash iris
-sudo su - iris
+sudo useradd -r -m -s /bin/bash botical
+sudo su - botical
 ```
 
 ## 3. Clone and Install
 
 ```bash
 cd /opt
-sudo git clone <repository-url> iris
-sudo chown -R $USER:$USER iris
-cd iris
+sudo git clone <repository-url> botical
+sudo chown -R $USER:$USER botical
+cd botical
 bun install
 ```
 
@@ -44,8 +44,8 @@ bun install
 Create the configuration directory and file:
 
 ```bash
-sudo mkdir -p /etc/iris
-sudo nano /etc/iris/.env
+sudo mkdir -p /etc/botical
+sudo nano /etc/botical/.env
 ```
 
 Add the following configuration:
@@ -55,10 +55,10 @@ Add the following configuration:
 NODE_ENV=production
 
 # Server
-IRIS_PORT=4096
-IRIS_HOST=0.0.0.0
-IRIS_DATA_DIR=/var/lib/iris
-IRIS_LOG_LEVEL=info
+BOTICAL_PORT=4096
+BOTICAL_HOST=0.0.0.0
+BOTICAL_DATA_DIR=/var/lib/botical
+BOTICAL_LOG_LEVEL=info
 
 # Auth & Email
 APP_URL=https://your-domain.com
@@ -66,7 +66,7 @@ RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
 EMAIL_FROM=noreply@your-domain.com
 
 # Security - Generate with: openssl rand -base64 32
-IRIS_ENCRYPTION_KEY=your-secure-encryption-key-here
+BOTICAL_ENCRYPTION_KEY=your-secure-encryption-key-here
 ```
 
 **Important:** Generate a secure encryption key:
@@ -78,15 +78,15 @@ openssl rand -base64 32
 Secure the config file:
 
 ```bash
-sudo chmod 600 /etc/iris/.env
-sudo chown iris:iris /etc/iris/.env  # If using iris user
+sudo chmod 600 /etc/botical/.env
+sudo chown botical:botical /etc/botical/.env  # If using botical user
 ```
 
 ## 5. Create Data Directory
 
 ```bash
-sudo mkdir -p /var/lib/iris
-sudo chown iris:iris /var/lib/iris  # Or your user
+sudo mkdir -p /var/lib/botical
+sudo chown botical:botical /var/lib/botical  # Or your user
 ```
 
 ## 6. Create systemd Service
@@ -94,30 +94,30 @@ sudo chown iris:iris /var/lib/iris  # Or your user
 Copy the service file:
 
 ```bash
-sudo cp /opt/iris/docs/iris.service /etc/systemd/system/iris.service
+sudo cp /opt/botical/docs/botical.service /etc/systemd/system/botical.service
 ```
 
 Or create manually:
 
 ```bash
-sudo nano /etc/systemd/system/iris.service
+sudo nano /etc/systemd/system/botical.service
 ```
 
 Contents (adjust user/paths as needed):
 
 ```ini
 [Unit]
-Description=Iris AI Agent Server
-Documentation=https://github.com/your-org/iris
+Description=Botical AI Agent Server
+Documentation=https://github.com/your-org/botical
 After=network.target
 
 [Service]
 Type=simple
-User=iris
-Group=iris
-WorkingDirectory=/opt/iris
-EnvironmentFile=/etc/iris/.env
-ExecStart=/home/iris/.bun/bin/bun run src/index.ts
+User=botical
+Group=botical
+WorkingDirectory=/opt/botical
+EnvironmentFile=/etc/botical/.env
+ExecStart=/home/botical/.bun/bin/bun run src/index.ts
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10
@@ -133,7 +133,7 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
-ReadWritePaths=/var/lib/iris
+ReadWritePaths=/var/lib/botical
 
 # Resource limits
 LimitNOFILE=65535
@@ -142,7 +142,7 @@ MemoryMax=2G
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=iris
+SyslogIdentifier=botical
 
 [Install]
 WantedBy=multi-user.target
@@ -152,14 +152,14 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable iris
-sudo systemctl start iris
+sudo systemctl enable botical
+sudo systemctl start botical
 ```
 
 Check status:
 
 ```bash
-sudo systemctl status iris
+sudo systemctl status botical
 ```
 
 ## 8. Configure Nginx (Reverse Proxy)
@@ -174,7 +174,7 @@ sudo apt install nginx
 Create site configuration:
 
 ```bash
-sudo nano /etc/nginx/sites-available/iris
+sudo nano /etc/nginx/sites-available/botical
 ```
 
 Contents:
@@ -215,7 +215,7 @@ server {
 Enable the site:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/iris /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/botical /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default  # Remove default site
 sudo nginx -t  # Test configuration
 sudo systemctl reload nginx
@@ -246,25 +246,25 @@ Expected response:
 
 ## Upgrade Workflow
 
-To update Iris to a new version:
+To update Botical to a new version:
 
 ```bash
-cd /opt/iris
-sudo systemctl stop iris
+cd /opt/botical
+sudo systemctl stop botical
 git pull
 bun install
 # Migrations run automatically on startup
-sudo systemctl start iris
+sudo systemctl start botical
 ```
 
 For zero-downtime upgrades (if using multiple instances behind a load balancer):
 
 ```bash
 # On each instance:
-cd /opt/iris
+cd /opt/botical
 git pull
 bun install
-sudo systemctl restart iris
+sudo systemctl restart botical
 # Wait for health check to pass before proceeding to next instance
 ```
 
@@ -274,10 +274,10 @@ sudo systemctl restart iris
 
 ```bash
 # Single file backup
-cp /var/lib/iris/iris.db /backup/iris-$(date +%Y%m%d).db
+cp /var/lib/botical/botical.db /backup/botical-$(date +%Y%m%d).db
 
 # Full directory backup (includes project databases)
-tar -czf /backup/iris-full-$(date +%Y%m%d).tar.gz /var/lib/iris
+tar -czf /backup/botical-full-$(date +%Y%m%d).tar.gz /var/lib/botical
 ```
 
 ### Automated Backup (cron)
@@ -290,9 +290,9 @@ Add:
 
 ```
 # Daily backup at 2 AM
-0 2 * * * tar -czf /backup/iris-$(date +\%Y\%m\%d).tar.gz /var/lib/iris
+0 2 * * * tar -czf /backup/botical-$(date +\%Y\%m\%d).tar.gz /var/lib/botical
 # Keep only last 7 days
-0 3 * * * find /backup -name "iris-*.tar.gz" -mtime +7 -delete
+0 3 * * * find /backup -name "botical-*.tar.gz" -mtime +7 -delete
 ```
 
 ## Logs
@@ -301,16 +301,16 @@ View logs:
 
 ```bash
 # Recent logs
-sudo journalctl -u iris -n 100
+sudo journalctl -u botical -n 100
 
 # Follow logs in real-time
-sudo journalctl -u iris -f
+sudo journalctl -u botical -f
 
 # Logs since last boot
-sudo journalctl -u iris -b
+sudo journalctl -u botical -b
 
 # Logs from specific time
-sudo journalctl -u iris --since "2024-01-01 00:00:00"
+sudo journalctl -u botical --since "2024-01-01 00:00:00"
 ```
 
 ## Troubleshooting
@@ -320,7 +320,7 @@ sudo journalctl -u iris --since "2024-01-01 00:00:00"
 Check logs for errors:
 
 ```bash
-sudo journalctl -u iris -e
+sudo journalctl -u botical -e
 ```
 
 Common issues:
@@ -331,17 +331,17 @@ Common issues:
 ### Permission errors
 
 ```bash
-sudo chown -R iris:iris /var/lib/iris
-sudo chown -R iris:iris /opt/iris
+sudo chown -R botical:botical /var/lib/botical
+sudo chown -R botical:botical /opt/botical
 ```
 
 ### Database locked
 
 ```bash
-sudo systemctl stop iris
+sudo systemctl stop botical
 # Wait for any locks to release
 sleep 5
-sudo systemctl start iris
+sudo systemctl start botical
 ```
 
 ### Email not sending
@@ -362,8 +362,8 @@ sudo certbot renew --force-renewal
 
 ## Security Checklist
 
-- [ ] `IRIS_ENCRYPTION_KEY` is set and secure
-- [ ] `/etc/iris/.env` has restricted permissions (600)
+- [ ] `BOTICAL_ENCRYPTION_KEY` is set and secure
+- [ ] `/etc/botical/.env` has restricted permissions (600)
 - [ ] Firewall allows only ports 80, 443, 22
 - [ ] SSH key authentication only (disable password auth)
 - [ ] Regular security updates applied
@@ -397,12 +397,12 @@ htop
 sudo iotop
 
 # Disk space
-df -h /var/lib/iris
+df -h /var/lib/botical
 ```
 
 ## Related Documentation
 
-- [Local Development](./local-development.md) - Run locally with `npx iris-ai`
+- [Local Development](./local-development.md) - Run locally with `npx botical`
 - [exe.dev Deployment](./deployment.md) - One-command deployment with CI/CD
-- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
+- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for botical.vicenti.net
 - [Architecture](./knowledge-base/01-architecture.md) - System architecture

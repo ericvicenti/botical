@@ -1,28 +1,28 @@
-# Local Development with npx iris-ai
+# Local Development with npx botical
 
-Run Iris locally with a single command - no setup required.
+Run Botical locally with a single command - no setup required.
 
 ## Quick Start
 
 ```bash
-npx iris-ai
+npx botical
 ```
 
 That's it! The command handles everything:
 1. Installs Bun runtime if needed
-2. Downloads Iris to `~/.iris/app`
+2. Downloads Botical to `~/.botical/app`
 3. Installs dependencies
 4. Builds the web interface
 5. Starts the server and opens your browser
 
 ## How It Works
 
-The `iris-ai` npm package is a lightweight CLI that bootstraps the full Iris application. It's designed to work on any system with Node.js 18+ installed.
+The `botical` npm package is a lightweight CLI that bootstraps the full Botical application. It's designed to work on any system with Node.js 18+ installed.
 
 ### Installation Flow
 
 ```
-npx iris-ai
+npx botical
      │
      ▼
 ┌─────────────────────────────────────┐
@@ -32,7 +32,7 @@ npx iris-ai
      │
      ▼
 ┌─────────────────────────────────────┐
-│ 2. Setup Iris (~/.iris/app)         │
+│ 2. Setup Botical (~/.botical/app)         │
 │    - First run: git clone           │
 │    - Subsequent: git pull           │
 └─────────────────────────────────────┘
@@ -60,18 +60,18 @@ npx iris-ai
 
 ### Data Storage
 
-All Iris data is stored in `~/.iris/`:
+All Botical data is stored in `~/.botical/`:
 
 | Path | Description |
 |------|-------------|
-| `~/.iris/app/` | Application files (git repo) |
-| `~/.iris/iris.db` | Root database (users, projects) |
-| `~/.iris/projects/` | Per-project SQLite databases |
+| `~/.botical/app/` | Application files (git repo) |
+| `~/.botical/botical.db` | Root database (users, projects) |
+| `~/.botical/projects/` | Per-project SQLite databases |
 
 ## Command Line Options
 
 ```bash
-npx iris-ai [options]
+npx botical [options]
 ```
 
 | Option | Description |
@@ -86,20 +86,20 @@ npx iris-ai [options]
 
 ```bash
 # Start on default port (6001)
-npx iris-ai
+npx botical
 
 # Start on custom port
-npx iris-ai -p 8080
+npx botical -p 8080
 
 # Force update and rebuild
-npx iris-ai --update --rebuild
+npx botical --update --rebuild
 ```
 
 ## Auto-Update Behavior
 
-When you run `npx iris-ai`:
-- If `~/.iris/app` doesn't exist: Full installation (git clone)
-- If `~/.iris/app` exists: Checks for updates from GitHub
+When you run `npx botical`:
+- If `~/.botical/app` doesn't exist: Full installation (git clone)
+- If `~/.botical/app` exists: Checks for updates from GitHub
   - If updates available: Pulls latest, reinstalls dependencies, rebuilds
   - If up to date: Skips to server startup
 
@@ -116,7 +116,7 @@ The CLI automatically finds an available port:
 
 - **Node.js 18+**: Required to run the npx command
 - **Bun**: Installed automatically if not present
-- **Git**: Required for downloading/updating Iris
+- **Git**: Required for downloading/updating Botical
 - **macOS, Linux, or Windows**: Cross-platform support
 
 ## Alternative: Direct Clone
@@ -125,8 +125,8 @@ If you prefer manual setup for development:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ericvicenti/iris.git
-cd iris
+git clone https://github.com/ericvicenti/botical.git
+cd botical
 
 # Start development environment
 bun dev
@@ -143,31 +143,31 @@ If automatic Bun installation fails, install manually:
 curl -fsSL https://bun.sh/install | bash
 ```
 
-Then run `npx iris-ai` again.
+Then run `npx botical` again.
 
 ### Port already in use
 
 Use a different port:
 ```bash
-npx iris-ai -p 8080
+npx botical -p 8080
 ```
 
 ### Updates not applying
 
 Force a complete update:
 ```bash
-npx iris-ai --update --rebuild
+npx botical --update --rebuild
 ```
 
 ### Browser doesn't open
 
 Navigate manually to the URL shown in the terminal (e.g., `http://localhost:6001`).
 
-### Permission errors on ~/.iris
+### Permission errors on ~/.botical
 
 Ensure you own the directory:
 ```bash
-sudo chown -R $USER ~/.iris
+sudo chown -R $USER ~/.botical
 ```
 
 ## Related Documentation

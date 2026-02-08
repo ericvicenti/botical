@@ -1,10 +1,10 @@
 # Deployment Guide
 
-Deploy Iris to an exe.dev server with a single command.
+Deploy Botical to an exe.dev server with a single command.
 
 > **Other deployment options:**
-> - [Local Development](./local-development.md) - Run locally with `npx iris-ai`
-> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup details for iris.vicenti.net
+> - [Local Development](./local-development.md) - Run locally with `npx botical`
+> - [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup details for botical.vicenti.net
 > - [Traditional VPS](./deployment-guide.md) - Ubuntu/Nginx deployment
 
 ## Quick Start
@@ -15,7 +15,7 @@ bun scripts/deploy.ts <hostname>
 
 Example:
 ```bash
-bun scripts/deploy.ts iris-vicenti.exe.xyz
+bun scripts/deploy.ts botical-vicenti.exe.xyz
 ```
 
 ## Prerequisites
@@ -71,7 +71,7 @@ Bun Server (Hono)
 1. Deploy to your exe.dev server
 2. Create a CNAME record pointing your domain to your VM:
    ```
-   iris.example.com  CNAME  your-vm.exe.xyz
+   botical.example.com  CNAME  your-vm.exe.xyz
    ```
 3. exe.dev automatically provisions a TLS certificate
 
@@ -88,33 +88,33 @@ The systemd service sets these environment variables:
 | Variable | Value | Description |
 |----------|-------|-------------|
 | `NODE_ENV` | `production` | Production mode |
-| `IRIS_PORT` | `8000` | HTTP port (exe.dev requires 3000-9999) |
-| `IRIS_HOST` | `0.0.0.0` | Listen on all interfaces |
-| `IRIS_STATIC_DIR` | `$HOME/iris/webui/dist` | Built frontend path |
-| `IRIS_DATA_DIR` | `$HOME/.iris` | Data directory |
+| `BOTICAL_PORT` | `8000` | HTTP port (exe.dev requires 3000-9999) |
+| `BOTICAL_HOST` | `0.0.0.0` | Listen on all interfaces |
+| `BOTICAL_STATIC_DIR` | `$HOME/botical/webui/dist` | Built frontend path |
+| `BOTICAL_DATA_DIR` | `$HOME/.botical` | Data directory |
 
-To customize, edit `/etc/systemd/system/iris.service` on the server.
+To customize, edit `/etc/systemd/system/botical.service` on the server.
 
 ## Management Commands
 
 View logs:
 ```bash
-ssh your-vm.exe.xyz journalctl -u iris -f
+ssh your-vm.exe.xyz journalctl -u botical -f
 ```
 
 Restart service:
 ```bash
-ssh your-vm.exe.xyz systemctl restart iris
+ssh your-vm.exe.xyz systemctl restart botical
 ```
 
 Stop service:
 ```bash
-ssh your-vm.exe.xyz systemctl stop iris
+ssh your-vm.exe.xyz systemctl stop botical
 ```
 
 Check status:
 ```bash
-ssh your-vm.exe.xyz systemctl status iris
+ssh your-vm.exe.xyz systemctl status botical
 ```
 
 ## Troubleshooting
@@ -126,7 +126,7 @@ ssh your-vm.exe.xyz systemctl status iris
 ### Service fails to start
 Check logs for errors:
 ```bash
-ssh your-vm.exe.xyz journalctl -u iris -n 50 --no-pager
+ssh your-vm.exe.xyz journalctl -u botical -n 50 --no-pager
 ```
 
 Common issues:
@@ -134,8 +134,8 @@ Common issues:
 - Missing dependencies: Re-run the deploy script
 
 ### Frontend not loading
-1. Check that the build succeeded: `ssh your-vm.exe.xyz ls /root/iris/webui/dist/`
-2. Check `IRIS_STATIC_DIR` is set correctly in the service file
+1. Check that the build succeeded: `ssh your-vm.exe.xyz ls /root/botical/webui/dist/`
+2. Check `BOTICAL_STATIC_DIR` is set correctly in the service file
 
 ## Manual Deployment
 
@@ -149,8 +149,8 @@ ssh your-vm.exe.xyz
 curl -fsSL https://bun.sh/install | bash
 
 # Clone repository
-git clone https://github.com/ericvicenti/iris.git
-cd iris
+git clone https://github.com/ericvicenti/botical.git
+cd botical
 
 # Install dependencies
 bun install
@@ -160,12 +160,12 @@ cd webui && bun install && cd ..
 cd webui && bun run build && cd ..
 
 # Copy service file
-cp scripts/iris.service /etc/systemd/system/iris.service
+cp scripts/botical.service /etc/systemd/system/botical.service
 
 # Enable and start
 systemctl daemon-reload
-systemctl enable iris
-systemctl start iris
+systemctl enable botical
+systemctl start botical
 ```
 
 ## Rollback
@@ -174,12 +174,12 @@ To rollback to a previous version:
 
 ```bash
 ssh your-vm.exe.xyz
-cd /root/iris
+cd /root/botical
 git log --oneline -10  # Find the commit to rollback to
 git reset --hard <commit-hash>
 bun install
 cd webui && bun install && bun run build
-systemctl restart iris
+systemctl restart botical
 ```
 
 ## Security Notes
@@ -187,7 +187,7 @@ systemctl restart iris
 - The service runs as root (simplest for exe.dev VMs)
 - TLS is handled by exe.dev's proxy - traffic between proxy and app is HTTP
 - CORS is currently permissive (`*`) - configure in production if needed
-- Data is stored in `/root/.iris` - back up this directory
+- Data is stored in `/root/.botical` - back up this directory
 
 ## Continuous Deployment (GitHub Actions)
 
@@ -195,14 +195,14 @@ Set up automatic deploys on every push to main:
 
 ### 1. Get a Runner Token
 
-Go to: https://github.com/ericvicenti/iris/settings/actions/runners/new?arch=x64&os=linux
+Go to: https://github.com/ericvicenti/botical/settings/actions/runners/new?arch=x64&os=linux
 
 Copy the token from the `./config.sh` command (starts with `A...`).
 
 ### 2. Run the Setup Script
 
 ```bash
-bun scripts/setup-runner.ts iris-vicenti.exe.xyz <TOKEN>
+bun scripts/setup-runner.ts botical-vicenti.exe.xyz <TOKEN>
 ```
 
 This installs and configures a self-hosted GitHub Actions runner on your server.
@@ -210,19 +210,19 @@ This installs and configures a self-hosted GitHub Actions runner on your server.
 ### 3. Done!
 
 Every push to `main` will now trigger automatic deployment. View runs at:
-https://github.com/ericvicenti/iris/actions
+https://github.com/ericvicenti/botical/actions
 
 ### Runner Management
 
 ```bash
 # View runner status
-ssh iris-vicenti.exe.xyz sudo systemctl status gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl status gh-actions-runner
 
 # View runner logs
-ssh iris-vicenti.exe.xyz sudo journalctl -u gh-actions-runner -f
+ssh botical-vicenti.exe.xyz sudo journalctl -u gh-actions-runner -f
 
 # Restart runner
-ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
+ssh botical-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
 ```
 
 ## Files
@@ -231,13 +231,13 @@ ssh iris-vicenti.exe.xyz sudo systemctl restart gh-actions-runner
 |------|-------------|
 | `scripts/deploy.ts` | Main deployment script |
 | `scripts/setup-runner.ts` | GitHub Actions runner setup |
-| `scripts/iris.service` | Systemd service template |
+| `scripts/botical.service` | Systemd service template |
 | `.github/workflows/deploy.yml` | CI/CD workflow |
 | `src/server/app.ts` | Static file serving logic |
 
 ## Related Documentation
 
-- [Local Development](./local-development.md) - Run locally with `npx iris-ai`
-- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for iris.vicenti.net
+- [Local Development](./local-development.md) - Run locally with `npx botical`
+- [Hosting Infrastructure](./hosting-infrastructure.md) - Production setup for botical.vicenti.net
 - [Traditional VPS Guide](./deployment-guide.md) - Ubuntu/Nginx deployment
 - [Architecture](./knowledge-base/01-architecture.md) - System architecture

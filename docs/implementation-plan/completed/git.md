@@ -1,14 +1,14 @@
 # Phase 12: Git Integration ✅ COMPLETE
 
-**Goal**: First-class git operations via API with Iris SSH identity
+**Goal**: First-class git operations via API with Botical SSH identity
 
 **Status**: Complete - SSH identity, full git operations, WebSocket events
 
 ## Overview
 
-Every Iris project is a git repository. This phase adds git operations (status, branch, commit, push/pull) via API, enabling both the UI and agents to perform version control operations.
+Every Botical project is a git repository. This phase adds git operations (status, branch, commit, push/pull) via API, enabling both the UI and agents to perform version control operations.
 
-**Key Decision**: Iris has its own SSH identity. Users add the Iris public key to GitHub/GitLab to grant push access.
+**Key Decision**: Botical has its own SSH identity. Users add the Botical public key to GitHub/GitLab to grant push access.
 
 ---
 
@@ -24,9 +24,9 @@ Every Iris project is a git repository. This phase adds git operations (status, 
 }
 ```
 
-### Iris SSH Identity
+### Botical SSH Identity
 
-On first run, Iris generates an SSH keypair:
+On first run, Botical generates an SSH keypair:
 
 ```typescript
 // src/services/identity.ts
@@ -35,13 +35,13 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
-const IRIS_DIR = join(homedir(), '.iris')
-const PRIVATE_KEY_PATH = join(IRIS_DIR, 'id_ed25519')
-const PUBLIC_KEY_PATH = join(IRIS_DIR, 'id_ed25519.pub')
+const BOTICAL_DIR = join(homedir(), '.botical')
+const PRIVATE_KEY_PATH = join(BOTICAL_DIR, 'id_ed25519')
+const PUBLIC_KEY_PATH = join(BOTICAL_DIR, 'id_ed25519.pub')
 
 export function ensureIdentity(): void {
-  if (!existsSync(IRIS_DIR)) {
-    mkdirSync(IRIS_DIR, { recursive: true })
+  if (!existsSync(BOTICAL_DIR)) {
+    mkdirSync(BOTICAL_DIR, { recursive: true })
   }
 
   if (!existsSync(PRIVATE_KEY_PATH)) {
@@ -67,7 +67,7 @@ export function getPrivateKeyPath(): string {
 }
 ```
 
-Configure git to use Iris identity:
+Configure git to use Botical identity:
 
 ```typescript
 // When performing git operations
@@ -127,10 +127,10 @@ interface GitService {
   getIdentity(): Promise<{ publicKey: string; fingerprint: string }>
 }
 
-// Iris commits with recognizable signature
-const IRIS_AUTHOR = {
-  name: 'Iris',
-  email: 'iris@iris-agent.dev',  // Configurable via env
+// Botical commits with recognizable signature
+const BOTICAL_AUTHOR = {
+  name: 'Botical',
+  email: 'botical@botical-agent.dev',  // Configurable via env
 }
 ```
 
@@ -203,8 +203,8 @@ class GitServiceImpl implements GitService {
     return simpleGit(projectPath, {
       config: [
         `core.sshCommand=ssh -i ${getPrivateKeyPath()} -o StrictHostKeyChecking=accept-new`,
-        `user.name=${IRIS_AUTHOR.name}`,
-        `user.email=${IRIS_AUTHOR.email}`,
+        `user.name=${BOTICAL_AUTHOR.name}`,
+        `user.email=${BOTICAL_AUTHOR.email}`,
       ],
     })
   }
@@ -230,7 +230,7 @@ class GitServiceImpl implements GitService {
     const git = this.getGit(project.path)
 
     const result = await git.commit(message, {
-      '--author': `${IRIS_AUTHOR.name} <${IRIS_AUTHOR.email}>`,
+      '--author': `${BOTICAL_AUTHOR.name} <${BOTICAL_AUTHOR.email}>`,
     })
 
     // Emit event
@@ -243,7 +243,7 @@ class GitServiceImpl implements GitService {
     return {
       hash: result.commit,
       branch: result.branch,
-      author: IRIS_AUTHOR.name,
+      author: BOTICAL_AUTHOR.name,
       summary: result.summary,
     }
   }
@@ -300,7 +300,7 @@ POST   /api/projects/:projectId/git/stash/pop      Pop stash
 DELETE /api/projects/:projectId/git/stash/:index   Drop stash
 
 # Identity
-GET    /api/git/identity                           Get Iris SSH public key
+GET    /api/git/identity                           Get Botical SSH public key
 ```
 
 ### WebSocket Events
@@ -354,7 +354,7 @@ export function useGitDiff(projectId: string, options?: { staged?: boolean; file
   })
 }
 
-export function useIrisIdentity() {
+export function useBoticalIdentity() {
   return useQuery({
     queryKey: ['git', 'identity'],
     queryFn: () => apiClient<{ publicKey: string; fingerprint: string }>('/api/git/identity'),
@@ -416,7 +416,7 @@ tests/unit/services/git.test.ts            50+ tests
 ├── switchBranch() - checks out branch
 ├── deleteBranch() - deletes branch
 ├── stage() / unstage() - staging operations
-├── commit() - creates commit with Iris author
+├── commit() - creates commit with Botical author
 ├── log() - returns commit history
 ├── diff() - returns diff output
 ├── fetch() / pull() / push() - remote operations
@@ -468,10 +468,10 @@ tests/integration/git-operations.test.ts
 - [ ] Git status correctly reports working tree state
 - [ ] Branch operations work (create, switch, delete)
 - [ ] Staging/unstaging works correctly
-- [ ] Commits created with Iris author signature
+- [ ] Commits created with Botical author signature
 - [ ] Commit history retrieved correctly
 - [ ] Diff output returned for staged/unstaged changes
-- [ ] Push/pull work with Iris SSH identity
+- [ ] Push/pull work with Botical SSH identity
 - [ ] Stash operations work
 - [ ] Identity API returns public key for user to add to GitHub
 - [ ] WebSocket events broadcast for git operations

@@ -1,7 +1,7 @@
 /**
  * Docker Extension
  *
- * Provides Docker container management functionality for Iris.
+ * Provides Docker container management functionality for Botical.
  * This extension runs its own HTTP server and provides:
  * - Container listing, starting, stopping
  * - Image management

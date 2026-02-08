@@ -1,6 +1,6 @@
 # API Reference
 
-This document describes the WebSocket and REST APIs for interacting with Iris.
+This document describes the WebSocket and REST APIs for interacting with Botical.
 
 ---
 

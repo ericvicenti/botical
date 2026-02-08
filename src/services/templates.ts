@@ -1,7 +1,7 @@
 /**
  * Template Service
  *
- * Manages task templates stored in .iris/templates/ directory.
+ * Manages task templates stored in .botical/templates/ directory.
  * Templates define agent configuration, tools, and system prompts for tasks.
  */
 
@@ -41,7 +41,7 @@ export interface TaskTemplateSummary {
   agentClass: string;
 }
 
-const TEMPLATES_DIR = ".iris/templates";
+const TEMPLATES_DIR = ".botical/templates";
 
 /**
  * Parse a template file content (YAML frontmatter + markdown body)
@@ -274,7 +274,7 @@ export class TemplateService {
   }
 
   /**
-   * Create the .iris/templates directory if it doesn't exist
+   * Create the .botical/templates directory if it doesn't exist
    */
   static async ensureTemplatesDir(projectPath: string): Promise<string> {
     const templatesDir = path.join(projectPath, TEMPLATES_DIR);

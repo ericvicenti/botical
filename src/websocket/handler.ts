@@ -1,7 +1,7 @@
 /**
  * WebSocket Handler
  *
- * Main WebSocket connection handler for Iris.
+ * Main WebSocket connection handler for Botical.
  * See: docs/implementation-plan/05-realtime-communication.md#websocket-handler
  *
  * Authentication flow:
@@ -48,7 +48,7 @@ interface UserInfo {
  */
 function validateToken(token: string): UserInfo | null {
   // Check if it's an API key
-  if (token.startsWith("iris_")) {
+  if (token.startsWith("botical_")) {
     const db = DatabaseManager.getRootDb();
     const keyHash = hashSha256(token);
 

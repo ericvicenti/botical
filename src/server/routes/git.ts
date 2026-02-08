@@ -583,10 +583,10 @@ export const gitIdentity = new Hono();
 
 /**
  * GET /api/git/identity
- * Get Iris SSH public key for git authentication
+ * Get Botical SSH public key for git authentication
  *
  * Users should add this public key to GitHub/GitLab to allow
- * Iris to push/pull via SSH.
+ * Botical to push/pull via SSH.
  */
 gitIdentity.get("/identity", (c) => {
   const identity = getIdentityInfo();

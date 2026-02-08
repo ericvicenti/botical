@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { subscribeToUIActionEvents, type UIActionPayload } from "@/lib/websocket/events";
 
-const STORAGE_KEY = "iris:ui";
+const STORAGE_KEY = "botical:ui";
 
 const DEFAULT_SIDEBAR_WIDTH = 240;
 const MIN_SIDEBAR_WIDTH = 180;

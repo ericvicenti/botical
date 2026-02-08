@@ -1,19 +1,19 @@
 #!/usr/bin/env bun
 /**
- * Iris Deployment Script
+ * Botical Deployment Script
  *
- * Deploys Iris to an exe.dev server with a single idempotent command.
+ * Deploys Botical to an exe.dev server with a single idempotent command.
  * See: docs/deployment.md
  *
  * Usage: bun scripts/deploy.ts <hostname>
- * Example: bun scripts/deploy.ts iris-vicenti.exe.xyz
+ * Example: bun scripts/deploy.ts botical-vicenti.exe.xyz
  */
 
 import { spawn, type SpawnOptions } from "bun";
 import { resolve, dirname } from "path";
 
-const REPO_URL = "git@github.com:ericvicenti/iris.git";
-const SERVICE_NAME = "iris";
+const REPO_URL = "git@github.com:ericvicenti/botical.git";
+const SERVICE_NAME = "botical";
 
 /**
  * Run a command locally and return the result
@@ -83,33 +83,33 @@ async function copyToRemote(
  * Generate systemd service file content with correct paths
  */
 function generateServiceFile(homeDir: string, user: string): string {
-  const irisDir = `${homeDir}/iris`;
+  const boticalDir = `${homeDir}/botical`;
   const bunPath = `${homeDir}/.bun/bin/bun`;
-  const dataDir = `${homeDir}/.iris`;
+  const dataDir = `${homeDir}/.botical`;
 
   return `[Unit]
-Description=Iris AI Agent Workspace
+Description=Botical AI Agent Workspace
 After=network.target
 
 [Service]
 Type=simple
 User=${user}
-WorkingDirectory=${irisDir}
+WorkingDirectory=${boticalDir}
 ExecStart=${bunPath} run src/index.ts
 Restart=always
 RestartSec=5
 
 # Production environment
 Environment=NODE_ENV=production
-Environment=IRIS_PORT=8000
-Environment=IRIS_HOST=0.0.0.0
-Environment=IRIS_STATIC_DIR=${irisDir}/webui/dist
-Environment=IRIS_DATA_DIR=${dataDir}
+Environment=BOTICAL_PORT=8000
+Environment=BOTICAL_HOST=0.0.0.0
+Environment=BOTICAL_STATIC_DIR=${boticalDir}/webui/dist
+Environment=BOTICAL_DATA_DIR=${dataDir}
 
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=iris
+SyslogIdentifier=botical
 
 [Install]
 WantedBy=multi-user.target
@@ -120,7 +120,7 @@ WantedBy=multi-user.target
  * Main deployment function
  */
 async function deploy(host: string): Promise<void> {
-  console.log(`\n🚀 Deploying Iris to ${host}\n`);
+  console.log(`\n🚀 Deploying Botical to ${host}\n`);
 
   // Step 1: Check SSH connectivity and get user info
   console.log("📡 Checking SSH connectivity...");
@@ -131,7 +131,7 @@ async function deploy(host: string): Promise<void> {
   const [homeDir, user] = sshCheck.output.trim().split("\n");
   console.log(`   Connected as ${user} (home: ${homeDir})\n`);
 
-  const remoteDir = `${homeDir}/iris`;
+  const remoteDir = `${homeDir}/botical`;
 
   // Step 2: Install Bun if not present
   console.log("📦 Checking Bun installation...");
@@ -167,7 +167,7 @@ async function deploy(host: string): Promise<void> {
     console.log("   Generating deploy key...");
     await runRemote(
       host,
-      `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "iris-deploy@${host}"`
+      `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "botical-deploy@${host}"`
     );
   }
 
@@ -180,9 +180,9 @@ async function deploy(host: string): Promise<void> {
     console.log("⚠️  Deploy key not authorized for GitHub repository");
     console.log("=".repeat(70));
     console.log("\nAdd this deploy key to your GitHub repository:");
-    console.log("  1. Go to: https://github.com/ericvicenti/iris/settings/keys");
+    console.log("  1. Go to: https://github.com/ericvicenti/botical/settings/keys");
     console.log("  2. Click 'Add deploy key'");
-    console.log("  3. Title: iris-deploy@" + host);
+    console.log("  3. Title: botical-deploy@" + host);
     console.log("  4. Paste this key:\n");
     console.log(pubKey.output.trim());
     console.log("\n" + "=".repeat(70));
@@ -309,7 +309,7 @@ SERVICEEOF`
   }
 
   // Step 8: Configure exe.dev proxy (make public, set port)
-  // Extract VM name from hostname (e.g., "iris-vicenti" from "iris-vicenti.exe.xyz")
+  // Extract VM name from hostname (e.g., "botical-vicenti" from "botical-vicenti.exe.xyz")
   const vmName = host.replace(/\.exe\.xyz$/, "");
   if (host.endsWith(".exe.xyz")) {
     console.log("🌐 Configuring exe.dev proxy...");
@@ -342,7 +342,7 @@ const host = process.argv[2];
 
 if (!host) {
   console.error("Usage: bun scripts/deploy.ts <hostname>");
-  console.error("Example: bun scripts/deploy.ts iris-vicenti.exe.xyz");
+  console.error("Example: bun scripts/deploy.ts botical-vicenti.exe.xyz");
   process.exit(1);
 }
 

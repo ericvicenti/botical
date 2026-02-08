@@ -58,7 +58,7 @@ export async function createServer(
   const port = server.port ?? config.port;
   const hostname = server.hostname ?? config.host;
 
-  console.log(`🚀 Iris server running at http://${hostname}:${port}`);
+  console.log(`🚀 Botical server running at http://${hostname}:${port}`);
   console.log(`🔌 WebSocket available at ws://${hostname}:${port}/ws`);
 
   // Start auto-start services (don't await - let it run in background)

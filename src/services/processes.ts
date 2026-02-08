@@ -392,7 +392,7 @@ export class ProcessService {
    * Get log path for a process
    */
   static getLogPath(projectPath: string, processId: string): string {
-    return `${projectPath}/.iris/logs/${processId}.log`;
+    return `${projectPath}/.botical/logs/${processId}.log`;
   }
 
   /**

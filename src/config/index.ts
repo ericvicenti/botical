@@ -6,7 +6,7 @@
  *
  * Configuration is loaded from environment variables with sensible defaults.
  * The data directory structure supports the multi-database architecture:
- * - Root DB at: {dataDir}/iris.db
+ * - Root DB at: {dataDir}/botical.db
  * - Project DBs at: {dataDir}/projects/{projectId}/project.db
  *
  * See: docs/knowledge-base/01-architecture.md#database-architecture
@@ -46,7 +46,7 @@ export type ConfigOptions = z.infer<typeof ConfigSchema>;
  */
 function getDefaultDataDir(): string {
   const home = os.homedir();
-  return path.join(home, ".iris");
+  return path.join(home, ".botical");
 }
 
 /**
@@ -73,12 +73,12 @@ class ConfigManager {
   load(overrides: Partial<ConfigOptions> = {}): ConfigOptions {
     const envConfig = {
       // Server settings
-      dataDir: process.env.IRIS_DATA_DIR || getDefaultDataDir(),
-      port: process.env.IRIS_PORT
-        ? parseInt(process.env.IRIS_PORT, 10)
+      dataDir: process.env.BOTICAL_DATA_DIR || getDefaultDataDir(),
+      port: process.env.BOTICAL_PORT
+        ? parseInt(process.env.BOTICAL_PORT, 10)
         : undefined,
-      host: process.env.IRIS_HOST,
-      logLevel: process.env.IRIS_LOG_LEVEL as ConfigOptions["logLevel"],
+      host: process.env.BOTICAL_HOST,
+      logLevel: process.env.BOTICAL_LOG_LEVEL as ConfigOptions["logLevel"],
 
       // Environment
       nodeEnv: process.env.NODE_ENV as ConfigOptions["nodeEnv"],
@@ -89,7 +89,7 @@ class ConfigManager {
       emailFrom: process.env.EMAIL_FROM,
 
       // Security
-      encryptionKey: process.env.IRIS_ENCRYPTION_KEY,
+      encryptionKey: process.env.BOTICAL_ENCRYPTION_KEY,
     };
 
     // Remove undefined values
@@ -126,7 +126,7 @@ class ConfigManager {
    * Get the root database path
    */
   getRootDbPath(): string {
-    return path.join(this.getDataDir(), "iris.db");
+    return path.join(this.getDataDir(), "botical.db");
   }
 
   /**
@@ -161,7 +161,7 @@ class ConfigManager {
    * Check if the server is running in single-user mode.
    *
    * Single-user mode is enabled when:
-   * - IRIS_SINGLE_USER env var is explicitly set to 'true', OR
+   * - BOTICAL_SINGLE_USER env var is explicitly set to 'true', OR
    * - Auto-detected: host is 'localhost' AND no RESEND_API_KEY configured
    *
    * In single-user mode, authentication is bypassed and a local user
@@ -170,8 +170,8 @@ class ConfigManager {
    */
   isSingleUserMode(): boolean {
     // Explicit override takes precedence
-    if (process.env.IRIS_SINGLE_USER !== undefined) {
-      return process.env.IRIS_SINGLE_USER === "true";
+    if (process.env.BOTICAL_SINGLE_USER !== undefined) {
+      return process.env.BOTICAL_SINGLE_USER === "true";
     }
     // Auto-detect: localhost without email service configured
     const config = this.get();

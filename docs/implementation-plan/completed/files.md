@@ -2,7 +2,7 @@
 
 ## Overview
 
-Iris provides file management through agent tools that operate on the local filesystem within the project directory. File operations are:
+Botical provides file management through agent tools that operate on the local filesystem within the project directory. File operations are:
 - Scoped to the project directory (no path traversal)
 - Executed through the tool system
 - Integrated with the agent workflow

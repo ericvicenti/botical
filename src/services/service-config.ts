@@ -1,7 +1,7 @@
 /**
  * Service Configuration Service
  *
- * Manages persistent service definitions that can auto-start when Iris starts.
+ * Manages persistent service definitions that can auto-start when Botical starts.
  * Services are stored in the project database and can be configured to
  * automatically restart when the server starts.
  *

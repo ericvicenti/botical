@@ -1,7 +1,7 @@
 /**
  * Search Extension
  *
- * Provides web search functionality for Iris using SearXNG.
+ * Provides web search functionality for Botical using SearXNG.
  * This extension runs its own HTTP server and provides:
  * - Web search queries via SearXNG metasearch engine
  * - Auto-provisioning of SearXNG Docker container

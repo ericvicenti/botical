@@ -2,7 +2,7 @@
 
 ## Overview
 
-The agent system is the core of Iris, providing:
+The agent system is the core of Botical, providing:
 - Integration with Vercel AI SDK for LLM interactions
 - Tool execution loop with streaming
 - Custom agent configurations
@@ -127,7 +127,7 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
       { tool: 'read', pattern: '*', action: 'allow' },
       { tool: 'glob', pattern: '*', action: 'allow' },
       { tool: 'grep', pattern: '*', action: 'allow' },
-      { tool: 'write', pattern: '.iris/plans/*.md', action: 'allow' },
+      { tool: 'write', pattern: '.botical/plans/*.md', action: 'allow' },
       { tool: '*', pattern: '*', action: 'deny' },
     ],
   },

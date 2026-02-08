@@ -99,7 +99,7 @@ export interface Mutation<TParams, TResult = void> {
 }
 
 /**
- * Query state returned by useIrisQuery
+ * Query state returned by useBoticalQuery
  */
 export interface QueryState<T> {
   data: T | undefined;
@@ -112,7 +112,7 @@ export interface QueryState<T> {
 }
 
 /**
- * Mutation state returned by useIrisMutation
+ * Mutation state returned by useBoticalMutation
  */
 export interface MutationState<TParams, TResult> {
   mutate: (params: TParams) => void;
@@ -126,7 +126,7 @@ export interface MutationState<TParams, TResult> {
 }
 
 /**
- * Options for useIrisQuery hook
+ * Options for useBoticalQuery hook
  */
 export interface UseQueryOptions {
   /** Whether the query should execute */
@@ -138,7 +138,7 @@ export interface UseQueryOptions {
 }
 
 /**
- * Options for useIrisMutation hook
+ * Options for useBoticalMutation hook
  */
 export interface UseMutationOptions<TResult> {
   /** Called on successful mutation */

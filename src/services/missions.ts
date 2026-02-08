@@ -2,7 +2,7 @@
  * Mission Service
  *
  * Manages autonomous work units with planning documents and lifecycle transitions.
- * Missions are the core unit of autonomous work in Iris, featuring:
+ * Missions are the core unit of autonomous work in Botical, featuring:
  * - A planning phase with markdown documents
  * - Completion criteria drafted by agent, approved by user
  * - Tasks as granular work units within the mission
@@ -148,7 +148,7 @@ ${description || "Describe the mission goal here..."}
 Additional context...
 
 ---
-*Plan drafted by Iris on ${date}*
+*Plan drafted by Botical on ${date}*
 `;
 }
 
@@ -168,7 +168,7 @@ export class MissionService {
     const now = Date.now();
     const id = generateId(IdPrefixes.mission, { descending: true });
     const slug = generateSlug(validated.title);
-    const planPath = `.iris/missions/${slug}.md`;
+    const planPath = `.botical/missions/${slug}.md`;
     const planContent = generatePlanTemplate(validated.title, validated.description);
 
     db.prepare(

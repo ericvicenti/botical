@@ -1,7 +1,7 @@
 /**
  * Workflow Configuration (YAML-based)
  *
- * Manages workflows stored as YAML files in .iris/workflows/
+ * Manages workflows stored as YAML files in .botical/workflows/
  * Workflows define composable action sequences that execute as a DAG.
  */
 
@@ -13,7 +13,7 @@ import {
   saveYamlFile,
   deleteYamlFile,
   yamlFileExists,
-  getIrisPaths,
+  getBoticalPaths,
 } from "./yaml.ts";
 import type { ActionCategory } from "@/actions/types.ts";
 import type {
@@ -129,14 +129,14 @@ function workflowToYaml(workflow: WorkflowDefinition): WorkflowYaml {
  * YAML-based Workflow Service
  *
  * Reads and writes workflow definitions from YAML files.
- * Workflows are stored in .iris/workflows/{name}.yaml
+ * Workflows are stored in .botical/workflows/{name}.yaml
  */
 export const WorkflowYamlService = {
   /**
    * Get workflow file path
    */
   getPath(projectPath: string, name: string): string {
-    return getIrisPaths(projectPath).workflow(name);
+    return getBoticalPaths(projectPath).workflow(name);
   },
 
   /**
@@ -160,7 +160,7 @@ export const WorkflowYamlService = {
    * List all workflows in a project
    */
   list(projectPath: string, projectId: string): WorkflowDefinition[] {
-    const workflowsDir = getIrisPaths(projectPath).workflows;
+    const workflowsDir = getBoticalPaths(projectPath).workflows;
     const yamlFiles = loadYamlDir<unknown>(workflowsDir);
 
     const workflows: WorkflowDefinition[] = [];

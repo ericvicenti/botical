@@ -6,7 +6,7 @@
 
 ## Overview
 
-In Iris, a "Task" is a conversation with an AI agent focused on accomplishing a specific goal. The agent continues working until the task is complete. This phase implemented:
+In Botical, a "Task" is a conversation with an AI agent focused on accomplishing a specific goal. The agent continues working until the task is complete. This phase implemented:
 
 - Tasks sidebar panel showing all tasks for a project
 - Task creation interface

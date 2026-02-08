@@ -1,5 +1,5 @@
 /**
- * useIrisQuery Hook Tests
+ * useBoticalQuery Hook Tests
  *
  * Tests for the query hook with mocked API responses.
  */
@@ -9,7 +9,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/setup";
-import { useIrisQuery } from "./useIrisQuery";
+import { useBoticalQuery } from "./useBoticalQuery";
 import { WebSocketProvider } from "@/lib/websocket/context";
 import type { Query } from "./types";
 import type { ReactNode } from "react";
@@ -34,7 +34,7 @@ function createWrapper() {
   };
 }
 
-describe("useIrisQuery", () => {
+describe("useBoticalQuery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -53,7 +53,7 @@ describe("useIrisQuery", () => {
       endpoint: "/api/test/items",
     };
 
-    const { result } = renderHook(() => useIrisQuery(query, undefined), {
+    const { result } = renderHook(() => useBoticalQuery(query, undefined), {
       wrapper: createWrapper(),
     });
 
@@ -82,7 +82,7 @@ describe("useIrisQuery", () => {
       endpoint: (params) => `/api/items/${params.id}`,
     };
 
-    const { result } = renderHook(() => useIrisQuery(query, { id: "123" }), {
+    const { result } = renderHook(() => useBoticalQuery(query, { id: "123" }), {
       wrapper: createWrapper(),
     });
 
@@ -110,7 +110,7 @@ describe("useIrisQuery", () => {
     };
 
     const { result } = renderHook(
-      () => useIrisQuery(query, { search: "hello" }),
+      () => useBoticalQuery(query, { search: "hello" }),
       { wrapper: createWrapper() }
     );
 
@@ -137,7 +137,7 @@ describe("useIrisQuery", () => {
     };
 
     const { result } = renderHook(
-      () => useIrisQuery(query, { filters: ["a", "b"] }),
+      () => useBoticalQuery(query, { filters: ["a", "b"] }),
       { wrapper: createWrapper() }
     );
 
@@ -163,7 +163,7 @@ describe("useIrisQuery", () => {
       endpoint: "/api/error",
     };
 
-    const { result } = renderHook(() => useIrisQuery(query, undefined), {
+    const { result } = renderHook(() => useBoticalQuery(query, undefined), {
       wrapper: createWrapper(),
     });
 
@@ -190,7 +190,7 @@ describe("useIrisQuery", () => {
     };
 
     const { result, rerender } = renderHook(
-      ({ enabled }) => useIrisQuery(query, undefined, { enabled }),
+      ({ enabled }) => useBoticalQuery(query, undefined, { enabled }),
       {
         wrapper: createWrapper(),
         initialProps: { enabled: false },
@@ -225,7 +225,7 @@ describe("useIrisQuery", () => {
       endpoint: "/api/refetchable",
     };
 
-    const { result } = renderHook(() => useIrisQuery(query, undefined), {
+    const { result } = renderHook(() => useBoticalQuery(query, undefined), {
       wrapper: createWrapper(),
     });
 
@@ -268,7 +268,7 @@ describe("useIrisQuery", () => {
 
     // First query with id=1
     const { result: result1 } = renderHook(
-      () => useIrisQuery(query, { id: "1" }),
+      () => useBoticalQuery(query, { id: "1" }),
       { wrapper }
     );
 
@@ -278,7 +278,7 @@ describe("useIrisQuery", () => {
 
     // Second query with id=2 (different cache key)
     const { result: result2 } = renderHook(
-      () => useIrisQuery(query, { id: "2" }),
+      () => useBoticalQuery(query, { id: "2" }),
       { wrapper }
     );
 
@@ -308,7 +308,7 @@ describe("useIrisQuery", () => {
 
     // First render
     const { result: result1, unmount } = renderHook(
-      () => useIrisQuery(query, undefined),
+      () => useBoticalQuery(query, undefined),
       { wrapper }
     );
 
@@ -320,7 +320,7 @@ describe("useIrisQuery", () => {
 
     // Second render - should use cached data
     const { result: result2 } = renderHook(
-      () => useIrisQuery(query, undefined, { staleTime: 60000 }),
+      () => useBoticalQuery(query, undefined, { staleTime: 60000 }),
       { wrapper }
     );
 

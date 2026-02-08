@@ -247,7 +247,7 @@ export const GitSyncCompletedEvent = z.object({
 });
 
 // Union of all event types
-export const IrisEvent = z.discriminatedUnion("type", [
+export const BoticalEvent = z.discriminatedUnion("type", [
   SessionCreatedEvent,
   SessionUpdatedEvent,
   SessionDeletedEvent,
@@ -275,14 +275,14 @@ export const IrisEvent = z.discriminatedUnion("type", [
   GitSyncCompletedEvent,
 ]);
 
-export type IrisEvent = z.infer<typeof IrisEvent>;
+export type BoticalEvent = z.infer<typeof BoticalEvent>;
 
 // Event type string literals
-export type IrisEventType = IrisEvent["type"];
+export type BoticalEventType = BoticalEvent["type"];
 
 // Extract payload type for a specific event type
-export type EventPayload<T extends IrisEventType> = Extract<
-  IrisEvent,
+export type EventPayload<T extends BoticalEventType> = Extract<
+  BoticalEvent,
   { type: T }
 >["payload"];
 
@@ -291,13 +291,13 @@ export interface EventEnvelope {
   id: string;
   timestamp: number;
   projectId?: string;
-  event: IrisEvent;
+  event: BoticalEvent;
 }
 
 // Subscriber callback type
-export type EventSubscriber<T extends IrisEventType = IrisEventType> = (
-  envelope: EventEnvelope & { event: Extract<IrisEvent, { type: T }> }
+export type EventSubscriber<T extends BoticalEventType = BoticalEventType> = (
+  envelope: EventEnvelope & { event: Extract<BoticalEvent, { type: T }> }
 ) => void | Promise<void>;
 
 // Pattern for event type matching (supports wildcards)
-export type EventPattern = IrisEventType | `${string}.*`;
+export type EventPattern = BoticalEventType | `${string}.*`;

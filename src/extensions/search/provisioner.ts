@@ -13,19 +13,19 @@ import * as os from "os";
 import * as crypto from "crypto";
 
 // Container labels to identify managed containers
-const EXTENSION_LABEL = "iris.extension";
+const EXTENSION_LABEL = "botical.extension";
 const EXTENSION_VALUE = "search";
-const CONTAINER_NAME = "iris-searxng";
+const CONTAINER_NAME = "botical-searxng";
 const SEARXNG_IMAGE = "searxng/searxng:latest";
 
 // SearXNG settings that enable JSON API access
-const SEARXNG_SETTINGS = `# SearXNG settings for Iris
+const SEARXNG_SETTINGS = `# SearXNG settings for Botical
 # See https://docs.searxng.org/admin/settings/settings.html
 
 use_default_settings: true
 
 general:
-  instance_name: "Iris Search"
+  instance_name: "Botical Search"
 
 search:
   safe_search: 0
@@ -61,11 +61,11 @@ export interface ProvisionerStatus {
 }
 
 /**
- * Get the Iris data directory for storing SearXNG config
+ * Get the Botical data directory for storing SearXNG config
  */
 function getConfigDir(): string {
   const homeDir = os.homedir();
-  return path.join(homeDir, ".iris", "searxng");
+  return path.join(homeDir, ".botical", "searxng");
 }
 
 /**
@@ -237,7 +237,7 @@ export async function ensureSearxngRunning(
       },
       Labels: {
         [EXTENSION_LABEL]: EXTENSION_VALUE,
-        "iris.managed": "true",
+        "botical.managed": "true",
       },
       socketPath,
     });

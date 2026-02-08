@@ -1,7 +1,7 @@
 /**
  * Search Extension (Frontend)
  *
- * Provides web search UI for Iris using SearXNG.
+ * Provides web search UI for Botical using SearXNG.
  */
 
 // Register pages with the primitives system

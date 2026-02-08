@@ -2,7 +2,7 @@
  * Logger Middleware
  *
  * Logs HTTP requests with timing information for observability.
- * Log level is configurable via IRIS_LOG_LEVEL environment variable.
+ * Log level is configurable via BOTICAL_LOG_LEVEL environment variable.
  * See: docs/knowledge-base/01-architecture.md#rest-api
  */
 

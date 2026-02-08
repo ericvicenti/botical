@@ -2,7 +2,7 @@
  * Workflows API Routes
  *
  * REST API endpoints for managing workflows within a project.
- * Workflows can come from YAML files (.iris/workflows/) or SQLite database.
+ * Workflows can come from YAML files (.botical/workflows/) or SQLite database.
  *
  * Endpoints:
  * - GET /api/workflows - List workflows for a project

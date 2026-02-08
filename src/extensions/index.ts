@@ -1,7 +1,7 @@
 /**
  * Extensions Module
  *
- * Provides the extension system for Iris - a way to add modular features
+ * Provides the extension system for Botical - a way to add modular features
  * that run as separate server processes.
  */
 

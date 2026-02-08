@@ -53,7 +53,7 @@ describe("Auth Routes", () => {
 
   beforeEach(async () => {
     // Disable single-user mode for auth route tests
-    process.env.IRIS_SINGLE_USER = "false";
+    process.env.BOTICAL_SINGLE_USER = "false";
 
     // Reset database for each test
     DatabaseManager.closeAll();
@@ -185,7 +185,7 @@ describe("Auth Routes", () => {
       const res = await app.request(`/auth/verify?token=${token}`);
 
       const setCookie = res.headers.get("Set-Cookie");
-      expect(setCookie).toContain("iris_session=");
+      expect(setCookie).toContain("botical_session=");
       expect(setCookie).toContain("HttpOnly");
     });
 
@@ -306,7 +306,7 @@ describe("Auth Routes", () => {
       });
 
       const setCookie = res.headers.get("Set-Cookie");
-      expect(setCookie).toContain("iris_session=");
+      expect(setCookie).toContain("botical_session=");
       expect(setCookie).toContain("Max-Age=0");
     });
 

@@ -1,7 +1,7 @@
 /**
  * WebSocket Module
  *
- * Real-time communication layer for Iris.
+ * Real-time communication layer for Botical.
  * See: docs/implementation-plan/05-realtime-communication.md
  *
  * This module provides:

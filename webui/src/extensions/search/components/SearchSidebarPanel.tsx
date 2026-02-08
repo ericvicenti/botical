@@ -30,7 +30,7 @@ const MAX_RECENT_SEARCHES = 5;
 const MAX_QUICK_RESULTS = 3;
 
 // Store recent searches in localStorage
-const RECENT_SEARCHES_KEY = "iris:search:recent";
+const RECENT_SEARCHES_KEY = "botical:search:recent";
 
 function getRecentSearches(): string[] {
   try {

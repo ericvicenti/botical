@@ -8,14 +8,14 @@
  * Usage: bun scripts/setup-runner.ts <hostname> <github-token>
  *
  * Get the token from:
- * https://github.com/ericvicenti/iris/settings/actions/runners/new?arch=x64&os=linux
+ * https://github.com/ericvicenti/botical/settings/actions/runners/new?arch=x64&os=linux
  */
 
 import { spawn } from "bun";
 
 const RUNNER_VERSION = "2.321.0";
 const RUNNER_URL = `https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz`;
-const REPO_URL = "https://github.com/ericvicenti/iris";
+const REPO_URL = "https://github.com/ericvicenti/botical";
 
 async function runLocal(
   cmd: string[]
@@ -151,7 +151,7 @@ if (!host || !token) {
   console.error("Usage: bun scripts/setup-runner.ts <hostname> <github-token>");
   console.error("");
   console.error("Get the token from:");
-  console.error("https://github.com/ericvicenti/iris/settings/actions/runners/new?arch=x64&os=linux");
+  console.error("https://github.com/ericvicenti/botical/settings/actions/runners/new?arch=x64&os=linux");
   console.error("");
   console.error("Look for the token in the './config.sh' command (starts with A...)");
   process.exit(1);

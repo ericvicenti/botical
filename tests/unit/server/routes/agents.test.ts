@@ -76,9 +76,9 @@ describe("Agents API Routes", () => {
       path: testProjectPath,
     });
     testProjectId = project.id;
-    // Create the .iris directory for YAML agents
-    const irisDir = path.join(testProjectPath, ".iris", "agents");
-    fs.mkdirSync(irisDir, { recursive: true });
+    // Create the .botical directory for YAML agents
+    const boticalDir = path.join(testProjectPath, ".botical", "agents");
+    fs.mkdirSync(boticalDir, { recursive: true });
   });
 
   const app = createApp();

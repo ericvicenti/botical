@@ -1,7 +1,7 @@
 /**
  * Exe.dev Extension
  *
- * Provides exe.dev VM management for Iris.
+ * Provides exe.dev VM management for Botical.
  */
 
 import { dirname } from "path";

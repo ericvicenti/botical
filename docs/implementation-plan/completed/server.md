@@ -117,7 +117,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Iris server running at http://${server.hostname}:${server.port}`);
+console.log(`Botical server running at http://${server.hostname}:${server.port}`);
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
@@ -158,7 +158,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
   }
 
   // API Key authentication
-  if (authorization.startsWith('Bearer iris_')) {
+  if (authorization.startsWith('Bearer botical_')) {
     const apiKey = authorization.slice(7);
     const keyData = await ApiKeyService.validate(apiKey);
 
@@ -459,7 +459,7 @@ export const ConfigSchema = z.object({
   host: z.string().default('0.0.0.0'),
 
   // Data storage
-  dataDir: z.string().default('~/.iris'),
+  dataDir: z.string().default('~/.botical'),
 
   // Security
   jwtSecret: z.string().optional(),
@@ -478,7 +478,7 @@ export const ConfigSchema = z.object({
 export type Config = z.infer<typeof ConfigSchema>;
 
 export async function loadConfig(): Promise<Config> {
-  const configPath = process.env.IRIS_CONFIG || '~/.iris/config.json';
+  const configPath = process.env.BOTICAL_CONFIG || '~/.botical/config.json';
   const expandedPath = configPath.replace('~', process.env.HOME!);
 
   let fileConfig = {};
@@ -488,10 +488,10 @@ export async function loadConfig(): Promise<Config> {
 
   // Environment overrides
   const envConfig: Partial<Config> = {};
-  if (process.env.IRIS_PORT) envConfig.port = parseInt(process.env.IRIS_PORT);
-  if (process.env.IRIS_HOST) envConfig.host = process.env.IRIS_HOST;
-  if (process.env.IRIS_DATA_DIR) envConfig.dataDir = process.env.IRIS_DATA_DIR;
-  if (process.env.IRIS_JWT_SECRET) envConfig.jwtSecret = process.env.IRIS_JWT_SECRET;
+  if (process.env.BOTICAL_PORT) envConfig.port = parseInt(process.env.BOTICAL_PORT);
+  if (process.env.BOTICAL_HOST) envConfig.host = process.env.BOTICAL_HOST;
+  if (process.env.BOTICAL_DATA_DIR) envConfig.dataDir = process.env.BOTICAL_DATA_DIR;
+  if (process.env.BOTICAL_JWT_SECRET) envConfig.jwtSecret = process.env.BOTICAL_JWT_SECRET;
 
   return ConfigSchema.parse({ ...fileConfig, ...envConfig });
 }

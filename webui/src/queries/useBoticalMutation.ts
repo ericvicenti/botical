@@ -1,5 +1,5 @@
 /**
- * useIrisMutation Hook
+ * useBoticalMutation Hook
  *
  * React hook for executing mutations with automatic cache invalidation.
  */
@@ -40,14 +40,14 @@ async function executeMutation<TParams, TResult>(
 }
 
 /**
- * useIrisMutation hook
+ * useBoticalMutation hook
  *
  * Executes mutations with:
  * - Automatic cache invalidation
  * - Type-safe params and return types
  * - Error handling
  */
-export function useIrisMutation<TParams, TResult>(
+export function useBoticalMutation<TParams, TResult>(
   mutation: Mutation<TParams, TResult>,
   options: UseMutationOptions<TResult> = {}
 ): MutationState<TParams, TResult> {

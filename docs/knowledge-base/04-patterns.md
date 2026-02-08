@@ -1,6 +1,6 @@
 # Code Patterns
 
-This document describes the common patterns used throughout the Iris codebase.
+This document describes the common patterns used throughout the Botical codebase.
 
 ---
 
@@ -722,7 +722,7 @@ Use typed errors for consistent error handling.
 ### Error Classes
 
 ```typescript
-export class IrisError extends Error {
+export class BoticalError extends Error {
   constructor(
     message: string,
     public code: string,
@@ -730,23 +730,23 @@ export class IrisError extends Error {
     public details?: unknown
   ) {
     super(message);
-    this.name = 'IrisError';
+    this.name = 'BoticalError';
   }
 }
 
-export class NotFoundError extends IrisError {
+export class NotFoundError extends BoticalError {
   constructor(resource: string, id: string) {
     super(`${resource} not found: ${id}`, 'NOT_FOUND', 404);
   }
 }
 
-export class ForbiddenError extends IrisError {
+export class ForbiddenError extends BoticalError {
   constructor(message: string) {
     super(message, 'FORBIDDEN', 403);
   }
 }
 
-export class ValidationError extends IrisError {
+export class ValidationError extends BoticalError {
   constructor(message: string, details?: unknown) {
     super(message, 'VALIDATION_ERROR', 400, details);
   }
@@ -761,7 +761,7 @@ export function errorHandler(): MiddlewareHandler {
     try {
       await next();
     } catch (error) {
-      if (error instanceof IrisError) {
+      if (error instanceof BoticalError) {
         return c.json({
           error: {
             code: error.code,

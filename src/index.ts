@@ -1,5 +1,5 @@
 /**
- * Iris - AI Agent Workspace Backend
+ * Botical - AI Agent Workspace Backend
  *
  * Main entry point for the server.
  */

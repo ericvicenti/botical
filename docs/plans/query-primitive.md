@@ -1,8 +1,8 @@
-# Query Primitive: Unified Data Fetching for Iris
+# Query Primitive: Unified Data Fetching for Botical
 
 ## Executive Summary
 
-This document outlines a new **Query Primitive** abstraction for Iris that unifies data fetching across the frontend and backend. The goal is to create a single, consistent API for querying data that:
+This document outlines a new **Query Primitive** abstraction for Botical that unifies data fetching across the frontend and backend. The goal is to create a single, consistent API for querying data that:
 
 1. Works identically on client and server
 2. Provides automatic caching and invalidation
@@ -16,7 +16,7 @@ This document outlines a new **Query Primitive** abstraction for Iris that unifi
 
 ### Current State
 
-Iris currently uses multiple data fetching patterns:
+Botical currently uses multiple data fetching patterns:
 
 1. **TanStack Query** (`useQuery`/`useMutation`) for REST API calls
 2. **WebSocket subscriptions** for real-time updates
@@ -108,7 +108,7 @@ export const workflowsQuery = defineQuery({
 ```typescript
 // React component
 function WorkflowsPanel({ projectId }) {
-  const { data, isLoading, error, refetch } = useIrisQuery(workflowsQuery, { projectId });
+  const { data, isLoading, error, refetch } = useBoticalQuery(workflowsQuery, { projectId });
 
   return (
     <div>
@@ -184,10 +184,10 @@ async function executeQuery<T, P>(
 }
 ```
 
-**Frontend (`webui/src/query/useIrisQuery.ts`):**
+**Frontend (`webui/src/query/useBoticalQuery.ts`):**
 
 ```typescript
-function useIrisQuery<T, P>(
+function useBoticalQuery<T, P>(
   query: Query<T, P>,
   params: P,
   options?: { enabled?: boolean }
@@ -366,8 +366,8 @@ Each phase includes specific unit tests and e2e tests that must pass before proc
 | defineQuery helper | `src/queries/define.ts` | Factory function for creating queries |
 | Backend executor | `src/queries/executor.ts` | `executeQuery()`, `executeMutation()` |
 | Backend cache | `src/queries/cache.ts` | In-memory cache with TTL support |
-| Frontend hook | `webui/src/queries/useIrisQuery.ts` | React hook wrapping TanStack Query |
-| Frontend mutation hook | `webui/src/queries/useIrisMutation.ts` | Mutation hook with auto-invalidation |
+| Frontend hook | `webui/src/queries/useBoticalQuery.ts` | React hook wrapping TanStack Query |
+| Frontend mutation hook | `webui/src/queries/useBoticalMutation.ts` | Mutation hook with auto-invalidation |
 | Query provider | `webui/src/queries/QueryProvider.tsx` | Context for dependency injection |
 
 #### 1.2 Unit Tests (`tests/unit/queries/`)
@@ -427,9 +427,9 @@ describe('QueryCache', () => {
 
 #### 1.3 Frontend Unit Tests (`webui/src/queries/__tests__/`)
 
-**File: `webui/src/queries/__tests__/useIrisQuery.test.tsx`**
+**File: `webui/src/queries/__tests__/useBoticalQuery.test.tsx`**
 ```typescript
-describe('useIrisQuery', () => {
+describe('useBoticalQuery', () => {
   it('fetches data on mount when enabled');
   it('does not fetch when enabled=false');
   it('returns isLoading=true while fetching');
@@ -440,7 +440,7 @@ describe('useIrisQuery', () => {
   it('refetch() triggers new fetch');
 });
 
-describe('useIrisQuery with realtime', () => {
+describe('useBoticalQuery with realtime', () => {
   it('subscribes to WebSocket events on mount');
   it('unsubscribes on unmount');
   it('invalidates query when event received');
@@ -448,9 +448,9 @@ describe('useIrisQuery with realtime', () => {
 });
 ```
 
-**File: `webui/src/queries/__tests__/useIrisMutation.test.tsx`**
+**File: `webui/src/queries/__tests__/useBoticalMutation.test.tsx`**
 ```typescript
-describe('useIrisMutation', () => {
+describe('useBoticalMutation', () => {
   it('calls API on mutate()');
   it('returns isPending=true while executing');
   it('returns data on success');
@@ -480,7 +480,7 @@ describe('QueryProvider', () => {
 ```typescript
 describe('Query Primitive E2E', () => {
   describe('Basic query flow', () => {
-    it('loads data using useIrisQuery and displays in component');
+    it('loads data using useBoticalQuery and displays in component');
     it('shows loading state while query is pending');
     it('shows error state when query fails');
     it('refetches data when refetch is called');
@@ -534,7 +534,7 @@ describe('Query Primitive E2E', () => {
 | Create `src/queries/agents.ts` | Define `agentsListQuery`, `agentsGetQuery` |
 | Create `src/queries/tools.ts` | Define `toolsCoreQuery`, `toolsActionsQuery` |
 | Create `src/queries/git.ts` | Define `gitIdentityQuery` |
-| Create frontend adapters | `useAgents()` → `useIrisQuery(agentsListQuery)` |
+| Create frontend adapters | `useAgents()` → `useBoticalQuery(agentsListQuery)` |
 | Update components | Replace old hooks with new ones |
 
 #### 2.3 Unit Tests
@@ -1084,7 +1084,7 @@ describe('Phase 5: Complex Queries', () => {
 | Task | Description |
 |------|-------------|
 | Remove `webui/src/lib/api/queries.ts` | Delete old query file |
-| Update all components | Replace `useProjects` with `useIrisQuery(projectsListQuery)` etc. |
+| Update all components | Replace `useProjects` with `useBoticalQuery(projectsListQuery)` etc. |
 | Remove manual WebSocket subscriptions | Components no longer need `useEffect` for WS |
 | Update test utilities | New mock helpers for query testing |
 | Update CLAUDE.md | Document new query patterns |

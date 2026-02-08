@@ -16,7 +16,7 @@ describe("SkillService", () => {
 
   beforeEach(() => {
     // Create a temporary directory for test projects
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "iris-skills-test-"));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "botical-skills-test-"));
   });
 
   afterEach(() => {

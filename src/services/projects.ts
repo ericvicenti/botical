@@ -75,14 +75,14 @@ function initializeWorkspace(workspacePath: string, projectName: string): void {
       // Create README.md
       const readmeContent = `# ${projectName}
 
-A project managed by Iris.
+A project managed by Botical.
 `;
       const readmePath = path.join(workspacePath, "README.md");
       fs.writeFileSync(readmePath, readmeContent, "utf-8");
 
-      // Create .gitignore with .iris directory
-      const gitignoreContent = `# Iris project data
-.iris/
+      // Create .gitignore with .botical directory
+      const gitignoreContent = `# Botical project data
+.botical/
 `;
       const gitignorePath = path.join(workspacePath, ".gitignore");
       fs.writeFileSync(gitignorePath, gitignoreContent, "utf-8");

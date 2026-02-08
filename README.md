@@ -1,4 +1,4 @@
-# Iris
+# Botical
 
 AI-powered development environment with a Bun backend and React frontend.
 
@@ -12,7 +12,7 @@ AI-powered development environment with a Bun backend and React frontend.
 
 ```bash
 git clone <repository-url>
-cd iris
+cd botical
 bun dev
 ```
 
@@ -54,10 +54,10 @@ Create a `.env` file or set environment variables:
 
 ```bash
 # Server
-IRIS_PORT=4096              # Server port (default: 4096)
-IRIS_HOST=localhost         # Server host (default: localhost)
-IRIS_DATA_DIR=~/.iris       # Data directory (default: ~/.iris)
-IRIS_LOG_LEVEL=info         # Log level: debug|info|warn|error
+BOTICAL_PORT=4096              # Server port (default: 4096)
+BOTICAL_HOST=localhost         # Server host (default: localhost)
+BOTICAL_DATA_DIR=~/.botical       # Data directory (default: ~/.botical)
+BOTICAL_LOG_LEVEL=info         # Log level: debug|info|warn|error
 
 # Environment
 NODE_ENV=development        # development|production|test
@@ -65,23 +65,23 @@ NODE_ENV=development        # development|production|test
 # Auth & Email
 APP_URL=http://localhost:4096  # Base URL for magic links
 RESEND_API_KEY=re_xxxxx        # Resend API key (optional in dev)
-EMAIL_FROM=noreply@iris.local  # From address for emails
+EMAIL_FROM=noreply@botical.local  # From address for emails
 
 # Security (REQUIRED in production)
-IRIS_ENCRYPTION_KEY=xxx        # Key for encrypting provider credentials
+BOTICAL_ENCRYPTION_KEY=xxx        # Key for encrypting provider credentials
 ```
 
 ### Required for Production
 
 | Variable | Description |
 |----------|-------------|
-| `IRIS_ENCRYPTION_KEY` | Used to encrypt stored API keys. Generate with: `openssl rand -base64 32` |
+| `BOTICAL_ENCRYPTION_KEY` | Used to encrypt stored API keys. Generate with: `openssl rand -base64 32` |
 | `RESEND_API_KEY` | Resend API key for sending magic link emails |
-| `APP_URL` | Public URL of your Iris instance (for magic links) |
+| `APP_URL` | Public URL of your Botical instance (for magic links) |
 
 ## Authentication
 
-Iris uses **email-based magic link authentication**:
+Botical uses **email-based magic link authentication**:
 
 1. User submits email at `POST /auth/magic-link`
 2. Receives email with login link (or see console in dev mode)
@@ -169,7 +169,7 @@ bun test:integration # Integration tests only
 ### Project Structure
 
 ```
-iris/
+botical/
 ├── src/
 │   ├── auth/           # Authentication (magic link, sessions)
 │   ├── bus/            # Event bus for internal events
@@ -189,9 +189,9 @@ iris/
 
 ### Database Architecture
 
-Iris uses a multi-database architecture:
+Botical uses a multi-database architecture:
 
-- **Root Database** (`iris.db`): Users, projects, API keys, credentials
+- **Root Database** (`botical.db`): Users, projects, API keys, credentials
 - **Project Databases** (per project): Sessions, messages, files
 
 This enables complete project isolation and easy backup/restore.

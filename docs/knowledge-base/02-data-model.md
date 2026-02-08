@@ -1,6 +1,6 @@
 # Data Model
 
-This document describes the entities in Iris, their relationships, and the Zod schemas used to validate them.
+This document describes the entities in Botical, their relationships, and the Zod schemas used to validate them.
 
 ---
 

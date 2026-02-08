@@ -17,7 +17,7 @@ Remove entirely - will rethink later:
 - `permissions` table from project DB
 - Permission checking in tool execution
 
-### 2. MIGRATE: Workflows → `.iris/workflows/*.yaml`
+### 2. MIGRATE: Workflows → `.botical/workflows/*.yaml`
 
 **Before (SQLite):**
 ```sql
@@ -28,7 +28,7 @@ step_executions (...)
 
 **After (YAML):**
 ```
-.iris/
+.botical/
   workflows/
     deploy.yaml
     run-tests.yaml
@@ -73,7 +73,7 @@ steps:
 
 **Keep in SQLite:** `workflow_executions` and `step_executions` (runtime state)
 
-### 3. MIGRATE: Services → `.iris/services/*.yaml`
+### 3. MIGRATE: Services → `.botical/services/*.yaml`
 
 **Before (SQLite):**
 ```sql
@@ -82,7 +82,7 @@ services (id, project_id, name, command, cwd, env, auto_start, enabled, ...)
 
 **After (YAML):**
 ```
-.iris/
+.botical/
   services/
     api-server.yaml
     postgres.yaml
@@ -104,7 +104,7 @@ env:
 
 **Keep in SQLite:** `processes` and `process_output` (runtime state)
 
-### 4. MIGRATE: Agents → `.iris/agents/*.yaml`
+### 4. MIGRATE: Agents → `.botical/agents/*.yaml`
 
 **Before (SQLite):**
 ```sql
@@ -113,7 +113,7 @@ agents (id, name, description, mode, provider_id, model_id, temperature, prompt,
 
 **After (YAML):**
 ```
-.iris/
+.botical/
   agents/
     default.yaml
     code-review.yaml
@@ -149,11 +149,11 @@ tools:
 
 Plans already use `plan_path` pointing to markdown files. No change needed.
 
-### 6. NEW: Project Config → `.iris/config.yaml`
+### 6. NEW: Project Config → `.botical/config.yaml`
 
 **Single config file for project-wide settings:**
 ```yaml
-# .iris/config.yaml
+# .botical/config.yaml
 name: My Project
 description: A cool project
 
@@ -171,7 +171,7 @@ settings:
 
 ```
 project/
-├── .iris/
+├── .botical/
 │   ├── config.yaml           # Project settings
 │   ├── agents/
 │   │   ├── default.yaml
@@ -202,26 +202,26 @@ project/
 - [ ] Create file watcher for hot-reload during development
 
 ### Phase 3: Migrate Workflows
-- [ ] Create `WorkflowFileService` that reads from `.iris/workflows/`
+- [ ] Create `WorkflowFileService` that reads from `.botical/workflows/`
 - [ ] Update `WorkflowService` to use file-based storage
 - [ ] Keep `workflow_executions` in SQLite for runtime state
 - [ ] Update API routes to use new service
 - [ ] Migration: export existing workflows to YAML files
 
 ### Phase 4: Migrate Services
-- [ ] Create `ServiceFileService` that reads from `.iris/services/`
+- [ ] Create `ServiceFileService` that reads from `.botical/services/`
 - [ ] Update `ServiceRunner` to use file-based config
 - [ ] Keep `processes` table for runtime state
 - [ ] Update API routes
 
 ### Phase 5: Migrate Agents
-- [ ] Create `AgentFileService` that reads from `.iris/agents/`
+- [ ] Create `AgentFileService` that reads from `.botical/agents/`
 - [ ] Update agent resolution to check files first
 - [ ] Keep builtin agents in code
 - [ ] Update API routes
 
 ### Phase 6: Project Config
-- [ ] Create `ConfigService` for `.iris/config.yaml`
+- [ ] Create `ConfigService` for `.botical/config.yaml`
 - [ ] Move relevant settings from SQLite
 - [ ] Update project initialization
 
@@ -238,7 +238,7 @@ project/
 - Same pattern as workflows
 
 ### File Sync
-- Watch `.iris/` for changes
+- Watch `.botical/` for changes
 - Broadcast updates via WebSocket
 - Handle conflicts (file changed while editing in UI)
 
@@ -262,7 +262,7 @@ project/
 
 3. **Secrets in services**: How to handle env vars with secrets?
    - Option A: Reference env vars `$DATABASE_URL`
-   - Option B: Separate `.iris/secrets.yaml` (gitignored)
+   - Option B: Separate `.botical/secrets.yaml` (gitignored)
    - Option C: Use system env vars only
 
 4. **Workflow execution history**: Keep in SQLite or move to files?

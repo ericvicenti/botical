@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-This document tracks key architectural decisions for Iris.
+This document tracks key architectural decisions for Botical.
 
 ---
 
@@ -48,7 +48,7 @@ Implementation note: The underlying PTY implementation is similar for both - the
 
 ### 3. Git Authentication
 
-**Decision:** SSH keys configured on the Iris server. Users add the Iris public key to their GitHub/GitLab accounts.
+**Decision:** SSH keys configured on the Botical server. Users add the Botical public key to their GitHub/GitLab accounts.
 
 **Rationale:**
 - Simple to implement and understand
@@ -56,7 +56,7 @@ Implementation note: The underlying PTY implementation is similar for both - the
 - User controls access by adding/removing the key
 - Future: Can add OAuth GitHub App later
 
-Signature approach: Commits/actions by the agent should have a recognizable signature (author name, commit message prefix) so it's clear when Iris made a change.
+Signature approach: Commits/actions by the agent should have a recognizable signature (author name, commit message prefix) so it's clear when Botical made a change.
 
 **Date:** 2025-01-15
 
@@ -67,7 +67,7 @@ Signature approach: Commits/actions by the agent should have a recognizable sign
 **Decision:** Polling on demand (no native file watchers for v1).
 
 **Rationale:**
-- Most edits come from the agent and WebUI, so Iris is already aware
+- Most edits come from the agent and WebUI, so Botical is already aware
 - Simpler implementation
 - Lower resource usage
 - Can add native watching later if needed

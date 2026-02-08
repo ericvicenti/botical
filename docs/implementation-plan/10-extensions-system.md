@@ -1,6 +1,6 @@
 # Extensions System
 
-This document describes the architecture for Iris extensions, which allow modular features to be added to both the backend and frontend. Extensions can define pages (sidebar panels and main content), actions, and their own backend servers - all using unified abstractions.
+This document describes the architecture for Botical extensions, which allow modular features to be added to both the backend and frontend. Extensions can define pages (sidebar panels and main content), actions, and their own backend servers - all using unified abstractions.
 
 ## Vision
 
@@ -13,7 +13,7 @@ Extensions encapsulate complete features that can be developed, tested, and depl
 3. **Independent Servers**: Each extension runs its own backend server process
 4. **Type-Safe Boundaries**: Zod schemas define contracts between extension components
 5. **User-Controlled Layout**: Sidebar ordering is configured by user/project, not hardcoded by extensions
-6. **Internal First**: Extensions live inside the Iris codebase (external extensions deferred)
+6. **Internal First**: Extensions live inside the Botical codebase (external extensions deferred)
 
 ---
 
@@ -165,7 +165,7 @@ Each extension runs its own HTTP server as a separate process:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Iris Core Server                       │
+│                      Botical Core Server                       │
 │                        (port 4096)                          │
 ├─────────────────────────────────────────────────────────────┤
 │  /api/projects, /api/sessions, /api/messages, etc.         │
@@ -234,7 +234,7 @@ Extensions are enabled per-project in project settings. The user controls which 
 ### Project Config Schema
 
 ```typescript
-// In project's .iris/config.yaml
+// In project's .botical/config.yaml
 export const ProjectExtensionsConfigSchema = z.object({
   extensions: z.object({
     /** Enabled extension IDs */
@@ -260,7 +260,7 @@ export const ProjectExtensionsConfigSchema = z.object({
 ### Example Project Config
 
 ```yaml
-# .iris/config.yaml
+# .botical/config.yaml
 extensions:
   enabled:
     - docker
@@ -328,7 +328,7 @@ DELETE /images/:id              # Remove image
 GET    /info                    # Docker daemon info
 ```
 
-The Iris core server proxies requests:
+The Botical core server proxies requests:
 - `GET /api/extensions/docker/containers` → `GET http://localhost:4101/containers`
 
 ### Actions

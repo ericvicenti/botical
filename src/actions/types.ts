@@ -1,11 +1,11 @@
 /**
- * Iris Actions Type System
+ * Botical Actions Type System
  *
  * Defines the unified action interface that works for both:
  * - AI agent tool calls
  * - GUI command palette actions
  *
- * Actions are the building blocks of Iris - they represent operations
+ * Actions are the building blocks of Botical - they represent operations
  * that can be performed on a project, whether triggered by an AI agent
  * or a user clicking in the UI.
  */

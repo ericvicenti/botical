@@ -1,6 +1,6 @@
 # Built-in Extensions
 
-This document summarizes the built-in extensions that are currently registered and shipped with Iris.
+This document summarizes the built-in extensions that are currently registered and shipped with Botical.
 
 ## Docker Extension
 
@@ -47,7 +47,7 @@ Key endpoints exposed by the extension server:
 Implementation notes:
 
 - The search extension runs a SearXNG instance, provisioned by the Docker client in `src/extensions/search/provisioner.ts`.
-- Configuration files for SearXNG are written under `~/.iris/searxng`.
+- Configuration files for SearXNG are written under `~/.botical/searxng`.
 - The manifest defines `searxngPort` and `autoProvision` settings with defaults.
 
 ## Exe.dev Extension

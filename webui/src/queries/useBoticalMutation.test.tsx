@@ -1,5 +1,5 @@
 /**
- * useIrisMutation Hook Tests
+ * useBoticalMutation Hook Tests
  *
  * Tests for the mutation hook with mocked API responses.
  */
@@ -9,8 +9,8 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/setup";
-import { useIrisMutation } from "./useIrisMutation";
-import { useIrisQuery } from "./useIrisQuery";
+import { useBoticalMutation } from "./useBoticalMutation";
+import { useBoticalQuery } from "./useBoticalQuery";
 import { WebSocketProvider } from "@/lib/websocket/context";
 import type { Query, Mutation } from "./types";
 import type { ReactNode } from "react";
@@ -38,7 +38,7 @@ function createWrapper() {
   };
 }
 
-describe("useIrisMutation", () => {
+describe("useBoticalMutation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -58,7 +58,7 @@ describe("useIrisMutation", () => {
       method: "POST",
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -96,7 +96,7 @@ describe("useIrisMutation", () => {
       body: (params) => ({ name: params.name }),
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -127,7 +127,7 @@ describe("useIrisMutation", () => {
       method: "POST",
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -158,7 +158,7 @@ describe("useIrisMutation", () => {
     const onSuccess = vi.fn();
 
     const { result } = renderHook(
-      () => useIrisMutation(mutation, { onSuccess }),
+      () => useBoticalMutation(mutation, { onSuccess }),
       { wrapper: createWrapper() }
     );
 
@@ -188,7 +188,7 @@ describe("useIrisMutation", () => {
 
     const onError = vi.fn();
 
-    const { result } = renderHook(() => useIrisMutation(mutation, { onError }), {
+    const { result } = renderHook(() => useBoticalMutation(mutation, { onError }), {
       wrapper: createWrapper(),
     });
 
@@ -219,7 +219,7 @@ describe("useIrisMutation", () => {
     const onSettled = vi.fn();
 
     const { result } = renderHook(
-      () => useIrisMutation(mutation, { onSettled }),
+      () => useBoticalMutation(mutation, { onSettled }),
       { wrapper: createWrapper() }
     );
 
@@ -247,7 +247,7 @@ describe("useIrisMutation", () => {
       method: "POST",
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -273,7 +273,7 @@ describe("useIrisMutation", () => {
       method: "POST",
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -331,7 +331,7 @@ describe("useIrisMutation", () => {
 
     // First, render the query to populate cache
     const { result: queryResult } = renderHook(
-      () => useIrisQuery(listQuery, undefined),
+      () => useBoticalQuery(listQuery, undefined),
       { wrapper }
     );
 
@@ -343,7 +343,7 @@ describe("useIrisMutation", () => {
 
     // Now render and execute the mutation
     const { result: mutationResult } = renderHook(
-      () => useIrisMutation(createMutation),
+      () => useBoticalMutation(createMutation),
       { wrapper }
     );
 
@@ -374,7 +374,7 @@ describe("useIrisMutation", () => {
       method: "DELETE",
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 
@@ -407,7 +407,7 @@ describe("useIrisMutation", () => {
       body: (params) => ({ field: params.field }),
     };
 
-    const { result } = renderHook(() => useIrisMutation(mutation), {
+    const { result } = renderHook(() => useBoticalMutation(mutation), {
       wrapper: createWrapper(),
     });
 

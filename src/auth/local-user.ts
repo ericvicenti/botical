@@ -1,7 +1,7 @@
 /**
  * Local User Service
  *
- * Manages the local user for single-user mode (npx iris-ai).
+ * Manages the local user for single-user mode (npx botical).
  * See: docs/knowledge-base/04-patterns.md
  *
  * In single-user mode:
@@ -18,7 +18,7 @@ import type { AuthContext, UserRow } from "./schemas.ts";
  * Fixed ID for the local user in single-user mode
  */
 export const LOCAL_USER_ID = "usr_local";
-const LOCAL_USER_EMAIL = "local@iris.local";
+const LOCAL_USER_EMAIL = "local@botical.local";
 const LOCAL_USER_USERNAME = "Local User";
 
 /**

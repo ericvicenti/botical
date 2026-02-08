@@ -1,7 +1,7 @@
 /**
  * Agent Configuration (YAML-based)
  *
- * Manages custom agents stored as YAML files in .iris/agents/
+ * Manages custom agents stored as YAML files in .botical/agents/
  * Agents define AI assistant configurations with custom prompts, tools, and settings.
  */
 
@@ -12,7 +12,7 @@ import {
   saveYamlFile,
   deleteYamlFile,
   yamlFileExists,
-  getIrisPaths,
+  getBoticalPaths,
 } from "./yaml.ts";
 import type { CustomAgent, AgentMode } from "@/services/agents.ts";
 
@@ -102,14 +102,14 @@ function agentToYaml(agent: CustomAgent): AgentYaml {
  * YAML-based Agent Configuration Service
  *
  * Reads and writes agent definitions from YAML files.
- * Agents are stored in .iris/agents/{name}.yaml
+ * Agents are stored in .botical/agents/{name}.yaml
  */
 export const AgentYamlService = {
   /**
    * Get agent file path
    */
   getPath(projectPath: string, name: string): string {
-    return getIrisPaths(projectPath).agent(name);
+    return getBoticalPaths(projectPath).agent(name);
   },
 
   /**
@@ -135,7 +135,7 @@ export const AgentYamlService = {
    * List all agents in a project
    */
   list(projectPath: string): CustomAgent[] {
-    const agentsDir = getIrisPaths(projectPath).agents;
+    const agentsDir = getBoticalPaths(projectPath).agents;
     const yamlFiles = loadYamlDir<unknown>(agentsDir);
 
     const agents: CustomAgent[] = [];

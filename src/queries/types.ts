@@ -172,7 +172,7 @@ export interface MutationState<TResult> {
 }
 
 /**
- * Options for useIrisQuery hook
+ * Options for useBoticalQuery hook
  */
 export interface UseQueryOptions {
   /** Whether the query should execute */
@@ -184,7 +184,7 @@ export interface UseQueryOptions {
 }
 
 /**
- * Options for useIrisMutation hook
+ * Options for useBoticalMutation hook
  */
 export interface UseMutationOptions<TResult> {
   /** Called on successful mutation */

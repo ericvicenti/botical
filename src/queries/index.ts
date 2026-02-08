@@ -1,7 +1,7 @@
 /**
  * Query Primitive
  *
- * Unified data fetching abstraction for Iris.
+ * Unified data fetching abstraction for Botical.
  */
 
 // Types

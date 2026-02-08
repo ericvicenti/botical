@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Iris Development Script
+ * Botical Development Script
  *
  * Starts backend and frontend dev servers with auto-port selection.
  * Run with: bun dev
@@ -80,7 +80,7 @@ function shutdown(): void {
 }
 
 async function main(): Promise<void> {
-  console.log("\n🔷 Iris Dev\n");
+  console.log("\n🔷 Botical Dev\n");
 
   await ensureDependencies();
 
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   // Start backend
   backendProcess = spawn(["bun", "run", "--hot", "src/index.ts"], {
     cwd: ROOT_DIR,
-    env: { ...process.env, IRIS_PORT: String(backendPort) },
+    env: { ...process.env, BOTICAL_PORT: String(backendPort) },
     stdout: "inherit",
     stderr: "inherit",
   });

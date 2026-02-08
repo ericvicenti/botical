@@ -21,7 +21,7 @@ describe("Single-User Mode Integration", () => {
 
   beforeEach(async () => {
     // Enable single-user mode
-    process.env.IRIS_SINGLE_USER = "true";
+    process.env.BOTICAL_SINGLE_USER = "true";
     delete process.env.RESEND_API_KEY;
 
     // Reset database for each test
@@ -47,22 +47,22 @@ describe("Single-User Mode Integration", () => {
   });
 
   describe("isSingleUserMode", () => {
-    it("returns true when IRIS_SINGLE_USER is set to true", () => {
-      process.env.IRIS_SINGLE_USER = "true";
+    it("returns true when BOTICAL_SINGLE_USER is set to true", () => {
+      process.env.BOTICAL_SINGLE_USER = "true";
       Config.load({ dataDir: testDataDir });
 
       expect(Config.isSingleUserMode()).toBe(true);
     });
 
-    it("returns false when IRIS_SINGLE_USER is set to false", () => {
-      process.env.IRIS_SINGLE_USER = "false";
+    it("returns false when BOTICAL_SINGLE_USER is set to false", () => {
+      process.env.BOTICAL_SINGLE_USER = "false";
       Config.load({ dataDir: testDataDir });
 
       expect(Config.isSingleUserMode()).toBe(false);
     });
 
     it("auto-detects based on localhost and no resendApiKey", () => {
-      delete process.env.IRIS_SINGLE_USER;
+      delete process.env.BOTICAL_SINGLE_USER;
       delete process.env.RESEND_API_KEY;
       Config.load({ dataDir: testDataDir, host: "localhost" });
 
@@ -70,7 +70,7 @@ describe("Single-User Mode Integration", () => {
     });
 
     it("returns false when resendApiKey is configured", () => {
-      delete process.env.IRIS_SINGLE_USER;
+      delete process.env.BOTICAL_SINGLE_USER;
       Config.load({
         dataDir: testDataDir,
         host: "localhost",
@@ -81,7 +81,7 @@ describe("Single-User Mode Integration", () => {
     });
 
     it("returns false when host is not localhost", () => {
-      delete process.env.IRIS_SINGLE_USER;
+      delete process.env.BOTICAL_SINGLE_USER;
       delete process.env.RESEND_API_KEY;
       Config.load({ dataDir: testDataDir, host: "0.0.0.0" });
 
@@ -112,7 +112,7 @@ describe("Single-User Mode Integration", () => {
         canExecuteCode: boolean;
       };
       expect(data.userId).toBe(LOCAL_USER_ID);
-      expect(data.email).toBe("local@iris.local");
+      expect(data.email).toBe("local@botical.local");
       expect(data.isAdmin).toBe(true);
       expect(data.canExecuteCode).toBe(true);
     });
@@ -215,7 +215,7 @@ describe("Single-User Mode Integration", () => {
   describe("multi-user mode behavior", () => {
     beforeEach(() => {
       // Disable single-user mode
-      process.env.IRIS_SINGLE_USER = "false";
+      process.env.BOTICAL_SINGLE_USER = "false";
       Config.load({ dataDir: testDataDir });
     });
 

@@ -1,6 +1,6 @@
 # Glossary
 
-This document defines the core terms and concepts used throughout the Iris codebase.
+This document defines the core terms and concepts used throughout the Botical codebase.
 
 ---
 
@@ -25,7 +25,7 @@ An AI assistant configuration that defines behavior, permissions, and capabiliti
 The core component that coordinates LLM interactions, tool execution, and message streaming. It manages the "tool loop" where the LLM can call tools repeatedly until task completion.
 
 ### API Key
-A secret token for programmatic access to the Iris API. Supports:
+A secret token for programmatic access to the Botical API. Supports:
 - User-scoped keys (access all user's projects)
 - Project-scoped keys (access single project)
 - Permission restrictions
@@ -152,7 +152,7 @@ Signed with server's secret key.
 ## L
 
 ### LLM (Large Language Model)
-The AI model that processes prompts and generates responses. Iris supports multiple providers via the Vercel AI SDK:
+The AI model that processes prompts and generates responses. Botical supports multiple providers via the Vercel AI SDK:
 - Anthropic (Claude)
 - OpenAI (GPT)
 - Others via AI SDK
@@ -328,7 +328,7 @@ The iterative process where an agent:
 ## U
 
 ### User
-An authenticated person using Iris. Users:
+An authenticated person using Botical. Users:
 - Own projects
 - Are members of other projects
 - Have API keys

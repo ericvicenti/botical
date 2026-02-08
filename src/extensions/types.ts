@@ -1,7 +1,7 @@
 /**
  * Extension System Types
  *
- * Defines the structure for Iris extensions - self-contained modules
+ * Defines the structure for Botical extensions - self-contained modules
  * that provide additional functionality via their own backend servers.
  */
 

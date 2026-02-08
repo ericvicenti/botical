@@ -4,7 +4,7 @@
  * Uses AES-256-GCM for encrypting sensitive data like API keys.
  * See: docs/knowledge-base/04-patterns.md
  *
- * Encryption key is derived from IRIS_ENCRYPTION_KEY environment variable.
+ * Encryption key is derived from BOTICAL_ENCRYPTION_KEY environment variable.
  * In development mode, uses a deterministic key with a warning.
  */
 
@@ -18,17 +18,17 @@ const AUTH_TAG_LENGTH = 16;
  * Get the encryption key from environment or use dev fallback
  */
 function getEncryptionKey(): Buffer {
-  const keyEnv = process.env.IRIS_ENCRYPTION_KEY;
+  const keyEnv = process.env.BOTICAL_ENCRYPTION_KEY;
 
   if (!keyEnv) {
     // In dev mode, use a deterministic key (not secure for production!)
     if (process.env.NODE_ENV !== "production") {
       console.warn(
-        "WARNING: Using insecure dev encryption key. Set IRIS_ENCRYPTION_KEY in production."
+        "WARNING: Using insecure dev encryption key. Set BOTICAL_ENCRYPTION_KEY in production."
       );
-      return createHash("sha256").update("iris-dev-key-not-secure").digest();
+      return createHash("sha256").update("botical-dev-key-not-secure").digest();
     }
-    throw new Error("IRIS_ENCRYPTION_KEY environment variable is required in production");
+    throw new Error("BOTICAL_ENCRYPTION_KEY environment variable is required in production");
   }
 
   // Derive 32-byte key from the provided key

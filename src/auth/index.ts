@@ -6,7 +6,7 @@
  *
  * Key features:
  * - Passwordless magic link authentication (multi-user mode)
- * - Single-user mode for local deployments (npx iris-ai)
+ * - Single-user mode for local deployments (npx botical)
  * - Database-backed sessions (revocable)
  * - First user becomes admin
  * - Code execution permissions

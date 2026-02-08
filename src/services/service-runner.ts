@@ -1,7 +1,7 @@
 /**
  * Service Runner
  *
- * Manages automatic starting of services when Iris starts.
+ * Manages automatic starting of services when Botical starts.
  * Handles spawning auto-start services and graceful shutdown.
  *
  * See: docs/implementation-plan/18-enhanced-service-management.md

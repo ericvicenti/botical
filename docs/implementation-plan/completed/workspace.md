@@ -2,7 +2,7 @@
 
 ## Overview
 
-Projects are the fundamental organizational unit in Iris. Each project:
+Projects are the fundamental organizational unit in Botical. Each project:
 - Has its own SQLite database
 - Contains isolated sessions, agents, and files
 - Can be shared with multiple users
@@ -21,7 +21,7 @@ Projects are the fundamental organizational unit in Iris. Each project:
 - Unique ID derived from root commit hash
 
 ### Remote Projects
-- Files stored only in Iris database
+- Files stored only in Botical database
 - Not tied to local filesystem
 - Good for cloud-only workflows
 
@@ -534,10 +534,10 @@ export class ProjectDiscovery {
       };
     }
 
-    // Check for existing Iris project marker
-    const irisMarker = path.join(directory, '.iris', 'project.json');
-    if (await this.exists(irisMarker)) {
-      const config = JSON.parse(await fs.readFile(irisMarker, 'utf-8'));
+    // Check for existing Botical project marker
+    const boticalMarker = path.join(directory, '.botical', 'project.json');
+    if (await this.exists(boticalMarker)) {
+      const config = JSON.parse(await fs.readFile(boticalMarker, 'utf-8'));
       return {
         type: 'local',
         path: directory,

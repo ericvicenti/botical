@@ -1,6 +1,6 @@
 # Actions System
 
-Actions are the unified interface for operations in Iris. They can be executed by:
+Actions are the unified interface for operations in Botical. They can be executed by:
 - **AI Agents** - as tools during conversation
 - **GUI** - via command palette (Cmd+K)
 - **Tests** - programmatically for verification

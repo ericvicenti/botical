@@ -5,21 +5,21 @@
  * See: docs/knowledge-base/04-patterns.md#error-handler-middleware
  *
  * Handles three error types:
- * - IrisError: Custom typed errors with code and statusCode
+ * - BoticalError: Custom typed errors with code and statusCode
  * - ZodError: Validation failures converted to 400 responses
  * - Generic Error: Logged and returned as 500
  */
 
 import { ZodError } from "zod";
-import { IrisError, ValidationError } from "../../utils/errors.ts";
+import { BoticalError, ValidationError } from "../../utils/errors.ts";
 
 /**
  * Handle errors for Hono's onError handler.
  * See: docs/knowledge-base/04-patterns.md#error-handling-pattern
  */
 export function handleError(error: Error | unknown, c: { json: (data: unknown, status: number) => Response }) {
-  // Handle Iris errors
-  if (error instanceof IrisError) {
+  // Handle Botical errors
+  if (error instanceof BoticalError) {
     return c.json(error.toJSON(), error.statusCode);
   }
 

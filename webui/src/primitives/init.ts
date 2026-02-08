@@ -1,5 +1,5 @@
 /**
- * Initialize all Iris Primitives
+ * Initialize all Botical Primitives
  *
  * This file imports and registers all primitives (actions and pages).
  * Import this file once at app startup.
@@ -33,4 +33,4 @@ import "./settings/pages";
 // Extensions (load all frontend extensions)
 import "../extensions";
 
-console.log("[Iris Primitives] Initialized");
+console.log("[Botical Primitives] Initialized");

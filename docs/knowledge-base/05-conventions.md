@@ -1,6 +1,6 @@
 # Coding Conventions
 
-This document defines the coding standards and conventions for the Iris codebase.
+This document defines the coding standards and conventions for the Botical codebase.
 
 ---
 

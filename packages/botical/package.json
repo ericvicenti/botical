@@ -1,12 +1,11 @@
 {
-  "name": "iris-ai",
+  "name": "botical",
   "version": "0.1.3",
-  "description": "Run Iris AI Agent Workspace locally with a single command",
+  "description": "Run Botical AI Agent Workspace locally with a single command",
   "type": "module",
   "license": "Apache-2.0",
   "bin": {
-    "iris-ai": "./bin/iris.js",
-    "iris": "./bin/iris.js"
+    "botical": "./bin/botical.js"
   },
   "files": [
     "bin",
@@ -26,10 +25,10 @@
   "author": "Eric Vicenti",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ericvicenti/iris.git",
-    "directory": "packages/iris-ai"
+    "url": "https://github.com/ericvicenti/botical.git",
+    "directory": "packages/botical"
   },
-  "homepage": "https://github.com/ericvicenti/iris#readme",
+  "homepage": "https://github.com/ericvicenti/botical#readme",
   "engines": {
     "node": ">=18.0.0"
   }

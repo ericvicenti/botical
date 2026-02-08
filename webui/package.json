@@ -1,5 +1,5 @@
 {
-  "name": "@iris/webui",
+  "name": "@botical/webui",
   "version": "0.0.1",
   "private": true,
   "type": "module",

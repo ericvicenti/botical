@@ -94,7 +94,7 @@ auth.get("/verify", async (c) => {
 
   c.header(
     "Set-Cookie",
-    `iris_session=${sessionToken}; ${cookieFlags}; Path=/; Max-Age=${7 * 24 * 60 * 60}`
+    `botical_session=${sessionToken}; ${cookieFlags}; Path=/; Max-Age=${7 * 24 * 60 * 60}`
   );
 
   // Check Accept header for response type
@@ -128,7 +128,7 @@ auth.post("/logout", requireAuth(), async (c) => {
   }
 
   // Clear cookie
-  c.header("Set-Cookie", "iris_session=; HttpOnly; Path=/; Max-Age=0");
+  c.header("Set-Cookie", "botical_session=; HttpOnly; Path=/; Max-Age=0");
 
   return c.json({ success: true });
 });

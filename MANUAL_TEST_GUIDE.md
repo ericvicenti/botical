@@ -1,4 +1,4 @@
-# Iris Manual Test Guide
+# Botical Manual Test Guide
 
 This guide documents the **currently working GUI functionality** and how to verify it through the browser. Update this guide as features are added.
 

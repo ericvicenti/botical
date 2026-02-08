@@ -1,7 +1,7 @@
 /**
  * Service Configuration (YAML-based)
  *
- * Manages services stored as YAML files in .iris/services/
+ * Manages services stored as YAML files in .botical/services/
  * Services define long-running processes that can be started/stopped.
  */
 
@@ -12,7 +12,7 @@ import {
   saveYamlFile,
   deleteYamlFile,
   yamlFileExists,
-  getIrisPaths,
+  getBoticalPaths,
 } from "./yaml.ts";
 import type { Service } from "@/services/service-config.ts";
 
@@ -83,14 +83,14 @@ function serviceToYaml(service: Service): ServiceYaml {
  * YAML-based Service Configuration Service
  *
  * Reads and writes service definitions from YAML files.
- * Services are stored in .iris/services/{name}.yaml
+ * Services are stored in .botical/services/{name}.yaml
  */
 export const ServiceYamlService = {
   /**
    * Get service file path
    */
   getPath(projectPath: string, name: string): string {
-    return getIrisPaths(projectPath).service(name);
+    return getBoticalPaths(projectPath).service(name);
   },
 
   /**
@@ -120,7 +120,7 @@ export const ServiceYamlService = {
    * List all services in a project
    */
   list(projectPath: string, projectId: string): Service[] {
-    const servicesDir = getIrisPaths(projectPath).services;
+    const servicesDir = getBoticalPaths(projectPath).services;
     const yamlFiles = loadYamlDir<unknown>(servicesDir);
 
     const services: Service[] = [];

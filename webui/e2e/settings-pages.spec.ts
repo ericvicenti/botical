@@ -123,8 +123,8 @@ test.describe("Settings Pages", () => {
       // Wait for page to load
       await page.waitForLoadState("networkidle");
 
-      // Should show About Iris heading
-      await expect(page.getByText("About Iris")).toBeVisible();
+      // Should show About Botical heading
+      await expect(page.getByText("About Botical")).toBeVisible();
     });
 
     test("should display version info", async ({ page }) => {

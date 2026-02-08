@@ -1,12 +1,12 @@
 # System Architecture
 
-This document describes the high-level architecture of Iris, explaining how components interact and why architectural decisions were made.
+This document describes the high-level architecture of Botical, explaining how components interact and why architectural decisions were made.
 
 ---
 
 ## Overview
 
-Iris follows a layered architecture with clear separation of concerns:
+Botical follows a layered architecture with clear separation of concerns:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -60,7 +60,7 @@ Iris follows a layered architecture with clear separation of concerns:
 ## Core Principles
 
 ### 1. Headless-First Design
-Iris is a backend-only system. It makes no assumptions about the client:
+Botical is a backend-only system. It makes no assumptions about the client:
 - No HTML rendering
 - No UI framework dependencies
 - All data exchange via structured JSON

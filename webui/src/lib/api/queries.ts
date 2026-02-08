@@ -153,7 +153,7 @@ export function useSendMessage() {
 }
 
 // Settings - stored in localStorage for now
-const SETTINGS_KEY = "iris:settings";
+const SETTINGS_KEY = "botical:settings";
 
 /**
  * Agent Class - Maps a name (easy/medium/smart) to a provider+model

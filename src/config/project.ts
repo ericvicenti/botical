@@ -1,7 +1,7 @@
 /**
  * Project Configuration (YAML-based)
  *
- * Manages project-level configuration stored in .iris/config.yaml
+ * Manages project-level configuration stored in .botical/config.yaml
  * This file contains project-wide settings that can be version-controlled.
  */
 
@@ -10,7 +10,7 @@ import {
   loadYamlFileWithSchema,
   saveYamlFile,
   yamlFileExists,
-  getIrisPaths,
+  getBoticalPaths,
 } from "./yaml.ts";
 
 // ============================================================================
@@ -188,14 +188,14 @@ export interface ProjectConfig {
 /**
  * YAML-based Project Configuration Service
  *
- * Reads and writes project configuration from .iris/config.yaml
+ * Reads and writes project configuration from .botical/config.yaml
  */
 export const ProjectConfigService = {
   /**
    * Get config file path for a project
    */
   getPath(projectPath: string): string {
-    return getIrisPaths(projectPath).config;
+    return getBoticalPaths(projectPath).config;
   },
 
   /**

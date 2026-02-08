@@ -255,7 +255,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
                   ))
                 ) : (
                   <div className="px-3 py-2 text-sm text-text-muted">
-                    No templates found. Create templates in .iris/templates/
+                    No templates found. Create templates in .botical/templates/
                   </div>
                 )}
               </div>

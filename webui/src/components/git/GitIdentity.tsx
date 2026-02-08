@@ -1,7 +1,7 @@
 /**
  * Git Identity Component
  *
- * Displays the Iris SSH public key for users to add to GitHub/GitLab.
+ * Displays the Botical SSH public key for users to add to GitHub/GitLab.
  * Includes copy functionality and setup instructions.
  */
 

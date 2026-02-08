@@ -33,7 +33,7 @@ describe("Mission Service", () => {
       expect(mission.projectId).toBe(projectId);
       expect(mission.title).toBe("Implement Authentication");
       expect(mission.status).toBe("planning");
-      expect(mission.planPath).toMatch(/\.iris\/missions\/implement-authentication\.md/);
+      expect(mission.planPath).toMatch(/\.botical\/missions\/implement-authentication\.md/);
       expect(mission.sessionId).toBeNull();
       expect(mission.planApprovedAt).toBeNull();
       expect(mission.planApprovedBy).toBeNull();
@@ -69,7 +69,7 @@ describe("Mission Service", () => {
         title: "Add @#$% Feature!!!",
       });
 
-      expect(mission.planPath).toMatch(/\.iris\/missions\/add-feature\.md/);
+      expect(mission.planPath).toMatch(/\.botical\/missions\/add-feature\.md/);
     });
   });
 

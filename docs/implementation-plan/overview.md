@@ -1,8 +1,8 @@
-# Iris Backend Implementation Overview
+# Botical Backend Implementation Overview
 
 ## Vision
 
-Iris is a headless backend server that provides a full-featured AI agent workspace. It exposes the functionality of the Vercel AI SDK through a WebSocket-first API, enabling efficient real-time communication with AI agents that help users accomplish work within organized projects.
+Botical is a headless backend server that provides a full-featured AI agent workspace. It exposes the functionality of the Vercel AI SDK through a WebSocket-first API, enabling efficient real-time communication with AI agents that help users accomplish work within organized projects.
 
 ## Core Principles
 
@@ -32,7 +32,7 @@ Iris is a headless backend server that provides a full-featured AI agent workspa
                               │ WebSocket + HTTP
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Iris Backend Server                         │
+│                      Botical Backend Server                         │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │                    API Layer (Hono)                         ││
 │  │  • WebSocket Handler (primary)                              ││

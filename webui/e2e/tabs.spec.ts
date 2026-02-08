@@ -347,14 +347,14 @@ test.describe("Tab System", () => {
       await page.waitForLoadState("networkidle");
 
       // Document title should contain "Projects"
-      await expect(page).toHaveTitle(/Projects.*Iris/);
+      await expect(page).toHaveTitle(/Projects.*Botical/);
 
       // Navigate to settings
       await page.goto("/settings/api-keys");
       await page.waitForLoadState("networkidle");
 
       // Document title should now contain "API Keys"
-      await expect(page).toHaveTitle(/API Keys.*Iris/);
+      await expect(page).toHaveTitle(/API Keys.*Botical/);
     });
 
     test("should show tab label in document title when navigating", async ({ page }) => {
@@ -362,7 +362,7 @@ test.describe("Tab System", () => {
       await page.waitForLoadState("networkidle");
 
       // Document title should contain "New Project"
-      await expect(page).toHaveTitle(/New Project.*Iris|Create Project.*Iris/);
+      await expect(page).toHaveTitle(/New Project.*Botical|Create Project.*Botical/);
 
       // Tab should also show "New Project"
       const tabBar = page.locator(".h-9.bg-bg-secondary.border-b");

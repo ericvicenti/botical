@@ -83,7 +83,7 @@ async function main(): Promise<void> {
   // Start backend server
   backendProcess = spawn(["bun", "run", "src/index.ts"], {
     cwd: ROOT_DIR,
-    env: { ...process.env, IRIS_PORT: String(BACKEND_PORT) },
+    env: { ...process.env, BOTICAL_PORT: String(BACKEND_PORT) },
     stdout: "inherit",
     stderr: "inherit",
   });

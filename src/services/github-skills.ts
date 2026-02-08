@@ -2,7 +2,7 @@
  * GitHub Skill Service
  *
  * Handles downloading and installing skills from GitHub repositories.
- * Skills are stored in `.iris/skills/<owner>/<repo>/` within the project.
+ * Skills are stored in `.botical/skills/<owner>/<repo>/` within the project.
  *
  * See: https://agentskills.io/specification
  */
@@ -10,7 +10,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import { getIrisPaths } from "../config/yaml.ts";
+import { getBoticalPaths } from "../config/yaml.ts";
 import {
   ProjectConfigService,
   type InstalledSkillConfig,
@@ -78,7 +78,7 @@ export const GitHubSkillService = {
    * Get the installation directory for a repo
    */
   getInstallDir(projectPath: string, repo: string): string {
-    const paths = getIrisPaths(projectPath);
+    const paths = getBoticalPaths(projectPath);
     return paths.skillRepo(repo);
   },
 
@@ -301,7 +301,7 @@ export const GitHubSkillService = {
     const response = await fetch(url, {
       headers: {
         Accept: "application/vnd.github+json",
-        "User-Agent": "iris-ai",
+        "User-Agent": "botical",
       },
       redirect: "follow",
     });

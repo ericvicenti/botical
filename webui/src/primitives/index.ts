@@ -1,5 +1,5 @@
 /**
- * Iris Primitives
+ * Botical Primitives
  *
  * A unified interface for Pages (UI surfaces) and Actions (operations).
  * Pages and Actions can be used from GUI, Agents, and Tests.

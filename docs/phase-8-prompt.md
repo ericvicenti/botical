@@ -2,7 +2,7 @@
 
 ## Context
 
-You are implementing Phase 8 of the Iris AI agent server. The previous phases have established:
+You are implementing Phase 8 of the Botical AI agent server. The previous phases have established:
 
 - **Phase 1** ✅: Foundation - Database, server, project system, event bus
 - **Phase 2** ✅: Agent Core - AI SDK integration, sessions, tools, streaming

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
 import { EventBus } from "@/bus/event-bus.ts";
-import type { IrisEvent, EventEnvelope } from "@/bus/types.ts";
+import type { BoticalEvent, EventEnvelope } from "@/bus/types.ts";
 
 describe("EventBus", () => {
   beforeEach(() => {
@@ -9,7 +9,7 @@ describe("EventBus", () => {
 
   describe("publish", () => {
     it("publishes project-scoped events", () => {
-      const event: IrisEvent = {
+      const event: BoticalEvent = {
         type: "session.created",
         payload: {
           sessionId: "sess_123",
@@ -30,7 +30,7 @@ describe("EventBus", () => {
       const callback = mock();
       EventBus.subscribe("session.created", callback);
 
-      const event: IrisEvent = {
+      const event: BoticalEvent = {
         type: "session.created",
         payload: {
           sessionId: "sess_123",
@@ -56,7 +56,7 @@ describe("EventBus", () => {
 
   describe("publishGlobal", () => {
     it("publishes global events without projectId", () => {
-      const event: IrisEvent = {
+      const event: BoticalEvent = {
         type: "project.created",
         payload: {
           projectId: "prj_123",
@@ -154,7 +154,7 @@ describe("EventBus", () => {
       const callback = mock();
       const sub = EventBus.subscribe("session.created", callback);
 
-      const event: IrisEvent = {
+      const event: BoticalEvent = {
         type: "session.created",
         payload: { sessionId: "1", title: "Test", agent: "default" },
       };

@@ -1,5 +1,5 @@
 /**
- * Iris Action Registry
+ * Botical Action Registry
  *
  * Central registry for all actions in the system. Actions registered here
  * are available to both AI agents (as tools) and the GUI (command palette).

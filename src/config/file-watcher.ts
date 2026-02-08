@@ -1,7 +1,7 @@
 /**
  * File Watcher for Configuration Hot-Reload
  *
- * Watches .iris/ directories for changes and emits events
+ * Watches .botical/ directories for changes and emits events
  * when configuration files are added, modified, or deleted.
  */
 
@@ -46,7 +46,7 @@ export interface ConfigWatcherOptions {
 /**
  * Config File Watcher
  *
- * Watches a project's .iris/ directory for configuration changes.
+ * Watches a project's .botical/ directory for configuration changes.
  */
 export class ConfigFileWatcher {
   private watchers: fs.FSWatcher[] = [];
@@ -66,13 +66,13 @@ export class ConfigFileWatcher {
    * Start watching for file changes
    */
   start(): void {
-    const irisDir = path.join(this.projectPath, ".iris");
+    const boticalDir = path.join(this.projectPath, ".botical");
 
     // Watch directories
     const watchDirs: Array<{ dir: string; fileType: ConfigFileType }> = [
-      { dir: path.join(irisDir, "workflows"), fileType: "workflow" },
-      { dir: path.join(irisDir, "services"), fileType: "service" },
-      { dir: path.join(irisDir, "agents"), fileType: "agent" },
+      { dir: path.join(boticalDir, "workflows"), fileType: "workflow" },
+      { dir: path.join(boticalDir, "services"), fileType: "service" },
+      { dir: path.join(boticalDir, "agents"), fileType: "agent" },
     ];
 
     for (const { dir, fileType } of watchDirs) {
@@ -104,10 +104,10 @@ export class ConfigFileWatcher {
     }
 
     // Watch config.yaml separately
-    const configPath = path.join(irisDir, "config.yaml");
-    if (fs.existsSync(irisDir)) {
+    const configPath = path.join(boticalDir, "config.yaml");
+    if (fs.existsSync(boticalDir)) {
       try {
-        const watcher = fs.watch(irisDir, (eventType, filename) => {
+        const watcher = fs.watch(boticalDir, (eventType, filename) => {
           if (filename !== "config.yaml") {
             return;
           }
@@ -122,7 +122,7 @@ export class ConfigFileWatcher {
 
         this.watchers.push(watcher);
       } catch (error) {
-        console.error(`Failed to watch .iris directory:`, error);
+        console.error(`Failed to watch .botical directory:`, error);
       }
     }
   }

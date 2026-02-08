@@ -2,7 +2,7 @@
  * Templates API Routes
  *
  * REST API endpoints for managing task templates within a project.
- * Templates are stored as YAML files in .iris/templates/
+ * Templates are stored as YAML files in .botical/templates/
  *
  * Endpoints:
  * - GET /api/templates - List templates for a project

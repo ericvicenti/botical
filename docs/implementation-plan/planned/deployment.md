@@ -1,10 +1,10 @@
 # Deployment Phase
 
-Deploy Iris to an exe.dev server with a single idempotent script.
+Deploy Botical to an exe.dev server with a single idempotent script.
 
 ## Overview
 
-**Target**: `iris-vicenti.exe.xyz` (with CNAME `iris.vicenti.net`)
+**Target**: `botical-vicenti.exe.xyz` (with CNAME `botical.vicenti.net`)
 **Architecture**: Single Bun server serving both API and static frontend
 **Process Management**: systemd
 **SSL/TLS**: Handled by exe.dev proxy (automatic)
@@ -23,7 +23,7 @@ The backend currently only serves API routes. For production, it needs to serve 
 **File**: `src/server/app.ts`
 
 Add static file serving that:
-- Serves files from `webui/dist/` (or configurable path via `IRIS_STATIC_DIR`)
+- Serves files from `webui/dist/` (or configurable path via `BOTICAL_STATIC_DIR`)
 - Falls back to `index.html` for client-side routing (SPA behavior)
 - Only activates in production mode
 - Prioritizes API routes over static files
@@ -37,7 +37,7 @@ Usage: `bun scripts/deploy.ts <hostname>`
 The script should:
 
 ```
-1. Parse hostname argument (e.g., "iris-vicenti.exe.xyz")
+1. Parse hostname argument (e.g., "botical-vicenti.exe.xyz")
 2. SSH to host and run deployment commands:
    a. Install Bun if not present
    b. Clone repo (first run) or pull latest (subsequent runs)
@@ -49,24 +49,24 @@ The script should:
 
 ### 3. Create Systemd Service Template
 
-**File**: `scripts/iris.service`
+**File**: `scripts/botical.service`
 
 ```ini
 [Unit]
-Description=Iris AI Agent Workspace
+Description=Botical AI Agent Workspace
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/iris
+WorkingDirectory=/root/botical
 ExecStart=/root/.bun/bin/bun run src/index.ts
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
-Environment=IRIS_PORT=80
-Environment=IRIS_HOST=0.0.0.0
-Environment=IRIS_STATIC_DIR=/root/iris/webui/dist
+Environment=BOTICAL_PORT=80
+Environment=BOTICAL_HOST=0.0.0.0
+Environment=BOTICAL_STATIC_DIR=/root/botical/webui/dist
 
 [Install]
 WantedBy=multi-user.target
@@ -92,8 +92,8 @@ bun scripts/deploy.ts ─────SSH────────>
                                       bun install
                                       cd webui && bun run build
                                       Install systemd service
-                                      systemctl enable iris
-                                      systemctl restart iris
+                                      systemctl enable botical
+                                      systemctl restart botical
 
                      <────Status──────  Server running on :80
 
@@ -109,7 +109,7 @@ bun scripts/deploy.ts ─────SSH────────>
 Internet
     │
     ▼
-https://iris.vicenti.net  ───CNAME───> iris-vicenti.exe.xyz
+https://botical.vicenti.net  ───CNAME───> botical-vicenti.exe.xyz
     │
     ▼
 exe.dev Proxy (TLS termination)
@@ -126,15 +126,15 @@ Bun Server (Hono)
 | Variable | Value | Description |
 |----------|-------|-------------|
 | `NODE_ENV` | `production` | Enables production mode |
-| `IRIS_PORT` | `80` | HTTP port (exe.dev forwards here) |
-| `IRIS_HOST` | `0.0.0.0` | Listen on all interfaces |
-| `IRIS_STATIC_DIR` | `/root/iris/webui/dist` | Path to built frontend |
-| `IRIS_DATA_DIR` | `/root/.iris` | Data directory (default) |
+| `BOTICAL_PORT` | `80` | HTTP port (exe.dev forwards here) |
+| `BOTICAL_HOST` | `0.0.0.0` | Listen on all interfaces |
+| `BOTICAL_STATIC_DIR` | `/root/botical/webui/dist` | Path to built frontend |
+| `BOTICAL_DATA_DIR` | `/root/.botical` | Data directory (default) |
 
 ## CNAME Setup
 
 After deployment, set up DNS:
-- `iris.vicenti.net` CNAME → `iris-vicenti.exe.xyz`
+- `botical.vicenti.net` CNAME → `botical-vicenti.exe.xyz`
 - exe.dev will automatically provision TLS certificate
 
 ## Script Idempotency
@@ -153,22 +153,22 @@ The deploy script must be idempotent (safe to run multiple times):
 
 ## Testing
 
-1. Run deploy script: `bun scripts/deploy.ts iris-vicenti.exe.xyz`
-2. Check service status: `ssh iris-vicenti.exe.xyz systemctl status iris`
+1. Run deploy script: `bun scripts/deploy.ts botical-vicenti.exe.xyz`
+2. Check service status: `ssh botical-vicenti.exe.xyz systemctl status botical`
 3. Test endpoints:
-   - `https://iris-vicenti.exe.xyz/health` → `{"status":"ok"}`
-   - `https://iris-vicenti.exe.xyz/` → Frontend HTML
-   - `wss://iris-vicenti.exe.xyz/ws` → WebSocket connection
+   - `https://botical-vicenti.exe.xyz/health` → `{"status":"ok"}`
+   - `https://botical-vicenti.exe.xyz/` → Frontend HTML
+   - `wss://botical-vicenti.exe.xyz/ws` → WebSocket connection
 
 ## Rollback
 
 If deployment fails:
 ```bash
-ssh iris-vicenti.exe.xyz
-systemctl stop iris
-cd ~/iris && git checkout <previous-commit>
+ssh botical-vicenti.exe.xyz
+systemctl stop botical
+cd ~/botical && git checkout <previous-commit>
 bun install && cd webui && bun run build
-systemctl start iris
+systemctl start botical
 ```
 
 ## Future Enhancements
