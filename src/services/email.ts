@@ -1,30 +1,154 @@
 /**
  * Email Service
  *
- * Sends emails via Resend in production, logs to console in development.
+ * Sends emails via SMTP in production, logs to console in development.
  * See: docs/knowledge-base/01-architecture.md
  *
  * Configuration:
- * - RESEND_API_KEY: Resend API key (optional in dev)
+ * - SMTP_HOST: SMTP server hostname
+ * - SMTP_PORT: SMTP port (default: 465 for SMTPS)
+ * - SMTP_USER: SMTP username
+ * - SMTP_PASS: SMTP password
  * - EMAIL_FROM: From address for emails
  * - APP_URL: Base URL for magic links
  */
 
 import { z } from "zod";
+import * as net from "net";
+import * as tls from "tls";
 
 const EmailConfigSchema = z.object({
-  resendApiKey: z.string().optional(),
-  fromEmail: z.string().email().default("noreply@botical.local"),
+  smtpHost: z.string().optional(),
+  smtpPort: z.coerce.number().default(465),
+  smtpUser: z.string().optional(),
+  smtpPass: z.string().optional(),
+  fromEmail: z.string().default("noreply@botical.local"),
   appUrl: z.string().url().default("http://localhost:6001"),
 });
 
 type EmailConfig = z.infer<typeof EmailConfigSchema>;
 
 /**
+ * Minimal SMTP client for sending emails over TLS (SMTPS port 465).
+ * No external dependencies required.
+ */
+async function sendSmtp(config: {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("SMTP connection timed out"));
+    }, 30000);
+
+    const socket = tls.connect(
+      { host: config.host, port: config.port, rejectUnauthorized: false },
+      () => {
+        // connected
+      }
+    );
+
+    let buffer = "";
+    let step = 0;
+
+    const boundary = `----=_Part_${Date.now().toString(36)}`;
+    const message = [
+      `From: ${config.from}`,
+      `To: ${config.to}`,
+      `Subject: ${config.subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      ``,
+      `--${boundary}`,
+      `Content-Type: text/plain; charset=utf-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      ``,
+      config.text,
+      ``,
+      `--${boundary}`,
+      `Content-Type: text/html; charset=utf-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      ``,
+      config.html,
+      ``,
+      `--${boundary}--`,
+    ].join("\r\n");
+
+    const steps = [
+      // 0: greeting → EHLO
+      () => socket.write(`EHLO botical\r\n`),
+      // 1: EHLO response → AUTH LOGIN
+      () => socket.write(`AUTH LOGIN\r\n`),
+      // 2: username prompt → send username
+      () => socket.write(Buffer.from(config.user).toString("base64") + "\r\n"),
+      // 3: password prompt → send password
+      () => socket.write(Buffer.from(config.pass).toString("base64") + "\r\n"),
+      // 4: auth success → MAIL FROM
+      () => socket.write(`MAIL FROM:<${config.from}>\r\n`),
+      // 5: MAIL FROM ok → RCPT TO
+      () => socket.write(`RCPT TO:<${config.to}>\r\n`),
+      // 6: RCPT TO ok → DATA
+      () => socket.write(`DATA\r\n`),
+      // 7: DATA ready → send message
+      () => socket.write(message + "\r\n.\r\n"),
+      // 8: message accepted → QUIT
+      () => {
+        socket.write(`QUIT\r\n`);
+        clearTimeout(timeout);
+        resolve();
+      },
+    ];
+
+    socket.on("data", (data) => {
+      buffer += data.toString();
+      const lines = buffer.split("\r\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line) continue;
+        const code = parseInt(line.substring(0, 3));
+
+        // Multi-line responses (e.g., 250-STARTTLS) - wait for final line
+        if (line[3] === "-") continue;
+
+        // Check for errors
+        if (code >= 400) {
+          clearTimeout(timeout);
+          socket.destroy();
+          reject(new Error(`SMTP error at step ${step}: ${line}`));
+          return;
+        }
+
+        if (step < steps.length) {
+          steps[step]();
+          step++;
+        }
+      }
+    });
+
+    socket.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(new Error(`SMTP connection error: ${err.message}`));
+    });
+
+    socket.on("close", () => {
+      clearTimeout(timeout);
+    });
+  });
+}
+
+/**
  * Email Service for sending transactional emails
  *
- * In development mode (no RESEND_API_KEY), magic links are logged to console.
- * In production mode, emails are sent via Resend API.
+ * In development mode (no SMTP configured), magic links are logged to console.
+ * In production mode, emails are sent via SMTP.
  */
 class EmailServiceClass {
   private config: EmailConfig | null = null;
@@ -35,7 +159,10 @@ class EmailServiceClass {
   private getConfig(): EmailConfig {
     if (!this.config) {
       this.config = EmailConfigSchema.parse({
-        resendApiKey: process.env.RESEND_API_KEY,
+        smtpHost: process.env.SMTP_HOST,
+        smtpPort: process.env.SMTP_PORT,
+        smtpUser: process.env.SMTP_USER,
+        smtpPass: process.env.SMTP_PASS,
         fromEmail: process.env.EMAIL_FROM,
         appUrl: process.env.APP_URL,
       });
@@ -47,7 +174,8 @@ class EmailServiceClass {
    * Check if running in dev mode (no email provider configured)
    */
   isDevMode(): boolean {
-    return !this.getConfig().resendApiKey;
+    const config = this.getConfig();
+    return !config.smtpHost;
   }
 
   /**
@@ -58,17 +186,43 @@ class EmailServiceClass {
   }
 
   /**
+   * Send an email via SMTP or log to console in dev mode
+   */
+  private async sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
+    const config = this.getConfig();
+
+    if (!config.smtpHost || !config.smtpUser || !config.smtpPass) {
+      console.log("\n========================================");
+      console.log("EMAIL (dev mode)");
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log("--------");
+      console.log(text);
+      console.log("========================================\n");
+      return;
+    }
+
+    await sendSmtp({
+      host: config.smtpHost,
+      port: config.smtpPort,
+      user: config.smtpUser,
+      pass: config.smtpPass,
+      from: config.fromEmail,
+      to,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
    * Send a magic link email for authentication
-   *
-   * @param email - Recipient email address
-   * @param token - The raw magic link token
    */
   async sendMagicLink(email: string, token: string): Promise<void> {
     const config = this.getConfig();
     const magicLink = `${config.appUrl}/auth/verify?token=${token}`;
 
-    if (!config.resendApiKey) {
-      // Dev mode: log to console
+    if (this.isDevMode()) {
       console.log("\n========================================");
       console.log("MAGIC LINK (dev mode)");
       console.log(`Email: ${email}`);
@@ -77,18 +231,7 @@ class EmailServiceClass {
       return;
     }
 
-    // Production: send via Resend
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: config.fromEmail,
-        to: email,
-        subject: "Your Botical Login Link",
-        html: `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -109,59 +252,18 @@ class EmailServiceClass {
     </p>
   </div>
 </body>
-</html>
-        `.trim(),
-        text: `Login to Botical\n\nClick this link to log in: ${magicLink}\n\nThis link expires in 15 minutes.\n\nIf you didn't request this, ignore this email.`,
-      }),
-    });
+</html>`.trim();
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Failed to send email: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
+    const text = `Login to Botical\n\nClick this link to log in: ${magicLink}\n\nThis link expires in 15 minutes.\n\nIf you didn't request this, ignore this email.`;
+
+    await this.sendEmail(email, "Your Botical Login Link", html, text);
   }
 
   /**
-   * Send a generic email (for future use)
-   *
-   * @param to - Recipient email address
-   * @param subject - Email subject
-   * @param html - HTML content
-   * @param text - Plain text content
+   * Send a generic email
    */
   async send(to: string, subject: string, html: string, text: string): Promise<void> {
-    const config = this.getConfig();
-
-    if (!config.resendApiKey) {
-      console.log("\n========================================");
-      console.log("EMAIL (dev mode)");
-      console.log(`To: ${to}`);
-      console.log(`Subject: ${subject}`);
-      console.log("--------");
-      console.log(text);
-      console.log("========================================\n");
-      return;
-    }
-
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: config.fromEmail,
-        to,
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Failed to send email: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
+    await this.sendEmail(to, subject, html, text);
   }
 }
 

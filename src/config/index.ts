@@ -32,7 +32,8 @@ const ConfigSchema = z.object({
 
   // Auth & Email settings
   appUrl: z.string().url().default("http://localhost:6001"),
-  resendApiKey: z.string().optional(),
+  resendApiKey: z.string().optional(), // deprecated, kept for compat
+  smtpHost: z.string().optional(),
   emailFrom: z.string().email().optional(),
 
   // Security
@@ -86,6 +87,7 @@ class ConfigManager {
       // Auth & Email
       appUrl: process.env.APP_URL,
       resendApiKey: process.env.RESEND_API_KEY,
+      smtpHost: process.env.SMTP_HOST,
       emailFrom: process.env.EMAIL_FROM,
 
       // Security
@@ -175,7 +177,7 @@ class ConfigManager {
     }
     // Auto-detect: localhost without email service configured
     const config = this.get();
-    return config.host === "localhost" && !config.resendApiKey;
+    return config.host === "localhost" && !config.resendApiKey && !config.smtpHost;
   }
 }
 
