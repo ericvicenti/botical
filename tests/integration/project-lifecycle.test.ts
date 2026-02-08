@@ -207,23 +207,26 @@ describe("Project Lifecycle Integration", () => {
       });
       ProjectService.addMember(rootDb, sharedProject.id, testUserId, "member");
 
-      // Query by owner
+      // Query by owner (includes root project)
       const ownedByUser1 = ProjectService.list(rootDb, { ownerId: testUserId });
-      expect(ownedByUser1.length).toBe(1);
-      expect(ownedByUser1[0]!.name).toBe("Owned Project");
+      const ownedNonRoot = ownedByUser1.filter((p) => p.id !== "prj_root");
+      expect(ownedNonRoot.length).toBe(1);
+      expect(ownedNonRoot[0]!.name).toBe("Owned Project");
 
-      // Query by member (includes owned and shared)
+      // Query by member (includes owned, shared, and root project)
       const accessibleByUser1 = ProjectService.list(rootDb, {
         memberId: testUserId,
       });
-      expect(accessibleByUser1.length).toBe(2);
+      const accessibleNonRoot = accessibleByUser1.filter((p) => p.id !== "prj_root");
+      expect(accessibleNonRoot.length).toBe(2);
 
-      // Query by user 2 membership
+      // Query by user 2 membership (includes root project in single-user mode)
       const accessibleByUser2 = ProjectService.list(rootDb, {
         memberId: testUserId2,
       });
-      expect(accessibleByUser2.length).toBe(1);
-      expect(accessibleByUser2[0]!.name).toBe("Shared Project");
+      const user2NonRoot = accessibleByUser2.filter((p) => p.id !== "prj_root");
+      expect(user2NonRoot.length).toBe(1);
+      expect(user2NonRoot[0]!.name).toBe("Shared Project");
     });
   });
 
