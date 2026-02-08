@@ -114,3 +114,16 @@ Environment=APP_URL=https://yourdomain.com
 - `/auth/magic-link` always returns success to prevent email enumeration
 - Cookie-based auth supported alongside Bearer tokens
 - Browser requests to `/auth/verify` redirect to onboarding/home instead of returning JSON
+
+## Email Deliverability Notes
+
+**Outbound email uses Resend (Amazon SES)** for reliable delivery. Direct SMTP from our VPS IP was blocked by Gmail (550 5.7.28 — IP reputation).
+
+**Critical DNS requirement:** The root domain SPF record MUST include `include:amazonses.com` for Resend emails to pass SPF:
+```
+v=spf1 a mx ip4:93.95.231.226 include:amazonses.com ~all
+```
+
+Without this, Gmail will hard-fail emails sent via Resend since they come from Amazon SES IPs, not our server IP.
+
+**Stalwart** (mail.verse.link) handles inbound email only.
