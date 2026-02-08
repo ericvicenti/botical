@@ -14,7 +14,7 @@ The mode is determined by `Config.isSingleUserMode()` in `src/config/index.ts`:
 ```
 BOTICAL_SINGLE_USER=true   → single-user (explicit)
 BOTICAL_SINGLE_USER=false  → multi-user (explicit)
-(unset)                    → auto-detect: single-user if host=localhost AND no RESEND_API_KEY
+(unset)                    → auto-detect: single-user if host=localhost AND no SMTP_HOST/RESEND_API_KEY
 ```
 
 ⚠️ **Do NOT use `BOTICAL_HOST` to force multi-user mode** — that value is also used as the `hostname` for `Bun.serve()`, which will cause EADDRINUSE errors if set to a domain name. Use `BOTICAL_SINGLE_USER=false` instead.
@@ -47,7 +47,7 @@ BOTICAL_SINGLE_USER=false  → multi-user (explicit)
 ```
 1. Frontend loads → AuthProvider calls GET /auth/mode
 2. If mode=multi-user and no valid session → ProtectedRoute renders LoginPage
-3. User enters email → POST /auth/magic-link → email sent via Resend (or logged in dev mode)
+3. User enters email → POST /auth/magic-link → email sent via SMTP (or logged in dev mode)
 4. User clicks link → GET /auth/verify?token=xxx → session created, token returned
 5. Frontend stores token → API calls include Authorization: Bearer <token>
 6. On AUTHENTICATION_ERROR from any API call → global auth check triggers re-render
@@ -68,15 +68,18 @@ BOTICAL_SINGLE_USER=false  → multi-user (explicit)
 
 ## Email Configuration
 
-Magic link emails are sent via [Resend](https://resend.com):
+Magic link emails are sent via SMTP (built-in TLS client, no external deps):
 
 ```env
-RESEND_API_KEY=re_xxxxx      # Resend API key (required for production)
-EMAIL_FROM=noreply@example.com # Sender address (must be verified in Resend)
+SMTP_HOST=mail.example.com     # SMTP server hostname
+SMTP_PORT=465                  # SMTP port (default: 465 for SMTPS)
+SMTP_USER=user                 # SMTP username
+SMTP_PASS=password             # SMTP password
+EMAIL_FROM=noreply@example.com # Sender address
 APP_URL=https://your-domain.com # Base URL for magic link URLs
 ```
 
-In dev mode (no `RESEND_API_KEY`), magic links are logged to the console.
+In dev mode (no `SMTP_HOST` configured), magic links are logged to the console.
 
 ## Production Deployment
 
@@ -84,7 +87,10 @@ Required systemd environment variables for multi-user:
 
 ```ini
 Environment=BOTICAL_SINGLE_USER=false
-Environment=RESEND_API_KEY=re_xxxxx
+Environment=SMTP_HOST=mail.yourdomain.com
+Environment=SMTP_PORT=465
+Environment=SMTP_USER=youruser
+Environment=SMTP_PASS=yourpassword
 Environment=EMAIL_FROM=noreply@yourdomain.com
 Environment=APP_URL=https://yourdomain.com
 ```
