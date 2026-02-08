@@ -29,6 +29,7 @@ import {
   ProjectService,
   ProjectCreateSchema,
   ProjectUpdateSchema,
+  ROOT_PROJECT_ID,
   type ProjectRole,
 } from "@/services/projects.ts";
 import { requireProjectAccess } from "@/auth/middleware.ts";
@@ -81,9 +82,11 @@ projects.get("/", async (c) => {
 
   const rootDb = DatabaseManager.getRootDb();
 
+  const auth = c.get("auth");
   const projectList = ProjectService.list(rootDb, {
     ownerId,
     memberId,
+    requestingUserId: auth?.userId,
     type,
     includeArchived,
     limit,
@@ -181,6 +184,14 @@ projects.get("/:id", async (c) => {
 
   const rootDb = DatabaseManager.getRootDb();
   const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+
+  // Root project requires admin access in multi-user mode
+  if (projectId === ROOT_PROJECT_ID) {
+    const auth = c.get("auth");
+    if (!auth || !ProjectService.hasRootAccess(rootDb, auth.userId)) {
+      throw new ForbiddenError("Admin access required for root project");
+    }
+  }
 
   return c.json({
     data: project,

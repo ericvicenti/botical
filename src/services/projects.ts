@@ -11,11 +11,39 @@ import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import * as os from "os";
 import { generateId, IdPrefixes } from "@/utils/id.ts";
 import { NotFoundError, ForbiddenError, ConflictError } from "@/utils/errors.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
 import type { Database } from "bun:sqlite";
+
+/**
+ * Root Project
+ *
+ * A hardcoded virtual project that always exists in both single-user and
+ * multi-user modes. Its working directory is the current user's home directory.
+ * In multi-user mode, only admin users can access it.
+ */
+export const ROOT_PROJECT_ID = "prj_root";
+
+function getRootProject(): Project {
+  return {
+    id: ROOT_PROJECT_ID,
+    name: "Root",
+    description: "System root project — home directory workspace",
+    ownerId: "system",
+    type: "local",
+    path: os.homedir(),
+    gitRemote: null,
+    iconUrl: null,
+    color: null,
+    settings: {},
+    createdAt: 0,
+    updatedAt: 0,
+    archivedAt: null,
+  };
+}
 
 /**
  * Convert a string to a URL-safe slug
@@ -310,6 +338,10 @@ export class ProjectService {
    * Get a project by ID
    */
   static getById(rootDb: Database, projectId: string): Project | null {
+    if (projectId === ROOT_PROJECT_ID) {
+      return getRootProject();
+    }
+
     const row = rootDb
       .prepare("SELECT * FROM projects WHERE id = ? AND archived_at IS NULL")
       .get(projectId) as ProjectRow | undefined;
@@ -337,6 +369,7 @@ export class ProjectService {
     options: {
       ownerId?: string;
       memberId?: string;
+      requestingUserId?: string;
       type?: "local" | "remote";
       includeArchived?: boolean;
       limit?: number;
@@ -386,7 +419,18 @@ export class ProjectService {
     }
 
     const rows = rootDb.prepare(query).all(...params) as ProjectRow[];
-    return rows.map(rowToProject);
+    const projects = rows.map(rowToProject);
+
+    // Include the root project at the beginning if user has access
+    if (!options.type || options.type === "local") {
+      const userId = options.requestingUserId || options.memberId || options.ownerId;
+      const showRoot = !userId || this.hasRootAccess(rootDb, userId);
+      if (showRoot) {
+        projects.unshift(getRootProject());
+      }
+    }
+
+    return projects;
   }
 
   /**
@@ -397,6 +441,9 @@ export class ProjectService {
     projectId: string,
     input: ProjectUpdateInput
   ): Project {
+    if (projectId === ROOT_PROJECT_ID) {
+      throw new ForbiddenError("Cannot modify the root project");
+    }
     this.getByIdOrThrow(rootDb, projectId);
     const validated = ProjectUpdateSchema.parse(input);
     const now = Date.now();
@@ -452,6 +499,9 @@ export class ProjectService {
    * Archive a project (soft delete)
    */
   static delete(rootDb: Database, projectId: string): void {
+    if (projectId === ROOT_PROJECT_ID) {
+      throw new ForbiddenError("Cannot delete the root project");
+    }
     this.getByIdOrThrow(rootDb, projectId);
     const now = Date.now();
 
@@ -673,12 +723,31 @@ export class ProjectService {
     projectId: string,
     userId: string
   ): boolean {
+    if (projectId === ROOT_PROJECT_ID) {
+      return this.hasRootAccess(rootDb, userId);
+    }
+
     const project = this.getById(rootDb, projectId);
     if (!project) return false;
     if (project.ownerId === userId) return true;
 
     const member = this.getMember(rootDb, projectId, userId);
     return member !== null;
+  }
+
+  /**
+   * Check if a user can access the root project.
+   * In single-user mode: always allowed.
+   * In multi-user mode: only admins.
+   */
+  static hasRootAccess(rootDb: Database, userId: string): boolean {
+    if (Config.isSingleUserMode()) return true;
+
+    const user = rootDb
+      .prepare("SELECT is_admin FROM users WHERE id = ?")
+      .get(userId) as { is_admin: number } | undefined;
+
+    return user?.is_admin === 1;
   }
 
   /**
@@ -696,6 +765,11 @@ export class ProjectService {
       admin: 2,
       owner: 3,
     };
+
+    if (projectId === ROOT_PROJECT_ID) {
+      // Root project: admin users get owner-level access
+      return this.hasRootAccess(rootDb, userId);
+    }
 
     const project = this.getById(rootDb, projectId);
     if (!project) return false;
