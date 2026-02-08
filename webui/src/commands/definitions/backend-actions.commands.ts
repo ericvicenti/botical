@@ -136,12 +136,36 @@ export function backendActionToCommand(action: BackendAction): Command {
         ctx.ui.openNewTaskModal();
         return;
       }
+
+      // Show running dialog for commands that take time
+      const showProgress = action.category === "shell" || action.id.includes("run");
+      // Extract command string for display (used by shell.run)
+      const commandStr = typeof collectedArgs.command === "string" ? collectedArgs.command : null;
+      if (showProgress) {
+        ctx.feedback.showRunning(
+          action.label,
+          commandStr ? `$ ${commandStr}` : `Executing: ${action.id}`
+        );
+      }
+
       try {
         const result = await executeBackendAction(
           action.id,
           collectedArgs,
           ctx.selectedProjectId
         );
+
+        // Hide running dialog
+        if (showProgress) {
+          ctx.feedback.hideRunning();
+        }
+
+        // Invalidate processes query for shell/process actions (they record commands)
+        if (ctx.selectedProjectId && (action.category === "shell" || action.id.startsWith("process."))) {
+          ctx.queryClient.invalidateQueries({
+            queryKey: ["projects", ctx.selectedProjectId, "processes"],
+          });
+        }
 
         if (result.type === "navigate" && result.pageId) {
           // Handle navigation results
@@ -192,7 +216,9 @@ export function backendActionToCommand(action: BackendAction): Command {
           if (message.length < 100) {
             ctx.feedback.showToast(message, "error");
           } else {
-            ctx.feedback.showResult(action.label, message, "error");
+            // Prepend command if available
+            const fullOutput = commandStr ? `$ ${commandStr}\n\n${message}` : message;
+            ctx.feedback.showResult(action.label, fullOutput, "error");
           }
         } else if (result.type === "success") {
           const title = (result.title as string) || action.label;
@@ -200,13 +226,19 @@ export function backendActionToCommand(action: BackendAction): Command {
 
           // If there's output, show in dialog
           if (output && output.length > 0) {
-            ctx.feedback.showResult(title, output, "success");
+            // Prepend command if available
+            const fullOutput = commandStr ? `$ ${commandStr}\n\n${output}` : output;
+            ctx.feedback.showResult(title, fullOutput, "success");
           } else {
             // No output - just show title as toast
             ctx.feedback.showToast(title, "success");
           }
         }
       } catch (err) {
+        // Hide running dialog on error
+        if (showProgress) {
+          ctx.feedback.hideRunning();
+        }
         console.error(`Failed to execute action ${action.id}:`, err);
         ctx.feedback.showToast(
           `Action failed: ${err instanceof Error ? err.message : "Unknown error"}`,

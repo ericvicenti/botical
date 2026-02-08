@@ -12,6 +12,7 @@ import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { useToast } from "@/components/ui/Toast";
 import { useResultDialog } from "@/components/ui/ResultDialog";
+import { useRunningCommand } from "@/components/ui/RunningCommandDialog";
 import { commandRegistry } from "./registry";
 import type { Command, ExecutionContext } from "./types";
 
@@ -48,6 +49,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const tabContext = useTabs();
   const { showToast } = useToast();
   const { showResult } = useResultDialog();
+  const { showRunning, hideRunning } = useRunningCommand();
 
   const getExecutionContext = useCallback((): ExecutionContext => {
     return {
@@ -76,11 +78,13 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       feedback: {
         showToast,
         showResult,
+        showRunning,
+        hideRunning,
       },
       navigate,
       queryClient,
     };
-  }, [ui, tabContext, navigate, queryClient, showToast, showResult]);
+  }, [ui, tabContext, navigate, queryClient, showToast, showResult, showRunning, hideRunning]);
 
   const execute = useCallback(
     async (commandId: string, args: Record<string, unknown> = {}) => {

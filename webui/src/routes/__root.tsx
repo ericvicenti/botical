@@ -13,6 +13,7 @@ import { FilePalette } from "@/components/file-palette/FilePalette";
 import { BackendActionsLoader } from "@/commands/BackendActionsLoader";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ResultDialogProvider } from "@/components/ui/ResultDialog";
+import { RunningCommandProvider } from "@/components/ui/RunningCommandDialog";
 import { registerAllCommands } from "@/commands/definitions";
 import { useUI } from "@/contexts/ui";
 import { NewTaskModal } from "@/components/tasks/NewTaskModal";
@@ -71,12 +72,14 @@ function RootLayout() {
   return (
     <ToastProvider>
       <ResultDialogProvider>
-        <FilePaletteProvider>
-          <CommandProvider>
-            <BackendActionsLoader />
-            <RootLayoutInner />
-          </CommandProvider>
-        </FilePaletteProvider>
+        <RunningCommandProvider>
+          <FilePaletteProvider>
+            <CommandProvider>
+              <BackendActionsLoader />
+              <RootLayoutInner />
+            </CommandProvider>
+          </FilePaletteProvider>
+        </RunningCommandProvider>
       </ResultDialogProvider>
     </ToastProvider>
   );

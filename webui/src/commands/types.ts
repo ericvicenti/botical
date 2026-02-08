@@ -35,6 +35,8 @@ export interface CommandArg {
 export interface FeedbackActions {
   showToast: (message: string, type?: "success" | "error" | "info") => void;
   showResult: (title: string, content: string, type?: "success" | "error" | "info") => void;
+  showRunning: (title: string, description?: string) => void;
+  hideRunning: () => void;
 }
 
 export interface ExecutionContext {
