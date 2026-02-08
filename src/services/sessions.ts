@@ -22,6 +22,7 @@ export const SessionCreateSchema = z.object({
   parentId: z.string().nullable().optional(),
   providerId: z.string().nullable().optional(),
   modelId: z.string().nullable().optional(),
+  systemPrompt: z.string().nullable().optional(),
 });
 
 export type SessionCreateInput = z.input<typeof SessionCreateSchema>;
@@ -35,6 +36,7 @@ export const SessionUpdateSchema = z.object({
   agent: z.string().optional(),
   providerId: z.string().nullable().optional(),
   modelId: z.string().nullable().optional(),
+  systemPrompt: z.string().nullable().optional(),
 });
 
 export type SessionUpdateInput = z.infer<typeof SessionUpdateSchema>;
@@ -51,6 +53,7 @@ export interface Session {
   agent: string;
   providerId: string | null;
   modelId: string | null;
+  systemPrompt: string | null;
   messageCount: number;
   totalCost: number;
   totalTokensInput: number;
@@ -74,6 +77,7 @@ interface SessionRow {
   agent: string;
   provider_id: string | null;
   model_id: string | null;
+  system_prompt: string | null;
   message_count: number;
   total_cost: number;
   total_tokens_input: number;
@@ -98,6 +102,7 @@ function rowToSession(row: SessionRow): Session {
     agent: row.agent,
     providerId: row.provider_id,
     modelId: row.model_id,
+    systemPrompt: row.system_prompt,
     messageCount: row.message_count,
     totalCost: row.total_cost,
     totalTokensInput: row.total_tokens_input,
@@ -138,10 +143,10 @@ export class SessionService {
     db.prepare(
       `
       INSERT INTO sessions (
-        id, slug, parent_id, title, status, agent, provider_id, model_id,
+        id, slug, parent_id, title, status, agent, provider_id, model_id, system_prompt,
         message_count, total_cost, total_tokens_input, total_tokens_output,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     ).run(
       id,
@@ -152,6 +157,7 @@ export class SessionService {
       validated.agent,
       validated.providerId ?? null,
       validated.modelId ?? null,
+      validated.systemPrompt ?? null,
       0,
       0,
       0,
@@ -169,6 +175,7 @@ export class SessionService {
       agent: validated.agent,
       providerId: validated.providerId ?? null,
       modelId: validated.modelId ?? null,
+      systemPrompt: validated.systemPrompt ?? null,
       messageCount: 0,
       totalCost: 0,
       totalTokensInput: 0,
@@ -303,6 +310,11 @@ export class SessionService {
       params.push(validated.modelId);
     }
 
+    if (validated.systemPrompt !== undefined) {
+      updates.push("system_prompt = ?");
+      params.push(validated.systemPrompt);
+    }
+
     params.push(sessionId);
 
     db.prepare(
@@ -391,5 +403,55 @@ export class SessionService {
 
     const result = db.prepare(query).get(...params) as { count: number };
     return result.count;
+  }
+
+  /**
+   * Update the system prompt for a session and create a change event
+   */
+  static updateSystemPrompt(
+    db: Database,
+    sessionId: string,
+    newSystemPrompt: string | null
+  ): Session {
+    const existing = this.getByIdOrThrow(db, sessionId);
+    const previousSystemPrompt = existing.systemPrompt;
+
+    // Update the session
+    const updatedSession = this.update(db, sessionId, {
+      systemPrompt: newSystemPrompt,
+    });
+
+    // Create a system prompt change event message
+    if (previousSystemPrompt !== newSystemPrompt) {
+      const { MessageService } = require("./messages.ts");
+      const { MessagePartService } = require("./messages.ts");
+      const { generateId, IdPrefixes } = require("@/utils/id.ts");
+
+      const eventMessage = MessageService.create(db, {
+        sessionId,
+        role: "system" as const,
+      });
+
+      // Create message part with system prompt change event
+      MessagePartService.create(db, {
+        messageId: eventMessage.id,
+        sessionId,
+        type: "text",
+        content: {
+          text: `System prompt updated`,
+          event: {
+            type: "system_prompt_change",
+            previous: previousSystemPrompt,
+            current: newSystemPrompt,
+            timestamp: Date.now(),
+          },
+        },
+      });
+
+      // Update session message count
+      this.updateStats(db, sessionId, { messageCount: 1 });
+    }
+
+    return updatedSession;
   }
 }

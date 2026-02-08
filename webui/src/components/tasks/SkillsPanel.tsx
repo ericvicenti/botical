@@ -50,7 +50,7 @@ export function SkillsPanel({
 
   if (!skills?.length) {
     return (
-      <div className="border border-border rounded-lg bg-bg-secondary p-4">
+      <div className="bg-bg-secondary p-4">
         <div className="flex items-center gap-2 text-text-muted">
           <Sparkles className="w-4 h-4" />
           <span className="text-sm">No skills available</span>
@@ -63,9 +63,9 @@ export function SkillsPanel({
   }
 
   return (
-    <div className="border border-border rounded-lg bg-bg-secondary overflow-hidden">
+    <div className="bg-bg-secondary overflow-hidden max-h-full flex flex-col">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center gap-2">
+      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center gap-2 shrink-0">
         <Sparkles className="w-4 h-4 text-accent-primary" />
         <span className="text-sm font-medium text-text-primary">Skills</span>
         <span className="text-xs text-text-muted ml-auto">
@@ -74,7 +74,7 @@ export function SkillsPanel({
       </div>
 
       {/* Skills list */}
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border overflow-y-auto flex-1">
         {skills.map((skill) => {
           const isExpanded = expandedSkills.has(skill.name);
           const isLoaded = loadedSkills.has(skill.name);

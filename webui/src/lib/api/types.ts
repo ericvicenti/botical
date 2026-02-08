@@ -23,6 +23,7 @@ export interface Session {
   agent: string;
   providerId: string | null;
   modelId: string | null;
+  systemPrompt: string | null;
   messageCount: number;
   totalCost: number;
   totalTokensInput: number;

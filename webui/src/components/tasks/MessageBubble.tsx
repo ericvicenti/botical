@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils/cn";
-import { User, Bot, AlertCircle, FileText, Loader2, ExternalLink } from "lucide-react";
+import { User, Bot, AlertCircle, FileText, Loader2, ExternalLink, Settings } from "lucide-react";
 import type { MessageWithParts, MessagePart } from "@/lib/api/types";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
@@ -157,8 +157,42 @@ function GroupedPartRenderer({
 
 export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const isSystem = message.role === "system";
   const isError = !!message.errorType;
   const isStreaming = !message.completedAt && message.role === "assistant";
+
+  // Check if this is a system prompt change event
+  const isSystemPromptChange = isSystem && message.parts?.[0]?.content && 
+    typeof message.parts[0].content === 'object' &&
+    'event' in (message.parts[0].content as any) &&
+    (message.parts[0].content as any).event?.type === 'system_prompt_change';
+
+  if (isSystemPromptChange) {
+    const event = (message.parts[0].content as any).event;
+    return (
+      <div className="flex justify-center my-4">
+        <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary border border-border rounded-full text-sm text-text-muted">
+          <Settings className="w-4 h-4" />
+          <span>System prompt updated</span>
+          <span className="text-text-tertiary">
+            {new Date(event.timestamp).toLocaleTimeString()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSystem) {
+    // Other system messages (for future use)
+    return (
+      <div className="flex justify-center my-2">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary border border-border rounded-full text-xs text-text-muted">
+          <Settings className="w-3 h-3" />
+          <span>System event</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -106,6 +106,22 @@ export function useArchiveSession() {
   });
 }
 
+export function useUpdateSystemPrompt() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sessionId, projectId, systemPrompt }: { sessionId: string; projectId: string; systemPrompt: string | null }) =>
+      apiClient<Session>(`/api/sessions/${sessionId}/system-prompt`, {
+        method: "PATCH",
+        body: JSON.stringify({ projectId, systemPrompt }),
+      }),
+    onSuccess: (_, { sessionId, projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["sessions", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["projects", projectId, "sessions"] });
+    },
+  });
+}
+
 // Messages
 export function useMessages(sessionId: string, projectId: string) {
   return useQuery({

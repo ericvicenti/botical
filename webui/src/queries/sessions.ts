@@ -19,6 +19,7 @@ export interface SessionQueryResult {
   agent: string;
   providerId: string | null;
   modelId: string | null;
+  systemPrompt: string | null;
   messageCount: number;
   totalCost: number;
   totalTokensInput: number;
@@ -65,6 +66,7 @@ export interface SessionsCreateParams {
     agent?: string;
     providerId?: string | null;
     modelId?: string | null;
+    systemPrompt?: string | null;
   };
 }
 
@@ -79,6 +81,7 @@ export interface SessionsUpdateParams {
     agent?: string;
     providerId?: string | null;
     modelId?: string | null;
+    systemPrompt?: string | null;
     shareUrl?: string | null;
   };
 }
@@ -86,6 +89,12 @@ export interface SessionsUpdateParams {
 export interface SessionsDeleteParams {
   projectId: string;
   sessionId: string;
+}
+
+export interface SessionsUpdateSystemPromptParams {
+  projectId: string;
+  sessionId: string;
+  systemPrompt: string | null;
 }
 
 // ============================================
@@ -188,4 +197,18 @@ export const sessionsDeleteMutation: Mutation<SessionsDeleteParams, { deleted: b
     ["sessions.get", params.projectId, params.sessionId],
   ],
   description: "Delete a session",
+};
+
+export const sessionsUpdateSystemPromptMutation: Mutation<SessionsUpdateSystemPromptParams, SessionQueryResult> = {
+  name: "sessions.updateSystemPrompt",
+  endpoint: (params) => `/api/sessions/${params.sessionId}/system-prompt`,
+  method: "PATCH",
+  body: (params) => ({ 
+    projectId: params.projectId, 
+    systemPrompt: params.systemPrompt 
+  }),
+  invalidateKeys: (params) => [
+    ["sessions.get", params.projectId, params.sessionId],
+  ],
+  description: "Update the system prompt for a session",
 };

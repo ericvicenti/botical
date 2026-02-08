@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useSession, useSettings, useProject, useCoreTools, useSkills } from "@/lib/api/queries";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { sessionsUpdateSystemPromptMutation, sessionsUpdateMutation } from "@/queries/sessions";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown, Edit, Save } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
@@ -55,8 +57,13 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     error,
   } = useTaskMessages({ sessionId, projectId });
 
+  // System prompt mutation
+  const updateSystemPromptMutation = useUpdateSystemPrompt();
+
   const [input, setInput] = useState("");
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
+  const [editedSystemPrompt, setEditedSystemPrompt] = useState("");
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -69,6 +76,8 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const toolsPanelRef = useRef<HTMLDivElement>(null);
+  const skillsPanelRef = useRef<HTMLDivElement>(null);
 
   // Scroll state tracking
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -150,6 +159,26 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     });
   };
 
+  const handleEditSystemPrompt = () => {
+    setEditedSystemPrompt(session?.systemPrompt || "");
+    setIsEditingSystemPrompt(true);
+  };
+
+  const handleSaveSystemPrompt = async () => {
+    if (!session) return;
+    
+    await updateSystemPromptMutation.mutateAsync({
+      projectId,
+      sessionId: session.id,
+      systemPrompt: editedSystemPrompt.trim() || null,
+    });
+  };
+
+  const handleCancelSystemPrompt = () => {
+    setIsEditingSystemPrompt(false);
+    setEditedSystemPrompt("");
+  };
+
   // Filter models based on which API keys are configured
   const availableModels = useMemo(() => {
     if (!settings) return [];
@@ -173,8 +202,28 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     return defaultModels[defaultProvider] || null;
   }, [settings]);
 
-  const currentModelId = selectedModel ?? defaultModel;
+  // Initialize selected model from session or default
+  useEffect(() => {
+    if (session && availableModels.length > 0 && !selectedModel) {
+      const sessionModel = session.modelId;
+      if (sessionModel && availableModels.find(m => m.id === sessionModel)) {
+        setSelectedModel(sessionModel);
+      } else if (defaultModel && availableModels.find(m => m.id === defaultModel)) {
+        setSelectedModel(defaultModel);
+      }
+    }
+  }, [session, availableModels, defaultModel, selectedModel]);
+
+  const currentModelId = selectedModel ?? session?.modelId ?? defaultModel;
   const currentModel = availableModels.find(m => m.id === currentModelId) ?? availableModels[0];
+
+  const handleModelChange = async (modelId: string) => {
+    setSelectedModel(modelId);
+    setShowModelDropdown(false);
+    
+    // TODO: Update session with new model via API
+    // For now, just store in local state
+  };
 
   const hasApiKey = settings?.anthropicApiKey || settings?.openaiApiKey || settings?.googleApiKey;
 
@@ -269,18 +318,24 @@ You have access to tools for reading, writing, and editing files, as well as exe
     }
   }, [sessionId, isActive]);
 
-  // Close model dropdown when clicking outside
+  // Close dropdowns and panels when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
         setShowModelDropdown(false);
       }
+      if (toolsPanelRef.current && !toolsPanelRef.current.contains(e.target as Node)) {
+        setShowToolsPanel(false);
+      }
+      if (skillsPanelRef.current && !skillsPanelRef.current.contains(e.target as Node)) {
+        setShowSkillsPanel(false);
+      }
     };
-    if (showModelDropdown) {
+    if (showModelDropdown || showToolsPanel || showSkillsPanel) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [showModelDropdown]);
+  }, [showModelDropdown, showToolsPanel, showSkillsPanel]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,10 +390,73 @@ You have access to tools for reading, writing, and editing files, as well as exe
           </span>
         }
       >
+        {/* Model selector in top right */}
+        <div className="relative" ref={modelDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowModelDropdown(!showModelDropdown)}
+            disabled={availableModels.length === 0}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
+              "bg-bg-primary border border-border",
+              "hover:border-accent-primary/50 transition-colors",
+              "text-text-primary min-w-0",
+              availableModels.length === 0 && "opacity-50 cursor-not-allowed"
+            )}
+            title={`Current model: ${currentModel?.name || 'None'}`}
+          >
+            <Bot className="w-4 h-4 text-accent-primary shrink-0" />
+            <span className="truncate max-w-32">{currentModel?.name ?? "Select model"}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-text-muted shrink-0" />
+          </button>
+          {showModelDropdown && availableModels.length > 0 && (
+            <div className="absolute top-full right-0 mt-1 w-80 bg-bg-primary border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+              <div className="py-1">
+                {/* Group models by provider */}
+                {["anthropic", "openai", "google"].map(providerId => {
+                  const providerModels = availableModels.filter(m => m.providerId === providerId);
+                  if (providerModels.length === 0) return null;
+                  return (
+                    <div key={providerId}>
+                      <div className="px-3 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
+                        {providerModels[0]?.providerName}
+                      </div>
+                      {providerModels.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => handleModelChange(model.id)}
+                          className={cn(
+                            "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
+                            currentModel?.id === model.id && "bg-bg-elevated"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-text-primary">
+                                {model.name}
+                              </div>
+                            </div>
+                            {currentModel?.id === model.id && (
+                              <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Toolbar buttons */}
+        <div className="h-6 w-px bg-border" /> {/* Separator */}
         <button
           onClick={() => setShowToolsPanel(!showToolsPanel)}
           className={cn(
-            "p-2 rounded-lg transition-colors",
+            "p-2 rounded-lg transition-colors relative",
             showToolsPanel
               ? "bg-accent-primary/20 text-accent-primary"
               : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
@@ -350,7 +468,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
         <button
           onClick={() => setShowSkillsPanel(!showSkillsPanel)}
           className={cn(
-            "p-2 rounded-lg transition-colors",
+            "p-2 rounded-lg transition-colors relative",
             showSkillsPanel
               ? "bg-accent-primary/20 text-accent-primary"
               : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
@@ -377,48 +495,131 @@ You have access to tools for reading, writing, and editing files, as well as exe
       {/* System Prompt Modal */}
       {showSystemPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-bg-primary border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+          <div className="bg-bg-primary border border-border rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="font-medium text-text-primary">System Prompt</h3>
-              <button
-                onClick={() => setShowSystemPrompt(false)}
-                className="p-1 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <h3 className="font-medium text-text-primary">System Prompt</h3>
+                {session?.systemPrompt && (
+                  <span className="px-2 py-1 text-xs bg-accent-primary/10 text-accent-primary rounded-full">
+                    Custom
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!isEditingSystemPrompt ? (
+                  <button
+                    onClick={handleEditSystemPrompt}
+                    className="p-2 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
+                    title="Edit system prompt"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleSaveSystemPrompt}
+                      disabled={updateSystemPromptMutation.isPending}
+                      className="p-2 hover:bg-bg-elevated rounded text-accent-primary hover:text-accent-primary/80 disabled:opacity-50"
+                      title="Save changes"
+                    >
+                      {updateSystemPromptMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancelSystemPrompt}
+                      disabled={updateSystemPromptMutation.isPending}
+                      className="p-2 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary disabled:opacity-50"
+                      title="Cancel changes"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowSystemPrompt(false)}
+                  className="p-1 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
-                {systemPromptPreview}
-              </pre>
+              {isEditingSystemPrompt ? (
+                <div className="h-full flex flex-col">
+                  <textarea
+                    value={editedSystemPrompt}
+                    onChange={(e) => setEditedSystemPrompt(e.target.value)}
+                    placeholder="Enter your custom system prompt..."
+                    className="flex-1 w-full p-4 bg-bg-secondary border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted font-mono resize-none focus:outline-none focus:border-accent-primary"
+                    style={{ minHeight: "400px" }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {session?.systemPrompt ? (
+                    <div>
+                      <h4 className="text-sm font-medium text-text-primary mb-2">Custom System Prompt</h4>
+                      <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
+                        {session.systemPrompt}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="text-sm font-medium text-text-primary mb-2">Generated System Prompt</h4>
+                      <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
+                        {systemPromptPreview}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="px-4 py-3 border-t border-border text-xs text-text-muted">
-              This is the system prompt sent to the AI model at the start of each conversation turn.
+              {isEditingSystemPrompt ? (
+                "Custom system prompts override the default agent prompt. Leave empty to use the default."
+              ) : session?.systemPrompt ? (
+                "Using custom system prompt. Click edit to modify or clear to use default."
+              ) : (
+                "Using default system prompt generated from agent configuration and project context."
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Tools Panel */}
+      {/* Floating Tools Panel */}
       {showToolsPanel && (
-        <div className="px-4 py-3 border-b border-border bg-bg-secondary">
-          <ToolsPanel
-            enabledTools={enabledTools}
-            onToggleTool={handleToggleTool}
-          />
+        <div className="fixed inset-0 z-40" style={{ pointerEvents: showToolsPanel ? 'auto' : 'none' }}>
+          <div className="absolute inset-0 bg-black/20" onClick={() => setShowToolsPanel(false)} />
+          <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={toolsPanelRef}>
+            <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+              <ToolsPanel
+                enabledTools={enabledTools}
+                onToggleTool={handleToggleTool}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Skills Panel */}
+      {/* Floating Skills Panel */}
       {showSkillsPanel && (
-        <div className="px-4 py-3 border-b border-border bg-bg-secondary">
-          <SkillsPanel
-            projectId={projectId}
-            enabledSkills={enabledSkills}
-            loadedSkills={loadedSkills}
-            onToggleSkill={handleToggleSkill}
-            onOpenSkillFile={handleOpenSkillFile}
-          />
+        <div className="fixed inset-0 z-40" style={{ pointerEvents: showSkillsPanel ? 'auto' : 'none' }}>
+          <div className="absolute inset-0 bg-black/20" onClick={() => setShowSkillsPanel(false)} />
+          <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={skillsPanelRef}>
+            <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+              <SkillsPanel
+                projectId={projectId}
+                enabledSkills={enabledSkills}
+                loadedSkills={loadedSkills}
+                onToggleSkill={handleToggleSkill}
+                onOpenSkillFile={handleOpenSkillFile}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -496,75 +697,14 @@ You have access to tools for reading, writing, and editing files, as well as exe
       {/* Input */}
       <div className="border-t border-border bg-bg-secondary p-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          {/* Model selector */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="relative" ref={modelDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setShowModelDropdown(!showModelDropdown)}
-                disabled={availableModels.length === 0}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-                  "bg-bg-primary border border-border",
-                  "hover:border-accent-primary/50 transition-colors",
-                  "text-text-primary",
-                  availableModels.length === 0 && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <Bot className="w-4 h-4 text-accent-primary" />
-                <span>{currentModel?.name ?? "Select model"}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
-              </button>
-              {showModelDropdown && availableModels.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-1 w-72 bg-bg-primary border border-border rounded-lg shadow-lg z-10 overflow-hidden max-h-80 overflow-y-auto">
-                  <div className="py-1">
-                    {/* Group models by provider */}
-                    {["anthropic", "openai", "google"].map(providerId => {
-                      const providerModels = availableModels.filter(m => m.providerId === providerId);
-                      if (providerModels.length === 0) return null;
-                      return (
-                        <div key={providerId}>
-                          <div className="px-3 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
-                            {providerModels[0]?.providerName}
-                          </div>
-                          {providerModels.map((model) => (
-                            <button
-                              key={model.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedModel(model.id);
-                                setShowModelDropdown(false);
-                              }}
-                              className={cn(
-                                "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
-                                currentModel?.id === model.id && "bg-bg-elevated"
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm text-text-primary">
-                                    {model.name}
-                                  </div>
-                                </div>
-                                {currentModel?.id === model.id && (
-                                  <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+          {/* Model status indicator */}
+          {currentModel && (
+            <div className="flex items-center gap-2 mb-3 text-xs text-text-muted">
+              <Bot className="w-3.5 h-3.5 text-accent-primary" />
+              <span>Using {currentModel.name} ({currentModel.providerName})</span>
             </div>
-            {currentModel && (
-              <span className="text-xs text-text-muted">
-                {currentModel.providerName}
-              </span>
-            )}
-          </div>
+          )}
+          
           <div className="flex gap-3 items-end">
             <div className="flex-1 relative">
               <textarea

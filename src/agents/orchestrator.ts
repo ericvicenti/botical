@@ -235,8 +235,9 @@ export class AgentOrchestrator {
     }));
 
     // Build system prompt with project context and skills
+    // Use session's custom system prompt if set, otherwise use agent prompt
     const systemPrompt = LLM.buildSystemPrompt({
-      agentPrompt: effectivePrompt,
+      agentPrompt: session.systemPrompt ?? effectivePrompt,
       projectContext: `Working directory: ${projectPath}`,
       availableSkills,
     });

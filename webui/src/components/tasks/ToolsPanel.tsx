@@ -95,9 +95,9 @@ export function ToolsPanel({
   const sortedCategories = categoryOrder.filter((c) => toolsByCategory.has(c));
 
   return (
-    <div className="border border-border rounded-lg bg-bg-secondary overflow-hidden">
+    <div className="bg-bg-secondary overflow-hidden max-h-full flex flex-col">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center gap-2">
+      <div className="px-3 py-2 border-b border-border bg-bg-tertiary flex items-center gap-2 shrink-0">
         <Wrench className="w-4 h-4 text-text-muted" />
         <span className="text-sm font-medium text-text-primary">Agent Tools</span>
         <span className="text-xs text-text-muted ml-auto">
@@ -106,7 +106,7 @@ export function ToolsPanel({
       </div>
 
       {/* Tool categories */}
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border overflow-y-auto flex-1">
         {sortedCategories.map((category) => {
           const info = CATEGORY_INFO[category];
           const tools = toolsByCategory.get(category) || [];

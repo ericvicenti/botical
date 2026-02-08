@@ -546,4 +546,17 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 9,
+    name: "add_system_prompt_to_sessions",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- Add system_prompt field to sessions
+        -- ============================================
+
+        ALTER TABLE sessions ADD COLUMN system_prompt TEXT;
+      `);
+    },
+  },
 ];

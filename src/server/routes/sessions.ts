@@ -198,6 +198,43 @@ sessions.delete("/:id", async (c) => {
 });
 
 /**
+ * PATCH /api/sessions/:id/system-prompt
+ * Update the system prompt for a session
+ */
+sessions.patch("/:id/system-prompt", async (c) => {
+  const sessionId = c.req.param("id");
+  const body = await c.req.json();
+
+  const projectId = body.projectId;
+  if (!projectId || typeof projectId !== "string") {
+    throw new ValidationError("projectId is required");
+  }
+
+  const SystemPromptSchema = z.object({
+    systemPrompt: z.string().nullable(),
+  });
+
+  const result = SystemPromptSchema.safeParse(body);
+  if (!result.success) {
+    throw new ValidationError(
+      result.error.errors[0]?.message || "Invalid input",
+      result.error.errors
+    );
+  }
+
+  const db = DatabaseManager.getProjectDb(projectId);
+  const session = SessionService.updateSystemPrompt(
+    db,
+    sessionId,
+    result.data.systemPrompt
+  );
+
+  return c.json({
+    data: session,
+  });
+});
+
+/**
  * GET /api/sessions/:id/messages
  * List messages in session with their parts
  */
