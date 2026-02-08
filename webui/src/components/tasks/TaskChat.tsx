@@ -58,7 +58,24 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   } = useTaskMessages({ sessionId, projectId });
 
   // System prompt mutation
-  const updateSystemPromptMutation = useUpdateSystemPrompt();
+  const queryClient = useQueryClient();
+
+  // System prompt mutation
+  const updateSystemPromptMutation = useMutation({
+    ...sessionsUpdateSystemPromptMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions.get", projectId, sessionId] });
+      setIsEditingSystemPrompt(false);
+    },
+  });
+
+  // Session update mutation
+  const updateSessionMutation = useMutation({
+    ...sessionsUpdateMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions.get", projectId, sessionId] });
+    },
+  });
 
   const [input, setInput] = useState("");
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
