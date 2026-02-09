@@ -101,7 +101,7 @@ export class AgentOrchestrator {
 
     // Resolve agent configuration
     const effectiveAgentName = agentName ?? session.agent ?? "default";
-    const agentConfig = AgentRegistry.get(db, effectiveAgentName);
+    const agentConfig = AgentRegistry.get(db, effectiveAgentName, projectPath);
     if (!agentConfig) {
       throw new Error(`Agent "${effectiveAgentName}" not found`);
     }

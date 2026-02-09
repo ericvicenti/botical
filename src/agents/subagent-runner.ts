@@ -98,7 +98,7 @@ export class SubAgentRunner {
     }
 
     // Resolve the agent configuration
-    const agentConfig = AgentRegistry.get(db, params.subagentType);
+    const agentConfig = AgentRegistry.get(db, params.subagentType, projectPath);
     if (!agentConfig) {
       return {
         sessionId: "",
