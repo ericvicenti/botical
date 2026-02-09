@@ -238,9 +238,14 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           break;
 
         case "message.complete":
-          // Clear streaming state - data will be refetched
-          log("streaming", "Message complete, clearing streaming state");
-          setStreamingMessage(null);
+          // Refetch messages FIRST, then clear streaming state to avoid flash
+          log("streaming", "Message complete, refetching before clearing streaming");
+          queryClient.refetchQueries({
+            queryKey: ["sessions", sessionId, "messages"],
+          }).then(() => {
+            log("streaming", "Refetch complete, now clearing streaming state");
+            setStreamingMessage(null);
+          });
           break;
 
         case "message.error":
@@ -257,7 +262,7 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
 
     const unsubscribe = subscribeToStreamingEvents(handleStreamingEvent);
     return unsubscribe;
-  }, [sessionId]);
+  }, [sessionId, queryClient]);
 
   // Log when fetched messages change
   useEffect(() => {
@@ -272,22 +277,17 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
     });
   }, [fetchedMessages]);
 
-  // Clear streaming state when messages update
+  // Clear streaming state when fetched messages include the completed assistant message
+  // (safety net in case message.complete event was missed)
   useEffect(() => {
-    if (fetchedMessages && fetchedMessages.length > 0) {
-      // Check if we have a completed assistant message
-      const lastMessage = fetchedMessages[fetchedMessages.length - 1];
-      log("checkStreaming", "Checking last message for completion", {
-        lastMessageId: lastMessage?.id,
-        role: lastMessage?.role,
-        completedAt: lastMessage?.completedAt,
-      });
-      if (lastMessage?.role === "assistant" && lastMessage?.completedAt) {
-        log("checkStreaming", "Clearing streaming message - assistant completed");
+    if (fetchedMessages && streamingMessage) {
+      const found = fetchedMessages.find(m => m.id === streamingMessage.id && m.completedAt);
+      if (found) {
+        log("checkStreaming", "Clearing streaming - found completed message in fetched data");
         setStreamingMessage(null);
       }
     }
-  }, [fetchedMessages]);
+  }, [fetchedMessages, streamingMessage]);
 
   const sendMessage = useCallback(async (content: string, options?: SendMessageOptions) => {
     log("sendMessage", "Starting sendMessage", { content: content.substring(0, 50), isSending, hasSettings: !!settings, options });
@@ -415,11 +415,11 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
     return !realMessageContents.has(content);
   });
 
-  // Combine and sort by createdAt to ensure chronological order
+  // Combine: fetched messages are already in server order, append optimistic at end
   const messages = [
     ...(fetchedMessages || []),
     ...filteredOptimistic,
-  ].sort((a, b) => a.createdAt - b.createdAt);
+  ];
 
   // Log the combined messages
   log("messages", "Combined messages", {
