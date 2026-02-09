@@ -33,6 +33,7 @@ import {
 } from "@/services/agents.ts";
 import { UnifiedAgentService } from "@/services/agents-unified.ts";
 import { AgentRegistry } from "@/agents/registry.ts";
+import { getAllBuiltinAgents } from "@/agents/builtin/index.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ValidationError, ForbiddenError, NotFoundError } from "@/utils/errors.ts";
 
@@ -85,15 +86,36 @@ agents.get("/", async (c) => {
   const { projectId, mode, includeHidden, builtinOnly, customOnly } =
     result.data;
 
-  // Get project database if projectId provided (for custom agents)
+  // Get project database and path if projectId provided (for custom agents)
   const db = projectId ? DatabaseManager.getProjectDb(projectId) : null;
+  const projectPath = projectId ? getProjectPath(projectId) : null;
 
-  const agentsList = AgentRegistry.list(db, {
-    mode,
-    includeHidden,
-    builtinOnly,
-    customOnly,
-  });
+  // Build agents list from built-in + unified sources (YAML + DB)
+  let agentsList: ReturnType<typeof AgentRegistry.list>;
+
+  if (projectPath && db) {
+    // Use UnifiedAgentService to get custom agents from both YAML and DB
+    const builtins = customOnly ? [] : getAllBuiltinAgents().filter((a) => {
+      if (mode && a.mode !== mode && a.mode !== "all") return false;
+      if (!includeHidden && a.hidden) return false;
+      return true;
+    });
+
+    const custom = builtinOnly ? [] : UnifiedAgentService.list(db, projectPath, {
+      mode: mode as any,
+      includeHidden,
+    }).map((a) => toAgentConfig(a));
+
+    agentsList = [...builtins, ...custom].sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    // Fallback to registry (no project context)
+    agentsList = AgentRegistry.list(db, {
+      mode,
+      includeHidden,
+      builtinOnly,
+      customOnly,
+    });
+  }
 
   return c.json({
     data: agentsList,
@@ -168,8 +190,16 @@ agents.get("/:name", async (c) => {
 
   // Get project database if provided
   const db = projectId ? DatabaseManager.getProjectDb(projectId) : null;
+  const singleProjectPath = projectId ? getProjectPath(projectId) : null;
 
-  const agent = AgentRegistry.get(db, name);
+  // Try unified service first (checks YAML + DB), fall back to registry
+  let agent;
+  if (singleProjectPath && db) {
+    const unified = UnifiedAgentService.getByName(db, singleProjectPath, name);
+    agent = unified ? toAgentConfig(unified) : AgentRegistry.get(db, name);
+  } else {
+    agent = AgentRegistry.get(db, name);
+  }
   if (!agent) {
     throw new ValidationError(`Agent "${name}" not found`);
   }
