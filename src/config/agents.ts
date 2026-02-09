@@ -1,10 +1,12 @@
 /**
  * Agent Configuration (YAML-based)
  *
- * Manages custom agents stored as YAML files in .botical/agents/
+ * Manages custom agents stored as YAML files in agents/{name}/agent.yaml
  * Agents define AI assistant configurations with custom prompts, tools, and settings.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import {
   loadYamlFileWithSchema,
@@ -116,7 +118,7 @@ export const AgentYamlService = {
    * Check if an agent exists
    */
   exists(projectPath: string, name: string): boolean {
-    return yamlFileExists(this.getPath(projectPath, name));
+    return fs.existsSync(this.getPath(projectPath, name));
   },
 
   /**
@@ -136,15 +138,22 @@ export const AgentYamlService = {
    */
   list(projectPath: string): CustomAgent[] {
     const agentsDir = getBoticalPaths(projectPath).agents;
-    const yamlFiles = loadYamlDir<unknown>(agentsDir);
-
     const agents: CustomAgent[] = [];
-    for (const [name, rawYaml] of yamlFiles) {
-      try {
-        const yaml = AgentYamlSchema.parse(rawYaml);
-        agents.push(yamlToAgent(name, yaml));
-      } catch (error) {
-        console.error(`Failed to parse agent ${name}:`, error);
+
+    if (!fs.existsSync(agentsDir)) return agents;
+
+    const entries = fs.readdirSync(agentsDir);
+    for (const entry of entries) {
+      const agentYamlPath = path.join(agentsDir, entry, "agent.yaml");
+      if (fs.existsSync(agentYamlPath) && fs.statSync(path.join(agentsDir, entry)).isDirectory()) {
+        try {
+          const yaml = loadYamlFileWithSchema(agentYamlPath, AgentYamlSchema, { optional: false });
+          if (yaml) {
+            agents.push(yamlToAgent(entry, yaml));
+          }
+        } catch (error) {
+          console.error(`Failed to parse agent ${entry}:`, error);
+        }
       }
     }
 
@@ -156,6 +165,10 @@ export const AgentYamlService = {
    */
   save(projectPath: string, agent: CustomAgent): void {
     const filePath = this.getPath(projectPath, agent.name);
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const yaml = agentToYaml(agent);
     saveYamlFile(filePath, yaml);
   },
@@ -164,8 +177,12 @@ export const AgentYamlService = {
    * Delete an agent
    */
   delete(projectPath: string, name: string): boolean {
-    const filePath = this.getPath(projectPath, name);
-    return deleteYamlFile(filePath);
+    const agentDir = path.join(getBoticalPaths(projectPath).agents, name);
+    if (fs.existsSync(agentDir)) {
+      fs.rmSync(agentDir, { recursive: true });
+      return true;
+    }
+    return deleteYamlFile(this.getPath(projectPath, name));
   },
 
   /**

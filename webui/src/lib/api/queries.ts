@@ -720,7 +720,7 @@ export function useCreateAgent() {
 export function useUpdateAgent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[]; mode?: string }) => {
+    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[] }) => {
       return apiClient<AgentConfig>(`/api/agents/${encodeURIComponent(data.name)}`, { method: "PUT", body: JSON.stringify(data) });
     },
     onSuccess: (_data, variables) => {

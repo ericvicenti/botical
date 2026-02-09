@@ -139,18 +139,15 @@ agents.post("/", async (c) => {
     );
   }
 
-  const saveToYaml = body.saveToYaml === true;
-
-  // If no project path, can only save to database
-  if (!projectPath && saveToYaml) {
-    throw new ValidationError("Project has no path configured for YAML storage");
+  if (!projectPath) {
+    throw new ValidationError("Project has no path configured");
   }
 
   const agent = UnifiedAgentService.create(
     db,
-    projectPath || "",
+    projectPath,
     result.data,
-    saveToYaml && !!projectPath
+    true // always save as YAML files
   );
 
   return c.json(

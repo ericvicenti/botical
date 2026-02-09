@@ -32,7 +32,7 @@ export const AgentCreateSchema = z.object({
       "Name must start with a letter and contain only lowercase letters, numbers, and hyphens"
     ),
   description: z.string().max(500).nullable().optional(),
-  mode: AgentModeSchema.default("subagent"),
+  mode: AgentModeSchema.default("all"),
   hidden: z.boolean().default(false),
   providerId: z.string().nullable().optional(),
   modelId: z.string().nullable().optional(),

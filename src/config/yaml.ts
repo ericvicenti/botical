@@ -210,13 +210,13 @@ export function getBoticalPaths(projectPath: string) {
     config: path.join(boticalDir, "config.yaml"),
     workflows: path.join(boticalDir, "workflows"),
     services: path.join(boticalDir, "services"),
-    agents: path.join(boticalDir, "agents"),
+    agents: path.join(projectPath, "agents"),
     plans: path.join(boticalDir, "plans"),
     skills: path.join(boticalDir, "skills"),
 
     workflow: (name: string) => path.join(boticalDir, "workflows", `${name}.yaml`),
     service: (name: string) => path.join(boticalDir, "services", `${name}.yaml`),
-    agent: (name: string) => path.join(boticalDir, "agents", `${name}.yaml`),
+    agent: (name: string) => path.join(projectPath, "agents", name, "agent.yaml"),
     plan: (name: string) => path.join(boticalDir, "plans", `${name}.md`),
     skillRepo: (repo: string) => path.join(boticalDir, "skills", ...repo.split("/")),
   };
