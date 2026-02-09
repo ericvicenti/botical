@@ -143,9 +143,7 @@ export default function LoginPage() {
 
         <div className="text-center text-text-muted text-sm">
           <p>
-            You'll receive a secure login link via email.{' '}
-            <br />
-            The first user to register becomes an admin.
+            You'll receive a secure login link via email.
           </p>
         </div>
       </div>

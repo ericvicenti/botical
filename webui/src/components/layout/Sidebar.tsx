@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles, Bot } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -19,6 +19,7 @@ import { SchedulesPanel } from "@/components/schedules";
 import { useExtensions, useProjectExtensions } from "@/lib/api/extensions";
 import { useNavigate } from "@tanstack/react-router";
 import { SkillsBrowser } from "@/components/skills/SkillsBrowser";
+import { AgentsPanel } from "@/components/agents/AgentsPanel";
 
 const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; label: string }[] = [
   { id: "tasks", icon: MessageSquare, label: "Tasks" },
@@ -29,6 +30,7 @@ const BASE_PROJECT_PANELS: { id: SidebarPanelType; icon: typeof MessageSquare; l
   { id: "workflows", icon: Workflow, label: "Workflows" },
   { id: "schedules", icon: Clock, label: "Schedules" },
   { id: "skills", icon: Sparkles, label: "Skills" },
+  { id: "agents", icon: Bot, label: "Agents" },
 ];
 
 // Map of extension icons
@@ -368,6 +370,14 @@ function SidebarPanelContent({ panel }: { panel: string }) {
       ) : (
         <div className="p-3 text-sm text-text-muted">
           Select a project to manage skills
+        </div>
+      );
+    case "agents":
+      return selectedProjectId ? (
+        <AgentsPanel projectId={selectedProjectId} />
+      ) : (
+        <div className="p-3 text-sm text-text-muted">
+          Select a project to manage agents
         </div>
       );
     case "exe":
