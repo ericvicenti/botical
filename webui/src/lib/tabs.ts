@@ -2,7 +2,7 @@ import type { Tab, TabData, TabType, SettingsPage } from "@/types/tabs";
 import { getPageUrl, matchPageRoute } from "@/primitives/registry";
 
 const SETTINGS_PAGE_LABELS: Record<SettingsPage, string> = {
-  "api-keys": "API Keys",
+  "api-keys": "Model Provider",
   "theme": "Theme",
   "shortcuts": "Keyboard Shortcuts",
   "experiments": "Experiments",
@@ -264,10 +264,10 @@ export function parseUrlToTabData(
         type: "page",
         pageId: "settings.api-keys",
         params: {},
-        label: "API Keys",
+        label: "Model Provider",
         icon: "key",
       },
-      label: "API Keys",
+      label: "Model Provider",
     };
   }
 

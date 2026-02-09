@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings, useSaveSettings, type AgentClass, DEFAULT_AGENT_CLASSES } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
-import { Save, Eye, EyeOff, Check, AlertCircle, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Save, Eye, EyeOff, Check, Plus, Pencil, Trash2, X } from "lucide-react";
 
 // Available models by provider
 const PROVIDER_MODELS: Record<"anthropic" | "openai" | "google", { id: string; name: string }[]> = {
@@ -29,7 +29,7 @@ export function SettingsPage() {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
-  const [defaultProvider, setDefaultProvider] = useState<"anthropic" | "openai" | "google">("anthropic");
+  // Default provider removed - each provider is now independent
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
 
@@ -45,7 +45,7 @@ export function SettingsPage() {
       setAnthropicKey(settings.anthropicApiKey || "");
       setOpenaiKey(settings.openaiApiKey || "");
       setGoogleKey(settings.googleApiKey || "");
-      setDefaultProvider(settings.defaultProvider || "anthropic");
+      // Default provider concept removed
       setAgentClasses(settings.agentClasses || DEFAULT_AGENT_CLASSES);
       setDefaultAgentClass(settings.defaultAgentClass || "medium");
     }
@@ -59,7 +59,7 @@ export function SettingsPage() {
       anthropicApiKey: anthropicKey || undefined,
       openaiApiKey: openaiKey || undefined,
       googleApiKey: googleKey || undefined,
-      defaultProvider,
+      // Default provider concept removed
       agentClasses,
       defaultAgentClass,
     });
@@ -150,12 +150,12 @@ export function SettingsPage() {
       <div className="max-w-2xl mx-auto p-8">
         <h1 className="text-2xl font-bold text-text-primary mb-2">Settings</h1>
         <p className="text-text-muted mb-8">
-          Configure your AI provider API keys and preferences.
+          Configure your AI model providers and preferences.
         </p>
 
-        {/* API Keys Section */}
+        {/* Model Provider Section */}
         <section className="mb-8">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">API Keys</h2>
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Model Provider</h2>
           <p className="text-sm text-text-muted mb-4">
             Your API keys are stored locally in your browser and never sent to our servers.
           </p>
@@ -279,31 +279,7 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Default Provider Section */}
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Default Provider</h2>
-          <p className="text-sm text-text-muted mb-4">
-            Choose which AI provider to use by default for new tasks.
-          </p>
-
-          <div className="flex gap-3">
-            {(["anthropic", "openai", "google"] as const).map((provider) => (
-              <button
-                key={provider}
-                onClick={() => setDefaultProvider(provider)}
-                className={cn(
-                  "px-4 py-2 rounded-lg border transition-colors capitalize",
-                  defaultProvider === provider
-                    ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
-                    : "border-border text-text-secondary hover:border-text-muted"
-                )}
-                data-testid={`provider-${provider}`}
-              >
-                {provider}
-              </button>
-            ))}
-          </div>
-        </section>
+        {/* Default Provider section removed - each provider is now independent */}
 
         {/* Agent Classes Section */}
         <section className="mb-8">
@@ -483,34 +459,7 @@ export function SettingsPage() {
           )}
         </section>
 
-        {/* Warning if no key for default provider */}
-        {defaultProvider === "anthropic" && !anthropicKey && (
-          <div className="mb-6 px-4 py-3 bg-accent-warning/10 border border-accent-warning/20 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-accent-warning shrink-0 mt-0.5" />
-            <p className="text-sm text-text-primary">
-              You've selected Anthropic as your default provider, but no API key is configured.
-              Please add your Anthropic API key above.
-            </p>
-          </div>
-        )}
-        {defaultProvider === "openai" && !openaiKey && (
-          <div className="mb-6 px-4 py-3 bg-accent-warning/10 border border-accent-warning/20 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-accent-warning shrink-0 mt-0.5" />
-            <p className="text-sm text-text-primary">
-              You've selected OpenAI as your default provider, but no API key is configured.
-              Please add your OpenAI API key above.
-            </p>
-          </div>
-        )}
-        {defaultProvider === "google" && !googleKey && (
-          <div className="mb-6 px-4 py-3 bg-accent-warning/10 border border-accent-warning/20 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-accent-warning shrink-0 mt-0.5" />
-            <p className="text-sm text-text-primary">
-              You've selected Google as your default provider, but no API key is configured.
-              Please add your Google AI API key above.
-            </p>
-          </div>
-        )}
+        {/* Default provider warnings removed - each provider is now independent */}
 
         {/* Save Button */}
         <div className="flex items-center gap-4">

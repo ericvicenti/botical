@@ -159,8 +159,8 @@ function ReviewCommitPageRoute() {
     ) {
       hasTriedAutoGenerate.current = true;
 
-      // Get API key for the default provider
-      const providerId = settings.defaultProvider || "anthropic";
+      // Get API key for anthropic (default provider)
+      const providerId = "anthropic";
       const apiKey = providerId === "anthropic"
         ? settings.anthropicApiKey
         : providerId === "openai"

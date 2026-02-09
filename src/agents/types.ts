@@ -15,6 +15,7 @@ export const ProviderIds = {
   anthropic: "anthropic",
   openai: "openai",
   google: "google",
+  ollama: "ollama",
 } as const;
 
 export type ProviderId = (typeof ProviderIds)[keyof typeof ProviderIds];

@@ -11,7 +11,7 @@ interface SettingsItem {
 }
 
 const SETTINGS_ITEMS: SettingsItem[] = [
-  { id: "api-keys", label: "API Keys", icon: Key, path: "/settings/api-keys" },
+  { id: "api-keys", label: "Model Provider", icon: Key, path: "/settings/api-keys" },
   { id: "theme", label: "Theme", icon: Palette, path: "/settings/theme" },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard, path: "/settings/shortcuts" },
   { id: "experiments", label: "Experiments", icon: Beaker, path: "/settings/experiments" },

@@ -194,7 +194,7 @@ export interface AppSettings {
   anthropicApiKey?: string;
   openaiApiKey?: string;
   googleApiKey?: string;
-  defaultProvider: "anthropic" | "openai" | "google";
+  ollamaBaseUrl?: string;
   userId: string;
   // Agent Classes
   agentClasses: AgentClass[];
@@ -220,7 +220,6 @@ export function getSettings(): AppSettings {
   }
   // Default settings with a generated userId
   return {
-    defaultProvider: "anthropic",
     userId: `user-${Date.now()}`,
     agentClasses: DEFAULT_AGENT_CLASSES,
     defaultAgentClass: "medium",

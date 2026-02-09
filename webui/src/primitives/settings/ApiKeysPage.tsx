@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings, useSaveSettings } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
-import { Save, Eye, EyeOff, Check, AlertCircle } from "lucide-react";
+import { Save, Eye, EyeOff, Check } from "lucide-react";
 
 interface ApiKeysPageProps {
   params: Record<string, never>;
@@ -15,7 +15,7 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
-  const [defaultProvider, setDefaultProvider] = useState<"anthropic" | "openai" | "google">("anthropic");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
 
@@ -24,7 +24,7 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
       setAnthropicKey(settings.anthropicApiKey || "");
       setOpenaiKey(settings.openaiApiKey || "");
       setGoogleKey(settings.googleApiKey || "");
-      setDefaultProvider(settings.defaultProvider || "anthropic");
+      setOllamaBaseUrl(settings.ollamaBaseUrl || "http://localhost:11434");
     }
   }, [settings]);
 
@@ -36,7 +36,7 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
       anthropicApiKey: anthropicKey || undefined,
       openaiApiKey: openaiKey || undefined,
       googleApiKey: googleKey || undefined,
-      defaultProvider,
+      ollamaBaseUrl: ollamaBaseUrl || undefined,
     });
 
     setSaved(true);
@@ -57,9 +57,9 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
 
   return (
     <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold text-text-primary mb-2">API Keys</h1>
+      <h1 className="text-2xl font-bold text-text-primary mb-2">Model Provider</h1>
       <p className="text-text-muted mb-8">
-        Configure your AI provider API keys. Keys are stored locally and never sent to our servers.
+        Configure your AI model providers. Credentials are stored locally and never sent to our servers.
       </p>
 
       <div className="space-y-6">
@@ -155,40 +155,33 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
           </div>
         </div>
 
-        {/* Default Provider */}
+        {/* Ollama */}
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Default Provider
+          <label className="block text-sm font-medium text-text-primary mb-1">
+            Ollama Base URL
           </label>
-          <div className="flex gap-3">
-            {(["anthropic", "openai", "google"] as const).map((provider) => (
-              <button
-                key={provider}
-                onClick={() => setDefaultProvider(provider)}
-                className={cn(
-                  "px-4 py-2 rounded-lg border transition-colors capitalize",
-                  defaultProvider === provider
-                    ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
-                    : "border-border text-text-secondary hover:border-text-muted"
-                )}
-                data-testid={`provider-${provider}`}
-              >
-                {provider}
-              </button>
-            ))}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={ollamaBaseUrl}
+              onChange={(e) => setOllamaBaseUrl(e.target.value)}
+              placeholder="http://localhost:11434"
+              className={cn(
+                "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
+                "text-text-primary placeholder:text-text-muted",
+                "focus:outline-none focus:border-accent-primary",
+                "font-mono text-sm"
+              )}
+              data-testid="ollama-base-url-input"
+            />
           </div>
+          <p className="text-xs text-text-muted mt-1">
+            Local Ollama server URL. No API key needed.{" "}
+            <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline">
+              Download Ollama
+            </a>
+          </p>
         </div>
-
-        {/* Warning if no key for default provider */}
-        {defaultProvider === "anthropic" && !anthropicKey && (
-          <Warning message="You've selected Anthropic as your default provider, but no API key is configured." />
-        )}
-        {defaultProvider === "openai" && !openaiKey && (
-          <Warning message="You've selected OpenAI as your default provider, but no API key is configured." />
-        )}
-        {defaultProvider === "google" && !googleKey && (
-          <Warning message="You've selected Google as your default provider, but no API key is configured." />
-        )}
 
         {/* Save Button */}
         <div className="flex items-center gap-4 pt-4">
@@ -219,15 +212,6 @@ export default function ApiKeysPage(_props: ApiKeysPageProps) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Warning({ message }: { message: string }) {
-  return (
-    <div className="px-4 py-3 bg-accent-warning/10 border border-accent-warning/20 rounded-lg flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-accent-warning shrink-0 mt-0.5" />
-      <p className="text-sm text-text-primary">{message}</p>
     </div>
   );
 }

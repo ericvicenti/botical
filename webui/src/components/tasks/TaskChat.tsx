@@ -209,16 +209,11 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     });
   }, [settings]);
 
-  // Get the default model based on the default provider
+  // Get the default model (use anthropic as fallback)
   const defaultModel = useMemo(() => {
     if (!settings) return null;
-    const defaultProvider = settings.defaultProvider;
-    const defaultModels: Record<string, string> = {
-      anthropic: "claude-sonnet-4-20250514",
-      openai: "gpt-4o",
-      google: "gemini-2.0-flash",
-    };
-    return defaultModels[defaultProvider] || null;
+    // Default to Anthropic Claude Sonnet 4 
+    return "claude-sonnet-4-20250514";
   }, [settings]);
 
   // Initialize selected model from session or default

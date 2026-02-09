@@ -6,18 +6,18 @@ import ThemePage from "./ThemePage";
 import AboutPage from "./AboutPage";
 
 /**
- * Page: API Keys Settings
+ * Page: Model Provider Settings
  *
- * Configure AI provider API keys.
+ * Configure AI model providers.
  */
 export const apiKeysPage = definePage({
   id: "settings.api-keys",
   icon: "key",
   category: "settings",
-  description: "Configure API keys for AI providers",
+  description: "Configure AI model providers",
 
-  getLabel: () => "API Keys",
-  getTitle: () => "API Keys - Settings",
+  getLabel: () => "Model Provider",
+  getTitle: () => "Model Provider - Settings",
 
   params: z.object({}),
 

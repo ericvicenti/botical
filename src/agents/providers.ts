@@ -9,6 +9,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOllama } from "ollama-ai-provider-v2";
 import type { LanguageModel } from "ai";
 import type { ProviderConfig, ProviderId, ModelConfig } from "./types.ts";
 
@@ -104,6 +105,39 @@ const GOOGLE_MODELS: ModelConfig[] = [
   },
 ];
 
+const OLLAMA_MODELS: ModelConfig[] = [
+  {
+    id: "llama3.1",
+    name: "Llama 3.1",
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPer1kInput: 0.0,
+    costPer1kOutput: 0.0,
+  },
+  {
+    id: "llama3.2",
+    name: "Llama 3.2",
+    contextWindow: 128000,
+    maxOutputTokens: 4096,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPer1kInput: 0.0,
+    costPer1kOutput: 0.0,
+  },
+  {
+    id: "mistral",
+    name: "Mistral",
+    contextWindow: 32000,
+    maxOutputTokens: 4096,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPer1kInput: 0.0,
+    costPer1kOutput: 0.0,
+  },
+];
+
 /**
  * Provider configurations
  */
@@ -125,6 +159,12 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     name: "Google",
     defaultModel: "gemini-2.0-flash",
     models: GOOGLE_MODELS,
+  },
+  ollama: {
+    id: "ollama",
+    name: "Ollama",
+    defaultModel: "llama3.1",
+    models: OLLAMA_MODELS,
   },
 };
 
@@ -182,13 +222,13 @@ export class ProviderRegistry {
    *
    * @param providerId - The provider ID
    * @param modelId - The model ID (uses provider default if not specified)
-   * @param apiKey - The API key for the provider
+   * @param credentials - The credentials for the provider (API key or base URL)
    * @returns A configured LanguageModel instance
    */
   static createModel(
     providerId: ProviderId,
     modelId: string | null,
-    apiKey: string
+    credentials: string
   ): LanguageModel {
     const provider = PROVIDERS[providerId];
     if (!provider) {
@@ -205,16 +245,20 @@ export class ProviderRegistry {
 
     switch (providerId) {
       case "anthropic": {
-        const anthropic = createAnthropic({ apiKey });
+        const anthropic = createAnthropic({ apiKey: credentials });
         return anthropic(effectiveModelId);
       }
       case "openai": {
-        const openai = createOpenAI({ apiKey });
+        const openai = createOpenAI({ apiKey: credentials });
         return openai(effectiveModelId);
       }
       case "google": {
-        const google = createGoogleGenerativeAI({ apiKey });
+        const google = createGoogleGenerativeAI({ apiKey: credentials });
         return google(effectiveModelId);
+      }
+      case "ollama": {
+        const ollama = createOllama({ baseURL: credentials });
+        return ollama(effectiveModelId);
       }
       default:
         throw new Error(`Unsupported provider: ${providerId}`);

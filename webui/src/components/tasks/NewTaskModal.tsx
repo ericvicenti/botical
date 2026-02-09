@@ -85,7 +85,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       };
     }
     return {
-      providerId: currentSettings.defaultProvider || "anthropic",
+      providerId: "anthropic",
       modelId: "claude-sonnet-4-20250514",
     };
   };

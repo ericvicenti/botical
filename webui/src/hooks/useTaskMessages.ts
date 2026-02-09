@@ -336,8 +336,8 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
       return [...prev, optimisticMessage];
     });
 
-    // Use provided provider/model or fall back to defaults
-    const providerId = options?.providerId ?? settings.defaultProvider;
+    // Use provided provider/model or fall back to anthropic
+    const providerId = options?.providerId ?? "anthropic";
 
     // Get API key for the selected provider
     const apiKey = providerId === "anthropic"
