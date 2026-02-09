@@ -11,6 +11,8 @@ import { ToolCall } from "@/components/ui/ToolCall";
 import { ContentHeader } from "@/components/layout/ContentHeader";
 import { ToolsPanel } from "./ToolsPanel";
 import { SkillsPanel } from "./SkillsPanel";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
+import type { ModelOption } from "@/hooks/useAvailableModels";
 import type { Skill } from "@/lib/api/types";
 
 interface TaskChatProps {
@@ -19,27 +21,7 @@ interface TaskChatProps {
   isActive?: boolean;
 }
 
-// Model definitions matching the backend providers.ts
-interface ModelOption {
-  id: string;
-  name: string;
-  providerId: "anthropic" | "openai" | "google";
-  providerName: string;
-}
-
-const AVAILABLE_MODELS: ModelOption[] = [
-  // Anthropic
-  { id: "claude-opus-4-20250514", name: "Claude Opus 4", providerId: "anthropic", providerName: "Anthropic" },
-  { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", providerId: "anthropic", providerName: "Anthropic" },
-  { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", providerId: "anthropic", providerName: "Anthropic" },
-  // OpenAI
-  { id: "gpt-4o", name: "GPT-4o", providerId: "openai", providerName: "OpenAI" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", providerId: "openai", providerName: "OpenAI" },
-  { id: "o1", name: "o1", providerId: "openai", providerName: "OpenAI" },
-  // Google
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", providerId: "google", providerName: "Google" },
-  { id: "gemini-2.0-flash-thinking-exp", name: "Gemini 2.0 Flash Thinking", providerId: "google", providerName: "Google" },
-];
+// ModelOption type imported from useAvailableModels
 
 export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProps) {
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
@@ -199,15 +181,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   }, [isSystemPromptDirty]);
 
   // Filter models based on which API keys are configured
-  const availableModels = useMemo(() => {
-    if (!settings) return [];
-    return AVAILABLE_MODELS.filter(model => {
-      if (model.providerId === "anthropic" && settings.anthropicApiKey) return true;
-      if (model.providerId === "openai" && settings.openaiApiKey) return true;
-      if (model.providerId === "google" && settings.googleApiKey) return true;
-      return false;
-    });
-  }, [settings]);
+  const { models: availableModels } = useAvailableModels();
 
   // Get the default model (use anthropic as fallback)
   const defaultModel = useMemo(() => {

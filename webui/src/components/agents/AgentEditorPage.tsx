@@ -5,25 +5,8 @@ import { cn } from "@/lib/utils/cn";
 import { ArrowLeft, Save, Trash2, Bot, ChevronDown, Wrench, Sparkles } from "lucide-react";
 import { ToolsPanel } from "@/components/tasks/ToolsPanel";
 import { SkillsPanel } from "@/components/tasks/SkillsPanel";
-
-// Model definitions matching TaskChat.tsx
-interface ModelOption {
-  id: string;
-  name: string;
-  providerId: "anthropic" | "openai" | "google";
-  providerName: string;
-}
-
-const AVAILABLE_MODELS: ModelOption[] = [
-  { id: "claude-opus-4-20250514", name: "Claude Opus 4", providerId: "anthropic", providerName: "Anthropic" },
-  { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", providerId: "anthropic", providerName: "Anthropic" },
-  { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", providerId: "anthropic", providerName: "Anthropic" },
-  { id: "gpt-4o", name: "GPT-4o", providerId: "openai", providerName: "OpenAI" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", providerId: "openai", providerName: "OpenAI" },
-  { id: "o1", name: "o1", providerId: "openai", providerName: "OpenAI" },
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", providerId: "google", providerName: "Google" },
-  { id: "gemini-2.0-flash-thinking-exp", name: "Gemini 2.0 Flash Thinking", providerId: "google", providerName: "Google" },
-];
+import { useAvailableModels } from "@/hooks/useAvailableModels";
+import type { ModelOption } from "@/hooks/useAvailableModels";
 
 interface AgentEditorPageProps {
   projectId: string;
@@ -66,15 +49,7 @@ export function AgentEditorPage({ projectId, agentName }: AgentEditorPageProps) 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const availableModels = useMemo(() => {
-    if (!settings) return AVAILABLE_MODELS;
-    return AVAILABLE_MODELS.filter(model => {
-      if (model.providerId === "anthropic" && settings.anthropicApiKey) return true;
-      if (model.providerId === "openai" && settings.openaiApiKey) return true;
-      if (model.providerId === "google" && settings.googleApiKey) return true;
-      return false;
-    });
-  }, [settings]);
+  const { models: availableModels } = useAvailableModels();
 
   const currentModel = availableModels.find(m => m.id === modelId) || null;
   const markDirty = () => setDirty(true);
