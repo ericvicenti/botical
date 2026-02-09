@@ -3,15 +3,13 @@
  *
  * Combines agents from multiple sources:
  * 1. Built-in agents (default, explore, plan)
- * 2. YAML files in .botical/agents/ (primary, file-based)
- * 3. SQLite database (legacy, for backward compatibility)
+ * 2. YAML files in agents/{name}/agent.yaml (filesystem-based)
  *
- * Priority: Built-in > YAML > Database
+ * Priority: Built-in > YAML
  */
 
 import type { Database } from "bun:sqlite";
 import {
-  AgentService,
   type CustomAgent,
   type AgentCreateInput,
   type AgentUpdateInput,
@@ -28,7 +26,7 @@ import type { AgentConfig } from "@/agents/types.ts";
 /**
  * Source indicator for agents
  */
-export type AgentSource = "builtin" | "yaml" | "database";
+export type AgentSource = "builtin" | "yaml";
 
 /**
  * Extended agent with source info
@@ -69,10 +67,10 @@ export const UnifiedAgentService = {
   },
 
   /**
-   * List all custom agents from all sources (excluding built-in)
+   * List all custom agents from YAML files
    */
   list(
-    db: Database,
+    _db: Database,
     projectPath: string,
     options: {
       mode?: AgentMode;
@@ -81,54 +79,36 @@ export const UnifiedAgentService = {
   ): AgentWithSource[] {
     const { mode, includeHidden = false } = options;
 
-    // Get YAML agents
-    const yamlAgents = AgentYamlService.list(projectPath).map((a) => ({
+    let agents = AgentYamlService.list(projectPath).map((a) => ({
       ...a,
       source: "yaml" as AgentSource,
     }));
 
-    // Get database agents
-    const dbAgents = AgentService.list(db, { mode, includeHidden }).map((a) => ({
-      ...a,
-      source: "database" as AgentSource,
-    }));
-
-    // Merge: YAML takes precedence over database for same name
-    const yamlNames = new Set(yamlAgents.map((a) => a.name));
-    const combined = [
-      ...yamlAgents,
-      ...dbAgents.filter((a) => !yamlNames.has(a.name)),
-    ];
-
-    // Apply filters to YAML agents (DB already filtered)
-    let filtered = combined;
     if (mode) {
-      filtered = filtered.filter((a) => a.mode === mode || a.mode === "all");
+      agents = agents.filter((a) => a.mode === mode || a.mode === "all");
     }
     if (!includeHidden) {
-      filtered = filtered.filter((a) => !a.hidden);
+      agents = agents.filter((a) => !a.hidden);
     }
 
-    // Sort by name
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return agents.sort((a, b) => a.name.localeCompare(b.name));
   },
 
   /**
-   * Count custom agents from all sources
+   * Count custom agents
    */
-  count(db: Database, projectPath: string): number {
-    return this.list(db, projectPath, { includeHidden: true }).length;
+  count(_db: Database, projectPath: string): number {
+    return AgentYamlService.count(projectPath);
   },
 
   /**
    * Get agent by ID
    */
   getById(
-    db: Database,
+    _db: Database,
     projectPath: string,
     agentId: string
   ): AgentWithSource | null {
-    // Check if it's a YAML agent ID
     if (agentId.startsWith("agent_yaml_")) {
       const name = agentId.replace("agent_yaml_", "");
       const agent = AgentYamlService.getByName(projectPath, name);
@@ -136,13 +116,6 @@ export const UnifiedAgentService = {
         return { ...agent, source: "yaml" };
       }
     }
-
-    // Check database
-    const agent = AgentService.getById(db, agentId);
-    if (agent) {
-      return { ...agent, source: "database" };
-    }
-
     return null;
   },
 
@@ -162,47 +135,35 @@ export const UnifiedAgentService = {
   },
 
   /**
-   * Get custom agent by name (excluding built-in)
+   * Get custom agent by name
    */
   getByName(
-    db: Database,
+    _db: Database,
     projectPath: string,
     name: string
   ): AgentWithSource | null {
-    // YAML takes precedence
-    const yamlAgent = AgentYamlService.getByName(projectPath, name);
-    if (yamlAgent) {
-      return { ...yamlAgent, source: "yaml" };
+    const agent = AgentYamlService.getByName(projectPath, name);
+    if (agent) {
+      return { ...agent, source: "yaml" };
     }
-
-    // Check database
-    const dbAgent = AgentService.getByName(db, name);
-    if (dbAgent) {
-      return { ...dbAgent, source: "database" };
-    }
-
     return null;
   },
 
   /**
-   * Create an agent
-   * - If saveToYaml is true, saves to YAML file
-   * - Otherwise saves to database (legacy behavior)
+   * Create an agent (always saves as YAML)
    */
   create(
     db: Database,
     projectPath: string,
     input: AgentCreateInput,
-    saveToYaml: boolean = false
+    _saveToYaml: boolean = true
   ): AgentWithSource {
-    // Check for reserved names
     if (this.isReservedName(input.name)) {
       throw new ValidationError(
         `Agent name "${input.name}" is reserved for built-in agents`
       );
     }
 
-    // Check for existing agent with same name
     const existing = this.getByName(db, projectPath, input.name);
     if (existing) {
       throw new ConflictError(`Agent with name "${input.name}" already exists`, {
@@ -210,41 +171,32 @@ export const UnifiedAgentService = {
       });
     }
 
-    if (saveToYaml) {
-      // Create YAML agent
-      const now = Date.now();
-      const agent: CustomAgent = {
-        id: `agent_yaml_${input.name}`,
-        name: input.name,
-        description: input.description ?? null,
-        mode: input.mode ?? "subagent",
-        hidden: input.hidden ?? false,
-        providerId: input.providerId ?? null,
-        modelId: input.modelId ?? null,
-        temperature: input.temperature ?? null,
-        topP: input.topP ?? null,
-        maxSteps: input.maxSteps ?? null,
-        prompt: input.prompt ?? null,
-        tools: input.tools ?? [],
-        options: input.options ?? {},
-        color: input.color ?? null,
-        isBuiltin: false,
-        createdAt: now,
-        updatedAt: now,
-      };
-      AgentYamlService.save(projectPath, agent);
-      return { ...agent, source: "yaml" };
-    } else {
-      // Create database agent
-      const agent = AgentService.create(db, input);
-      return { ...agent, source: "database" };
-    }
+    const now = Date.now();
+    const agent: CustomAgent = {
+      id: `agent_yaml_${input.name}`,
+      name: input.name,
+      description: input.description ?? null,
+      mode: input.mode ?? "all",
+      hidden: input.hidden ?? false,
+      providerId: input.providerId ?? null,
+      modelId: input.modelId ?? null,
+      temperature: input.temperature ?? null,
+      topP: input.topP ?? null,
+      maxSteps: input.maxSteps ?? null,
+      prompt: input.prompt ?? null,
+      tools: input.tools ?? [],
+      options: input.options ?? {},
+      color: input.color ?? null,
+      isBuiltin: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    AgentYamlService.save(projectPath, agent);
+    return { ...agent, source: "yaml" };
   },
 
   /**
    * Update an agent
-   * - YAML agents are updated by saving the file
-   * - Database agents use the standard service
    */
   update(
     db: Database,
@@ -254,19 +206,16 @@ export const UnifiedAgentService = {
   ): AgentWithSource {
     const existing = this.getByIdOrThrow(db, projectPath, agentId);
 
-    // Cannot update built-in agents
     if (existing.isBuiltin) {
       throw new ValidationError("Cannot update built-in agents");
     }
 
-    // Check for reserved names if name is being changed
     if (input.name && this.isReservedName(input.name)) {
       throw new ValidationError(
         `Agent name "${input.name}" is reserved for built-in agents`
       );
     }
 
-    // Check for duplicate name if name is being updated
     if (input.name && input.name !== existing.name) {
       const nameExists = this.getByName(db, projectPath, input.name);
       if (nameExists) {
@@ -277,64 +226,50 @@ export const UnifiedAgentService = {
       }
     }
 
-    if (existing.source === "yaml") {
-      // Update YAML agent
-      const now = Date.now();
-      const updated: CustomAgent = {
-        ...existing,
-        name: input.name ?? existing.name,
-        description: input.description !== undefined ? input.description : existing.description,
-        mode: input.mode ?? existing.mode,
-        hidden: input.hidden ?? existing.hidden,
-        providerId: input.providerId !== undefined ? input.providerId : existing.providerId,
-        modelId: input.modelId !== undefined ? input.modelId : existing.modelId,
-        temperature: input.temperature !== undefined ? input.temperature : existing.temperature,
-        topP: input.topP !== undefined ? input.topP : existing.topP,
-        maxSteps: input.maxSteps !== undefined ? input.maxSteps : existing.maxSteps,
-        prompt: input.prompt !== undefined ? input.prompt : existing.prompt,
-        tools: input.tools ?? existing.tools,
-        options: input.options !== undefined
-          ? { ...existing.options, ...input.options }
-          : existing.options,
-        color: input.color !== undefined ? input.color : existing.color,
-        updatedAt: now,
-      };
+    const now = Date.now();
+    const updated: CustomAgent = {
+      ...existing,
+      name: input.name ?? existing.name,
+      description: input.description !== undefined ? input.description : existing.description,
+      mode: input.mode ?? existing.mode,
+      hidden: input.hidden ?? existing.hidden,
+      providerId: input.providerId !== undefined ? input.providerId : existing.providerId,
+      modelId: input.modelId !== undefined ? input.modelId : existing.modelId,
+      temperature: input.temperature !== undefined ? input.temperature : existing.temperature,
+      topP: input.topP !== undefined ? input.topP : existing.topP,
+      maxSteps: input.maxSteps !== undefined ? input.maxSteps : existing.maxSteps,
+      prompt: input.prompt !== undefined ? input.prompt : existing.prompt,
+      tools: input.tools ?? existing.tools,
+      options: input.options !== undefined
+        ? { ...existing.options, ...input.options }
+        : existing.options,
+      color: input.color !== undefined ? input.color : existing.color,
+      updatedAt: now,
+    };
 
-      // If name changed, delete old file and create new
-      if (input.name && input.name !== existing.name) {
-        AgentYamlService.delete(projectPath, existing.name);
-        updated.id = `agent_yaml_${input.name}`;
-      }
-
-      AgentYamlService.save(projectPath, updated);
-      return { ...updated, source: "yaml" };
-    } else {
-      // Update database agent
-      const agent = AgentService.update(db, agentId, input);
-      return { ...agent, source: "database" };
+    if (input.name && input.name !== existing.name) {
+      AgentYamlService.delete(projectPath, existing.name);
+      updated.id = `agent_yaml_${input.name}`;
     }
+
+    AgentYamlService.save(projectPath, updated);
+    return { ...updated, source: "yaml" };
   },
 
   /**
    * Delete an agent
    */
-  delete(db: Database, projectPath: string, agentId: string): void {
-    const existing = this.getByIdOrThrow(db, projectPath, agentId);
-
-    // Cannot delete built-in agents
-    if (existing.isBuiltin) {
-      throw new ValidationError("Cannot delete built-in agents");
+  delete(_db: Database, projectPath: string, agentId: string): void {
+    const name = agentId.replace("agent_yaml_", "");
+    const exists = AgentYamlService.exists(projectPath, name);
+    if (!exists) {
+      throw new NotFoundError("Agent", agentId);
     }
-
-    if (existing.source === "yaml") {
-      AgentYamlService.delete(projectPath, existing.name);
-    } else {
-      AgentService.delete(db, agentId);
-    }
+    AgentYamlService.delete(projectPath, name);
   },
 
   /**
-   * Convert to AgentConfig format for use with the agent system
+   * Convert to AgentConfig format
    */
   toAgentConfig(agent: AgentWithSource): AgentConfig {
     return toAgentConfig(agent);

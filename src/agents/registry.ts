@@ -14,7 +14,8 @@ import {
   isBuiltinAgent,
   getAllBuiltinAgents,
 } from "./builtin/index.ts";
-import { AgentService, toAgentConfig } from "@/services/agents.ts";
+import { AgentYamlService } from "@/config/agents.ts";
+import { toAgentConfig } from "@/services/agents.ts";
 
 export type AgentMode = "primary" | "subagent";
 
@@ -29,18 +30,18 @@ export class AgentRegistry {
    * @param name - Agent name to look up
    * @returns Agent configuration or undefined if not found
    */
-  static get(db: Database | null, name: string): AgentConfig | undefined {
+  static get(db: Database | null, name: string, projectPath?: string): AgentConfig | undefined {
     // Check built-in agents first
     const builtin = getBuiltinAgent(name);
     if (builtin) {
       return builtin;
     }
 
-    // Check custom agents if database is provided
-    if (db) {
-      const custom = AgentService.getByName(db, name);
-      if (custom) {
-        return toAgentConfig(custom);
+    // Check YAML agents if project path is provided
+    if (projectPath) {
+      const yamlAgent = AgentYamlService.getByName(projectPath, name);
+      if (yamlAgent) {
+        return toAgentConfig(yamlAgent);
       }
     }
 
@@ -61,12 +62,12 @@ export class AgentRegistry {
   /**
    * Check if an agent exists
    */
-  static has(db: Database | null, name: string): boolean {
+  static has(db: Database | null, name: string, projectPath?: string): boolean {
     if (isBuiltinAgent(name)) {
       return true;
     }
-    if (db) {
-      return AgentService.getByName(db, name) !== null;
+    if (projectPath) {
+      return AgentYamlService.exists(projectPath, name);
     }
     return false;
   }
@@ -103,14 +104,17 @@ export class AgentRegistry {
       }
     }
 
-    // Add custom agents (unless builtinOnly or no db)
-    if (!options.builtinOnly && db) {
-      const customAgents = AgentService.list(db, {
-        mode: options.mode,
-        includeHidden: options.includeHidden,
-      });
-
-      for (const custom of customAgents) {
+    // Add custom YAML agents (unless builtinOnly)
+    // Note: projectPath must be passed in options for custom agents to appear
+    if (!options.builtinOnly && (options as any).projectPath) {
+      const yamlAgents = AgentYamlService.list((options as any).projectPath);
+      for (const custom of yamlAgents) {
+        if (options.mode && custom.mode !== options.mode && custom.mode !== "all") {
+          continue;
+        }
+        if (!options.includeHidden && custom.hidden) {
+          continue;
+        }
         agents.push(toAgentConfig(custom));
       }
     }

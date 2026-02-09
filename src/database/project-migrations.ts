@@ -559,4 +559,18 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 10,
+    name: "drop_agents_table",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- Remove agents table (moved to YAML files)
+        -- Agents are now stored as agents/{name}/agent.yaml
+        -- ============================================
+
+        DROP TABLE IF EXISTS agents;
+      `);
+    },
+  },
 ];
