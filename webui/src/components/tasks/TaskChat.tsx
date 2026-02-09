@@ -694,7 +694,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
                 isOptimistic={message.id.startsWith("optimistic-")}
               />
             ))}
-            {streamingMessage && (
+            {streamingMessage && !messages.find(m => m.id === streamingMessage.id) && (
               <StreamingMessageBubble message={streamingMessage} projectId={projectId} />
             )}
             <div ref={messagesEndRef} />

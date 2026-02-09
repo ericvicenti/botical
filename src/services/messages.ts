@@ -282,8 +282,8 @@ export class MessageService {
       params.push(options.role);
     }
 
-    // Order by ID ascending (chronological for ascending ID generation)
-    query += " ORDER BY id ASC";
+    // Order by creation time ascending, then ID for tiebreaker
+    query += " ORDER BY created_at ASC, id ASC";
 
     if (options.limit) {
       query += " LIMIT ?";

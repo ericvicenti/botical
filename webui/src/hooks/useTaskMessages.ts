@@ -238,13 +238,11 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           break;
 
         case "message.complete":
-          // Refetch messages FIRST, then clear streaming state to avoid flash
-          log("streaming", "Message complete, refetching before clearing streaming");
+          // Refetch messages — streaming state will be cleared by the safety-net
+          // effect once the completed message appears in fetched data
+          log("streaming", "Message complete, refetching messages");
           queryClient.refetchQueries({
             queryKey: ["sessions", sessionId, "messages"],
-          }).then(() => {
-            log("streaming", "Refetch complete, now clearing streaming state");
-            setStreamingMessage(null);
           });
           break;
 
