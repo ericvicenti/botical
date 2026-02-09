@@ -34,6 +34,7 @@ import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects
 import { Route as ProjectsProjectIdCommitRouteImport } from './routes/projects/$projectId/commit'
 import { Route as DockerContainersContainerIdIndexRouteImport } from './routes/docker/containers/$containerId/index'
 import { Route as ProjectsProjectIdCommitsHashRouteImport } from './routes/projects/$projectId/commits.$hash'
+import { Route as ProjectsProjectIdAgentsAgentNameRouteImport } from './routes/projects/$projectId/agents/$agentName'
 import { Route as DockerContainersContainerIdLogsRouteImport } from './routes/docker/containers/$containerId/logs'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -164,6 +165,12 @@ const ProjectsProjectIdCommitsHashRoute =
     path: '/commits/$hash',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
+const ProjectsProjectIdAgentsAgentNameRoute =
+  ProjectsProjectIdAgentsAgentNameRouteImport.update({
+    id: '/agents/$agentName',
+    path: '/agents/$agentName',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const DockerContainersContainerIdLogsRoute =
   DockerContainersContainerIdLogsRouteImport.update({
     id: '/docker/containers/$containerId/logs',
@@ -196,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
+  '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
   '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
 }
@@ -222,6 +230,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
+  '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
   '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
 }
@@ -251,6 +260,7 @@ export interface FileRoutesById {
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
+  '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
   '/docker/containers/$containerId/': typeof DockerContainersContainerIdIndexRoute
 }
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/docker/containers/$containerId/logs'
+    | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
     | '/docker/containers/$containerId'
   fileRoutesByTo: FileRoutesByTo
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
     | '/docker/containers/$containerId/logs'
+    | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
     | '/docker/containers/$containerId'
   id:
@@ -335,6 +347,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/docker/containers/$containerId/logs'
+    | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
     | '/docker/containers/$containerId/'
   fileRoutesById: FileRoutesById
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdCommitsHashRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/agents/$agentName': {
+      id: '/projects/$projectId/agents/$agentName'
+      path: '/agents/$agentName'
+      fullPath: '/projects/$projectId/agents/$agentName'
+      preLoaderRoute: typeof ProjectsProjectIdAgentsAgentNameRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/docker/containers/$containerId/logs': {
       id: '/docker/containers/$containerId/logs'
       path: '/docker/containers/$containerId/logs'
@@ -573,6 +593,7 @@ interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdCommitRoute: typeof ProjectsProjectIdCommitRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
+  ProjectsProjectIdAgentsAgentNameRoute: typeof ProjectsProjectIdAgentsAgentNameRoute
   ProjectsProjectIdCommitsHashRoute: typeof ProjectsProjectIdCommitsHashRoute
 }
 
@@ -580,6 +601,7 @@ const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
   ProjectsProjectIdCommitRoute: ProjectsProjectIdCommitRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
+  ProjectsProjectIdAgentsAgentNameRoute: ProjectsProjectIdAgentsAgentNameRoute,
   ProjectsProjectIdCommitsHashRoute: ProjectsProjectIdCommitsHashRoute,
 }
 

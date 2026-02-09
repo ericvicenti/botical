@@ -675,7 +675,6 @@ export interface AgentConfig {
   description: string;
   prompt?: string;
   tools: string[];
-  mode: "all" | "primary" | "subagent";
   modelId?: string | null;
   maxSteps?: number | null;
   temperature?: number | null;
@@ -709,7 +708,7 @@ export function useAgent(name: string, projectId?: string) {
 export function useCreateAgent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[]; mode?: string; saveToYaml?: boolean }) => {
+    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[]; saveToYaml?: boolean }) => {
       return apiClient<AgentConfig>("/api/agents", { method: "POST", body: JSON.stringify(data) });
     },
     onSuccess: (_data, variables) => {

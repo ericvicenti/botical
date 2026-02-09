@@ -4,17 +4,16 @@
  * Modal for creating a new task with:
  * - Message input (required)
  * - Title (optional, auto-generates from message if empty)
- * - Template selection
+ * - Agent selection
  */
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { X, Send, ChevronDown, Bot } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { useTemplates, useCreateSession, useSendMessage, useSettings, getSettings, useAgents } from "@/lib/api/queries";
+import { useCreateSession, useSendMessage, useSettings, getSettings, useAgents } from "@/lib/api/queries";
 import type { AgentConfig } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
-import type { TaskTemplateSummary } from "@/lib/api/types";
 
 interface NewTaskModalProps {
   projectId: string;
@@ -24,7 +23,6 @@ interface NewTaskModalProps {
 export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   const navigate = useNavigate();
   const { openTab } = useTabs();
-  const { data: templates, isLoading: templatesLoading } = useTemplates(projectId);
   const { data: agents } = useAgents(projectId);
   const { data: settings } = useSettings();
   const createSession = useCreateSession();
@@ -32,9 +30,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
-  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,7 +46,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowTemplateDropdown(false);
+        setShowAgentDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -68,20 +64,17 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
-
   // Get provider/model from agent class
   const getProviderModel = (agentClass: string) => {
     const currentSettings = settings || getSettings();
-    const agentClassConfig = currentSettings.agentClasses?.find((c) => c.id === agentClass);
+    const agentClassConfig = currentSettings.agentClasses?.find((c: any) => c.id === agentClass);
     if (agentClassConfig) {
       return {
         providerId: agentClassConfig.providerId,
         modelId: agentClassConfig.modelId,
       };
     }
-    // Default to medium
-    const mediumClass = currentSettings.agentClasses?.find((c) => c.id === "medium");
+    const mediumClass = currentSettings.agentClasses?.find((c: any) => c.id === "medium");
     if (mediumClass) {
       return {
         providerId: mediumClass.providerId,
@@ -99,21 +92,15 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
 
     setIsSubmitting(true);
     try {
-      // Generate title from message if not provided
       const taskTitle = title.trim() || generateTitle(message);
+      const { providerId, modelId } = getProviderModel("medium");
 
-      // Get provider/model from template's agent class
-      const agentClass = selectedTemplate?.agentClass || "medium";
-      const { providerId, modelId } = getProviderModel(agentClass);
-
-      // Create session with agent if selected
       const session = await createSession.mutateAsync({
         projectId,
         title: taskTitle,
-        agent: selectedAgentName || selectedTemplateId || "default",
+        agent: selectedAgentName || "default",
       });
 
-      // Get API key for the provider
       const currentSettings = settings || getSettings();
       let apiKey: string | undefined;
       if (providerId === "anthropic") {
@@ -124,7 +111,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
         apiKey = currentSettings.googleApiKey;
       }
 
-      // Send the first message
       await sendMessage.mutateAsync({
         projectId,
         sessionId: session.id,
@@ -135,7 +121,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
         modelId,
       });
 
-      // Open tab and navigate
       openTab({
         type: "task",
         sessionId: session.id,
@@ -153,12 +138,13 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Submit on Cmd/Ctrl + Enter
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
   };
+
+  const selectedAgent = agents?.find((a) => a.name === selectedAgentName);
 
   return (
     <div
@@ -198,117 +184,48 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
             />
           </div>
 
-          {/* Template selector */}
+          {/* Agent selector */}
           <div className="relative" ref={dropdownRef}>
             <label className="block text-sm font-medium text-text-primary mb-1">
-              Template
+              Agent
             </label>
             <button
               type="button"
-              onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+              onClick={() => setShowAgentDropdown(!showAgentDropdown)}
               className={cn(
                 "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
                 "text-left flex items-center justify-between",
                 "focus:outline-none focus:border-accent-primary"
               )}
-              data-testid="new-task-template-select"
+              data-testid="new-task-agent-select"
             >
               <div className="flex items-center gap-2">
                 <Bot className="w-4 h-4 text-text-muted" />
-                <span className={selectedTemplate ? "text-text-primary" : "text-text-muted"}>
-                  {selectedTemplate ? selectedTemplate.name : "Default (no template)"}
+                <span className={selectedAgent ? "text-text-primary" : "text-text-muted"}>
+                  {selectedAgent ? selectedAgent.name : "Default"}
                 </span>
               </div>
               <ChevronDown className="w-4 h-4 text-text-muted" />
             </button>
 
-            {showTemplateDropdown && (
+            {showAgentDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-bg-primary border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-auto">
-                {/* Default option */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedTemplateId(null);
-                    setShowTemplateDropdown(false);
-                  }}
+                  onClick={() => { setSelectedAgentName(null); setShowAgentDropdown(false); }}
                   className={cn(
                     "w-full px-3 py-2 text-left hover:bg-bg-elevated flex items-center gap-2",
-                    selectedTemplateId === null && "bg-accent-primary/10"
+                    !selectedAgentName && "bg-accent-primary/10"
                   )}
                 >
                   <Bot className="w-4 h-4 text-text-muted" />
                   <div>
                     <div className="text-sm text-text-primary">Default</div>
-                    <div className="text-xs text-text-muted">No template</div>
+                    <div className="text-xs text-text-muted">No agent preset</div>
                   </div>
                 </button>
-
-                {templatesLoading ? (
-                  <div className="px-3 py-2 text-sm text-text-muted">Loading templates...</div>
-                ) : templates && templates.length > 0 ? (
-                  templates.map((template) => (
-                    <TemplateOption
-                      key={template.id}
-                      template={template}
-                      selected={selectedTemplateId === template.id}
-                      onSelect={() => {
-                        setSelectedTemplateId(template.id);
-                        setShowTemplateDropdown(false);
-                      }}
-                    />
-                  ))
-                ) : (
-                  <div className="px-3 py-2 text-sm text-text-muted">
-                    No templates found. Create templates in .botical/templates/
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Agent selector */}
-          {agents && agents.length > 0 && (
-            <div className="relative">
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Agent
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowAgentDropdown(!showAgentDropdown)}
-                className={cn(
-                  "w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg",
-                  "text-left flex items-center justify-between",
-                  "focus:outline-none focus:border-accent-primary"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-text-muted" />
-                  <span className={selectedAgentName ? "text-text-primary" : "text-text-muted"}>
-                    {selectedAgentName
-                      ? agents.find((a) => a.name === selectedAgentName)?.name || selectedAgentName
-                      : "No agent (default)"}
-                  </span>
-                </div>
-                <ChevronDown className="w-4 h-4 text-text-muted" />
-              </button>
-
-              {showAgentDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-bg-primary border border-border rounded-lg shadow-lg z-10 max-h-60 overflow-auto">
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedAgentName(null); setShowAgentDropdown(false); }}
-                    className={cn(
-                      "w-full px-3 py-2 text-left hover:bg-bg-elevated flex items-center gap-2",
-                      !selectedAgentName && "bg-accent-primary/10"
-                    )}
-                  >
-                    <Bot className="w-4 h-4 text-text-muted" />
-                    <div>
-                      <div className="text-sm text-text-primary">No agent</div>
-                      <div className="text-xs text-text-muted">Use default settings</div>
-                    </div>
-                  </button>
-                  {agents.map((agent) => (
+                {agents && agents.length > 0 ? (
+                  agents.map((agent) => (
                     <button
                       key={agent.id}
                       type="button"
@@ -326,11 +243,15 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
                         )}
                       </div>
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-sm text-text-muted">
+                    No agents yet. Create one in the Agents tab.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Message input */}
           <div>
@@ -392,45 +313,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   );
 }
 
-function TemplateOption({
-  template,
-  selected,
-  onSelect,
-}: {
-  template: TaskTemplateSummary;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "w-full px-3 py-2 text-left hover:bg-bg-elevated flex items-start gap-2",
-        selected && "bg-accent-primary/10"
-      )}
-    >
-      <Bot className="w-4 h-4 text-text-muted mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-text-primary truncate">{template.name}</span>
-          <span className="text-xs text-text-muted px-1.5 py-0.5 bg-bg-elevated rounded shrink-0">
-            {template.agentClass}
-          </span>
-        </div>
-        {template.description && (
-          <div className="text-xs text-text-muted truncate">{template.description}</div>
-        )}
-      </div>
-    </button>
-  );
-}
-
-/**
- * Generate a title from the message content
- */
 function generateTitle(message: string): string {
-  // Take first line or first 50 chars
   const firstLine = message.split("\n")[0] || message;
   const truncated = firstLine.slice(0, 50);
   return truncated.length < firstLine.length ? truncated + "..." : truncated;
