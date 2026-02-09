@@ -18,6 +18,7 @@ import { Route as WorkflowRunsExecutionIdRouteImport } from './routes/workflow-r
 import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
 import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
 import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
+import { Route as SettingsModelsRouteImport } from './routes/settings/models'
 import { Route as SettingsExperimentsRouteImport } from './routes/settings/experiments'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
@@ -77,6 +78,11 @@ const SettingsThemeRoute = SettingsThemeRouteImport.update({
 const SettingsShortcutsRoute = SettingsShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsModelsRoute = SettingsModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsExperimentsRoute = SettingsExperimentsRouteImport.update({
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
+  '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
+  '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
+  '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
   '/tasks/$sessionId': typeof TasksSessionIdRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/api-keys'
     | '/settings/experiments'
+    | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/api-keys'
     | '/settings/experiments'
+    | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/api-keys'
     | '/settings/experiments'
+    | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
     | '/tasks/$sessionId'
@@ -395,6 +407,13 @@ declare module '@tanstack/react-router' {
       path: '/shortcuts'
       fullPath: '/settings/shortcuts'
       preLoaderRoute: typeof SettingsShortcutsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/models': {
+      id: '/settings/models'
+      path: '/models'
+      fullPath: '/settings/models'
+      preLoaderRoute: typeof SettingsModelsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/experiments': {
@@ -509,6 +528,7 @@ interface SettingsRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   SettingsExperimentsRoute: typeof SettingsExperimentsRoute
+  SettingsModelsRoute: typeof SettingsModelsRoute
   SettingsShortcutsRoute: typeof SettingsShortcutsRoute
   SettingsThemeRoute: typeof SettingsThemeRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -518,6 +538,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsApiKeysRoute: SettingsApiKeysRoute,
   SettingsExperimentsRoute: SettingsExperimentsRoute,
+  SettingsModelsRoute: SettingsModelsRoute,
   SettingsShortcutsRoute: SettingsShortcutsRoute,
   SettingsThemeRoute: SettingsThemeRoute,
   SettingsIndexRoute: SettingsIndexRoute,

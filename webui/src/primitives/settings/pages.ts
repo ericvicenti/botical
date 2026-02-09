@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { definePage } from "../registry";
 import ApiKeysPage from "./ApiKeysPage";
+import ModelsPage from "./ModelsPage";
 import ShortcutsPage from "./ShortcutsPage";
 import ThemePage from "./ThemePage";
 import AboutPage from "./AboutPage";
@@ -28,6 +29,29 @@ export const apiKeysPage = definePage({
   getRouteParams: () => ({}),
 
   component: ApiKeysPage,
+});
+
+/**
+ * Page: Model Provider Settings (new URL)
+ */
+export const modelsPage = definePage({
+  id: "settings.models",
+  icon: "key",
+  category: "settings",
+  description: "Configure AI model providers",
+
+  getLabel: () => "Model Providers",
+  getTitle: () => "Model Providers - Settings",
+
+  params: z.object({}),
+
+  route: "/settings/models",
+
+  parseParams: () => ({}),
+
+  getRouteParams: () => ({}),
+
+  component: ModelsPage,
 });
 
 /**

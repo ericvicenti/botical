@@ -11,7 +11,7 @@ interface SettingsItem {
 }
 
 const SETTINGS_ITEMS: SettingsItem[] = [
-  { id: "api-keys", label: "Model Provider", icon: Key, path: "/settings/api-keys" },
+  { id: "models", label: "Model Providers", icon: Key, path: "/settings/models" },
   { id: "theme", label: "Theme", icon: Palette, path: "/settings/theme" },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard, path: "/settings/shortcuts" },
   { id: "experiments", label: "Experiments", icon: Beaker, path: "/settings/experiments" },
@@ -38,7 +38,7 @@ export function SettingsPanel() {
       <div className="flex-1 overflow-auto py-1">
         {SETTINGS_ITEMS.map((item) => {
           const isActive = location.pathname === item.path ||
-            (location.pathname === "/settings" && item.id === "api-keys");
+            (location.pathname === "/settings" && item.id === "models");
           return (
             <button
               key={item.id}
