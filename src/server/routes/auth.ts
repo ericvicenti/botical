@@ -154,7 +154,7 @@ auth.post("/set-session", async (c) => {
   const sessionToken = authHeader.substring(7);
   
   // Validate session token
-  const session = SessionService.getByToken(sessionToken);
+  const session = SessionService.validate(sessionToken);
   if (!session) {
     return c.json({ error: "Invalid session token" }, 401);
   }
