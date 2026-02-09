@@ -248,8 +248,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
         Model Providers
       </h1>
       <p className="text-text-muted mb-8">
-        Enable the AI providers you want to use. Credentials are stored locally
-        in your browser.
+        Enable the AI providers you want to use.
       </p>
 
       <div className="space-y-4">
