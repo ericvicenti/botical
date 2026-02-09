@@ -3,7 +3,7 @@ import { useSession, useSettings, useProject, useCoreTools, useSkills, useUpdate
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown, Mic } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
@@ -11,8 +11,8 @@ import { ToolCall } from "@/components/ui/ToolCall";
 import { ContentHeader } from "@/components/layout/ContentHeader";
 import { ToolsPanel } from "./ToolsPanel";
 import { SkillsPanel } from "./SkillsPanel";
+import { VoiceButton, TTSToggle } from "@/components/ui/VoiceButton";
 import { useAvailableModels } from "@/hooks/useAvailableModels";
-import type { ModelOption } from "@/hooks/useAvailableModels";
 import type { Skill } from "@/lib/api/types";
 
 interface TaskChatProps {
@@ -54,6 +54,8 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [toolsInitialized, setToolsInitialized] = useState(false);
   const [skillsInitialized, setSkillsInitialized] = useState(false);
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [voiceInterim, setVoiceInterim] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -361,6 +363,45 @@ You have access to tools for reading, writing, and editing files, as well as exe
     }
   }, [showModelDropdown, showToolsPanel, showSkillsPanel]);
 
+  // Voice transcript handler — appends recognized text to input
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInput(prev => {
+      const separator = prev.trim() ? " " : "";
+      return prev + separator + text;
+    });
+    // Auto-resize textarea after voice input
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 200)}px`;
+      }
+    }, 0);
+  }, []);
+
+  // TTS: Read new assistant messages aloud when enabled
+  const lastSpokenMsgRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ttsEnabled || !messages.length) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== "assistant" || lastMsg.id === lastSpokenMsgRef.current) return;
+    // Only speak completed messages
+    if (!lastMsg.completedAt) return;
+    lastSpokenMsgRef.current = lastMsg.id;
+    
+    // Extract text from parts
+    const text = lastMsg.parts
+      .filter(p => p.type === "text")
+      .map(p => (p.content as { text: string })?.text || "")
+      .join(" ")
+      .trim();
+    if (text && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [ttsEnabled, messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const content = input.trim();
@@ -501,6 +542,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
         >
           <Sparkles className="w-5 h-5" />
         </button>
+        <TTSToggle enabled={ttsEnabled} onToggle={setTtsEnabled} />
         <button
           onClick={handleOpenSystemPrompt}
           className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
@@ -730,6 +772,13 @@ You have access to tools for reading, writing, and editing files, as well as exe
       {/* Input */}
       <div className="border-t border-border bg-bg-secondary p-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {/* Voice interim indicator */}
+          {voiceInterim && (
+            <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300 animate-pulse">
+              <Mic className="w-3.5 h-3.5" />
+              <span className="italic">{voiceInterim}</span>
+            </div>
+          )}
           {/* Model status indicator */}
           {currentModel && (
             <div className="flex items-center gap-2 mb-3 text-xs text-text-muted">
@@ -758,6 +807,11 @@ You have access to tools for reading, writing, and editing files, as well as exe
                 disabled={isSending || !hasApiKey}
               />
             </div>
+            <VoiceButton
+              onTranscript={handleVoiceTranscript}
+              onInterim={setVoiceInterim}
+              disabled={isSending || !hasApiKey}
+            />
             <button
               type="submit"
               disabled={!input.trim() || isSending || !hasApiKey}
