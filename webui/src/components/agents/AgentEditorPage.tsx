@@ -44,9 +44,6 @@ export function AgentEditorPage({ projectId, agentName }: AgentEditorPageProps) 
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
   const [dirty, setDirty] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [showToolsPanel, setShowToolsPanel] = useState(false);
-  const [showSkillsPanel, setShowSkillsPanel] = useState(false);
-
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -298,51 +295,23 @@ export function AgentEditorPage({ projectId, agentName }: AgentEditorPageProps) 
 
           {/* Tools */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-text-secondary flex items-center gap-1.5">
-                <Wrench className="w-4 h-4" /> Tools
-              </label>
-              <button
-                onClick={() => setShowToolsPanel(!showToolsPanel)}
-                className="text-xs text-accent-primary hover:underline"
-              >
-                {showToolsPanel ? "Hide" : "Configure"}
-              </button>
-            </div>
-            {showToolsPanel && !isBuiltin && (
-              <div className="border border-border rounded-lg overflow-hidden max-h-96">
+            <label className="text-sm font-medium text-text-secondary flex items-center gap-1.5 mb-1.5">
+              <Wrench className="w-4 h-4" /> Tools
+            </label>
+            {!isBuiltin && (
+              <div className="border border-border rounded-lg overflow-hidden">
                 <ToolsPanel enabledTools={enabledToolsSet} onToggleTool={handleToggleTool} />
               </div>
-            )}
-            {!showToolsPanel && tools.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {tools.map(tool => (
-                  <span key={tool} className="px-2 py-0.5 text-xs font-mono bg-bg-elevated rounded text-text-secondary">
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            )}
-            {!showToolsPanel && tools.length === 0 && (
-              <p className="text-xs text-text-muted">No tools selected (all tools available)</p>
             )}
           </div>
 
           {/* Skills */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-text-secondary flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4" /> Skills
-              </label>
-              <button
-                onClick={() => setShowSkillsPanel(!showSkillsPanel)}
-                className="text-xs text-accent-primary hover:underline"
-              >
-                {showSkillsPanel ? "Hide" : "Configure"}
-              </button>
-            </div>
-            {showSkillsPanel && !isBuiltin && (
-              <div className="border border-border rounded-lg overflow-hidden max-h-96">
+            <label className="text-sm font-medium text-text-secondary flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="w-4 h-4" /> Skills
+            </label>
+            {!isBuiltin && (
+              <div className="border border-border rounded-lg overflow-hidden">
                 <SkillsPanel
                   projectId={projectId}
                   enabledSkills={enabledSkills}
