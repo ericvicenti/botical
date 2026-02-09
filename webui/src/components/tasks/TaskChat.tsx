@@ -209,8 +209,16 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     setSelectedModel(modelId);
     setShowModelDropdown(false);
     
-    // TODO: Update session with new model via API
-    // For now, just store in local state
+    // Persist model change to session
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, modelId }),
+      });
+    } catch (err) {
+      console.error("Failed to save model:", err);
+    }
   };
 
   const hasApiKey = settings?.anthropicApiKey || settings?.openaiApiKey || settings?.googleApiKey;

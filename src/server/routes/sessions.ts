@@ -30,6 +30,7 @@ import {
 } from "@/services/sessions.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { ValidationError } from "@/utils/errors.ts";
+import { ProjectService } from "@/services/projects.ts";
 import type { SessionStatus } from "@/agents/types.ts";
 
 const sessions = new Hono();
@@ -117,7 +118,26 @@ sessions.post("/", async (c) => {
     );
   }
 
-  const session = SessionService.create(db, result.data);
+  // If an agent is specified, resolve its model and prompt
+  const createData = { ...result.data };
+  if (createData.agent && createData.agent !== "default") {
+    const rootDb = DatabaseManager.getRootDb();
+    const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+    if (project.path) {
+      const { AgentYamlService } = await import("@/config/agents.ts");
+      const agent = AgentYamlService.getByName(project.path, createData.agent);
+      if (agent) {
+        if (agent.modelId && !createData.modelId) {
+          createData.modelId = agent.modelId;
+        }
+        if (agent.prompt && !createData.systemPrompt) {
+          createData.systemPrompt = agent.prompt;
+        }
+      }
+    }
+  }
+
+  const session = SessionService.create(db, createData);
 
   return c.json(
     {
