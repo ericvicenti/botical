@@ -39,18 +39,27 @@ const messages = new Hono();
 /**
  * Schema for sending a message
  */
+/**
+ * Infer provider from model ID string
+ */
+function inferProviderId(modelId: string): ProviderId {
+  if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4") || modelId.startsWith("chatgpt")) return "openai";
+  if (modelId.startsWith("gemini")) return "google";
+  if (modelId.startsWith("llama") || modelId.startsWith("qwen") || modelId.startsWith("mistral")) return "ollama";
+  return "anthropic";
+}
+
 const SendMessageSchema = z.object({
   projectId: z.string().min(1),
   sessionId: z.string().min(1),
   content: z.string().min(1),
   userId: z.string().min(1),
-  providerId: z.enum(["anthropic", "openai", "google"]).default("anthropic"),
+  // All optional — backend resolves from session/agent config
+  providerId: z.enum(["anthropic", "openai", "google", "ollama"]).optional(),
   modelId: z.string().nullable().optional(),
   agentName: z.string().optional(),
   canExecuteCode: z.boolean().default(false),
-  // Optional list of enabled tool names (if not provided, uses all available)
   enabledTools: z.array(z.string()).optional(),
-  // Allow API key to be passed directly (for frontend localStorage storage)
   apiKey: z.string().optional(),
 });
 
@@ -74,8 +83,8 @@ messages.post("/", async (c) => {
     sessionId,
     content,
     userId,
-    providerId,
-    modelId,
+    providerId: requestProviderId,
+    modelId: requestModelId,
     agentName,
     canExecuteCode,
     enabledTools,
@@ -92,6 +101,13 @@ messages.post("/", async (c) => {
 
   // Verify session exists
   const session = SessionService.getByIdOrThrow(db, sessionId);
+
+  // Resolve model: explicit request > session config (set from agent at creation)
+  const modelId = requestModelId || session.modelId || null;
+
+  // Resolve provider: explicit request > infer from model > default
+  const providerId: ProviderId = requestProviderId
+    || (modelId ? inferProviderId(modelId) : "anthropic");
 
   // Get API key - prefer request body, fallback to stored credentials
   const apiKey = requestApiKey || ProviderCredentialsService.getApiKey(userId, providerId);

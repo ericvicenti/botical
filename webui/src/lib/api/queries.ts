@@ -156,9 +156,9 @@ export function useSendMessage() {
           sessionId: data.sessionId,
           content: data.content,
           userId: data.userId,
-          providerId: data.providerId || "anthropic",
-          apiKey: data.apiKey,
-          modelId: data.modelId,
+          ...(data.providerId && { providerId: data.providerId }),
+          ...(data.apiKey && { apiKey: data.apiKey }),
+          ...(data.modelId && { modelId: data.modelId }),
         }),
       }),
     onSuccess: (_, { sessionId }) => {

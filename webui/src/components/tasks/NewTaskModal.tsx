@@ -64,14 +64,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // Infer provider from model ID
-  const inferProvider = (modelId: string): "anthropic" | "openai" | "google" | "ollama" => {
-    if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4") || modelId.startsWith("chatgpt")) return "openai";
-    if (modelId.startsWith("gemini")) return "google";
-    if (modelId.startsWith("llama") || modelId.startsWith("qwen") || modelId.startsWith("mistral")) return "ollama";
-    return "anthropic";
-  };
-
   const handleSubmit = async () => {
     if (!message.trim() || isSubmitting) return;
 
@@ -79,28 +71,17 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     try {
       const taskTitle = title.trim() || generateTitle(message);
 
-      // Don't send model/provider — let the backend resolve from agent config
-      // The session creation already resolves agent modelId (see POST /api/sessions)
-
+      // Create session — backend resolves agent's modelId onto the session
       const session = await createSession.mutateAsync({
         projectId,
         title: taskTitle,
         agent: selectedAgentName || "default",
       });
 
-      // Session now has the agent's modelId set by the backend
-      const effectiveModelId = session.modelId || selectedAgent?.modelId || "claude-sonnet-4-20250514";
-      const effectiveProviderId = inferProvider(effectiveModelId);
-
       const currentSettings = settings || getSettings();
-      let apiKey: string | undefined;
-      if (effectiveProviderId === "anthropic") {
-        apiKey = currentSettings.anthropicApiKey;
-      } else if (effectiveProviderId === "openai") {
-        apiKey = currentSettings.openaiApiKey;
-      } else if (effectiveProviderId === "google") {
-        apiKey = currentSettings.googleApiKey;
-      }
+
+      // Send the first available API key — backend will pick the right provider
+      const apiKey = currentSettings.anthropicApiKey || currentSettings.openaiApiKey || currentSettings.googleApiKey;
 
       // Navigate and close immediately, send message in background
       openTab({
@@ -112,15 +93,13 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
       onClose();
 
-      // Fire and forget — the task page will show the streaming response
+      // Fire and forget — backend resolves model/provider from session config
       sendMessage.mutate({
         projectId,
         sessionId: session.id,
         content: message.trim(),
         userId: currentSettings.userId,
-        providerId: effectiveProviderId,
         apiKey,
-        modelId: effectiveModelId,
       });
     } catch (err) {
       console.error("Failed to create task:", err);
