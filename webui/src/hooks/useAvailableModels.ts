@@ -20,15 +20,29 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelOption[]> {
     if (!res.ok) return [];
     const data = await res.json();
     const models = (data.data || []) as Array<{ id: string; display_name?: string }>;
-    return models
+    // Preferred models in display order (current generation)
+    const PREFERRED_ANTHROPIC = [
+      "claude-opus-4-20250514",
+      "claude-sonnet-4-20250514",
+      "claude-3-5-haiku-20241022",
+    ];
+    const filtered = models
       .filter((m) => m.id.includes("claude"))
       .map((m) => ({
         id: m.id,
         name: m.display_name || m.id,
         providerId: "anthropic" as const,
         providerName: "Anthropic",
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      }));
+    // Sort: preferred models first (in order), then others alphabetically
+    return filtered.sort((a, b) => {
+      const aIdx = PREFERRED_ANTHROPIC.indexOf(a.id);
+      const bIdx = PREFERRED_ANTHROPIC.indexOf(b.id);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
   } catch {
     return [];
   }

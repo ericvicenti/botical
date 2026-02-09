@@ -237,9 +237,10 @@ export class ProviderRegistry {
 
     const effectiveModelId = modelId ?? provider.defaultModel;
     const modelConfig = provider.models.find((m) => m.id === effectiveModelId);
+    // Allow any model ID — the provider SDK will validate it
     if (!modelConfig) {
-      throw new Error(
-        `Unknown model ${effectiveModelId} for provider ${providerId}`
+      console.warn(
+        `Model ${effectiveModelId} not in known list for ${providerId}, passing through to provider SDK`
       );
     }
 
