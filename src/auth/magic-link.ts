@@ -18,6 +18,7 @@ import { AuthenticationError } from "../utils/errors.ts";
 import { EmailService } from "../services/email.ts";
 import { hashSha256, generateSecureToken } from "../services/crypto.ts";
 import type { EmailTokenRow, UserRow } from "./schemas.ts";
+import { SessionService } from "./session.ts";
 
 const MAGIC_LINK_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 
