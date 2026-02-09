@@ -172,48 +172,21 @@ export function useSendMessage() {
 const SETTINGS_KEY = "botical:settings";
 
 /**
- * Agent Class - Maps a name (easy/medium/smart) to a provider+model
+ * App Settings - stored in localStorage
  */
-export interface AgentClass {
-  id: string;           // e.g. "easy", "medium", "smart"
-  name: string;         // Display name
-  providerId: "anthropic" | "openai" | "google";
-  modelId: string;      // e.g. "claude-sonnet-4-20250514"
-}
-
-/**
- * Default agent classes
- */
-export const DEFAULT_AGENT_CLASSES: AgentClass[] = [
-  { id: "easy", name: "Easy", providerId: "anthropic", modelId: "claude-3-5-haiku-latest" },
-  { id: "medium", name: "Medium", providerId: "anthropic", modelId: "claude-sonnet-4-20250514" },
-  { id: "smart", name: "Smart", providerId: "anthropic", modelId: "claude-opus-4-20250514" },
-];
-
 export interface AppSettings {
   anthropicApiKey?: string;
   openaiApiKey?: string;
   googleApiKey?: string;
   ollamaBaseUrl?: string;
   userId: string;
-  // Agent Classes
-  agentClasses: AgentClass[];
-  defaultAgentClass: string; // ID of default agent class
 }
 
 export function getSettings(): AppSettings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      // Ensure agentClasses exists with defaults
-      if (!parsed.agentClasses || parsed.agentClasses.length === 0) {
-        parsed.agentClasses = DEFAULT_AGENT_CLASSES;
-      }
-      if (!parsed.defaultAgentClass) {
-        parsed.defaultAgentClass = "medium";
-      }
-      return parsed;
+      return JSON.parse(stored);
     }
   } catch (e) {
     console.warn("Failed to load settings:", e);
@@ -221,8 +194,6 @@ export function getSettings(): AppSettings {
   // Default settings with a generated userId
   return {
     userId: `user-${Date.now()}`,
-    agentClasses: DEFAULT_AGENT_CLASSES,
-    defaultAgentClass: "medium",
   };
 }
 

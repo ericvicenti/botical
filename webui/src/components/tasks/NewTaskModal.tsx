@@ -64,27 +64,12 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // Get provider/model from agent class
-  const getProviderModel = (agentClass: string) => {
-    const currentSettings = settings || getSettings();
-    const agentClassConfig = currentSettings.agentClasses?.find((c: any) => c.id === agentClass);
-    if (agentClassConfig) {
-      return {
-        providerId: agentClassConfig.providerId,
-        modelId: agentClassConfig.modelId,
-      };
-    }
-    const mediumClass = currentSettings.agentClasses?.find((c: any) => c.id === "medium");
-    if (mediumClass) {
-      return {
-        providerId: mediumClass.providerId,
-        modelId: mediumClass.modelId,
-      };
-    }
-    return {
-      providerId: "anthropic",
-      modelId: "claude-sonnet-4-20250514",
-    };
+  // Infer provider from model ID
+  const inferProvider = (modelId: string): "anthropic" | "openai" | "google" | "ollama" => {
+    if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4") || modelId.startsWith("chatgpt")) return "openai";
+    if (modelId.startsWith("gemini")) return "google";
+    if (modelId.startsWith("llama") || modelId.startsWith("qwen") || modelId.startsWith("mistral")) return "ollama";
+    return "anthropic";
   };
 
   const handleSubmit = async () => {
@@ -94,29 +79,18 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     try {
       const taskTitle = title.trim() || generateTitle(message);
 
-      // Use the selected agent's modelId if available, otherwise fall back to global settings
-      const agentModelId = selectedAgent?.modelId;
-      const { providerId: fallbackProviderId, modelId: fallbackModelId } = getProviderModel("medium");
-
-      // Determine the effective model: agent config > global class setting
-      const effectiveModelId = agentModelId || fallbackModelId;
-
-      // Determine provider from model ID
-      const effectiveProviderId = agentModelId
-        ? (agentModelId.startsWith("gpt-") || agentModelId.startsWith("o1") || agentModelId.startsWith("o3") || agentModelId.startsWith("o4")
-            ? "openai"
-            : agentModelId.startsWith("gemini")
-              ? "google"
-              : agentModelId.startsWith("llama") || agentModelId.startsWith("qwen") || agentModelId.startsWith("mistral")
-                ? "ollama"
-                : "anthropic")
-        : fallbackProviderId;
+      // Don't send model/provider — let the backend resolve from agent config
+      // The session creation already resolves agent modelId (see POST /api/sessions)
 
       const session = await createSession.mutateAsync({
         projectId,
         title: taskTitle,
         agent: selectedAgentName || "default",
       });
+
+      // Session now has the agent's modelId set by the backend
+      const effectiveModelId = session.modelId || selectedAgent?.modelId || "claude-sonnet-4-20250514";
+      const effectiveProviderId = inferProvider(effectiveModelId);
 
       const currentSettings = settings || getSettings();
       let apiKey: string | undefined;
