@@ -93,7 +93,24 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     setIsSubmitting(true);
     try {
       const taskTitle = title.trim() || generateTitle(message);
-      const { providerId, modelId } = getProviderModel("medium");
+
+      // Use the selected agent's modelId if available, otherwise fall back to global settings
+      const agentModelId = selectedAgent?.modelId;
+      const { providerId: fallbackProviderId, modelId: fallbackModelId } = getProviderModel("medium");
+
+      // Determine the effective model: agent config > global class setting
+      const effectiveModelId = agentModelId || fallbackModelId;
+
+      // Determine provider from model ID
+      const effectiveProviderId = agentModelId
+        ? (agentModelId.startsWith("gpt-") || agentModelId.startsWith("o1") || agentModelId.startsWith("o3") || agentModelId.startsWith("o4")
+            ? "openai"
+            : agentModelId.startsWith("gemini")
+              ? "google"
+              : agentModelId.startsWith("llama") || agentModelId.startsWith("qwen") || agentModelId.startsWith("mistral")
+                ? "ollama"
+                : "anthropic")
+        : fallbackProviderId;
 
       const session = await createSession.mutateAsync({
         projectId,
@@ -103,11 +120,11 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
 
       const currentSettings = settings || getSettings();
       let apiKey: string | undefined;
-      if (providerId === "anthropic") {
+      if (effectiveProviderId === "anthropic") {
         apiKey = currentSettings.anthropicApiKey;
-      } else if (providerId === "openai") {
+      } else if (effectiveProviderId === "openai") {
         apiKey = currentSettings.openaiApiKey;
-      } else if (providerId === "google") {
+      } else if (effectiveProviderId === "google") {
         apiKey = currentSettings.googleApiKey;
       }
 
@@ -127,9 +144,9 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
         sessionId: session.id,
         content: message.trim(),
         userId: currentSettings.userId,
-        providerId,
+        providerId: effectiveProviderId,
         apiKey,
-        modelId,
+        modelId: effectiveModelId,
       });
     } catch (err) {
       console.error("Failed to create task:", err);

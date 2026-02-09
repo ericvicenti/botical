@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useSession, useSettings, useProject, useCoreTools, useSkills, useUpdateSystemPrompt } from "@/lib/api/queries";
+import { useSession, useSettings, useProject, useCoreTools, useSkills, useUpdateSystemPrompt, useAgent } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
@@ -27,6 +27,8 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const { data: session, isLoading: sessionLoading } = useSession(sessionId, projectId);
   const { data: project } = useProject(projectId);
   const { data: settings } = useSettings();
+  const agentName = session?.agent || "default";
+  const { data: agentConfig } = useAgent(agentName, projectId);
   const { openTab } = useTabs();
   const {
     messages,
@@ -190,17 +192,20 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     return "claude-sonnet-4-20250514";
   }, [settings]);
 
-  // Initialize selected model from session or default
+  // Initialize selected model from session > agent config > default
   useEffect(() => {
     if (session && availableModels.length > 0 && !selectedModel) {
+      // Priority: session override > agent config > global default
       const sessionModel = session.modelId;
-      if (sessionModel && availableModels.find(m => m.id === sessionModel)) {
-        setSelectedModel(sessionModel);
+      const agentModel = agentConfig?.modelId;
+      const effectiveModel = sessionModel || agentModel || defaultModel;
+      if (effectiveModel && availableModels.find(m => m.id === effectiveModel)) {
+        setSelectedModel(effectiveModel);
       } else if (defaultModel && availableModels.find(m => m.id === defaultModel)) {
         setSelectedModel(defaultModel);
       }
     }
-  }, [session, availableModels, defaultModel, selectedModel]);
+  }, [session, availableModels, defaultModel, selectedModel, agentConfig]);
 
   const currentModelId = selectedModel ?? session?.modelId ?? defaultModel;
   const currentModel = availableModels.find(m => m.id === currentModelId) ?? availableModels[0];
