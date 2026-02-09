@@ -130,7 +130,7 @@ export class AgentOrchestrator {
     // Update session message count
     SessionService.updateStats(db, sessionId, { messageCount: 1 });
 
-    // Create assistant message
+    // Create assistant message (ensure created_at is after user message)
     const assistantMessage = MessageService.create(db, {
       sessionId,
       role: "assistant",

@@ -183,13 +183,21 @@ function rowToMessagePart(row: MessagePartRow): MessagePart {
 /**
  * Message Service for managing conversation messages
  */
+// Monotonic timestamp to ensure messages always have unique, ordered created_at
+let lastTimestamp = 0;
+function monotonic(): number {
+  const now = Date.now();
+  lastTimestamp = now > lastTimestamp ? now : lastTimestamp + 1;
+  return lastTimestamp;
+}
+
 export class MessageService {
   /**
    * Create a new message
    */
   static create(db: Database, input: MessageCreateInput): Message {
     const validated = MessageCreateSchema.parse(input);
-    const now = Date.now();
+    const now = monotonic();
     const id = generateId(IdPrefixes.message);
 
     db.prepare(
@@ -282,8 +290,8 @@ export class MessageService {
       params.push(options.role);
     }
 
-    // Order by creation time ascending, then ID for tiebreaker
-    query += " ORDER BY created_at ASC, id ASC";
+    // Order by creation time, with role tiebreaker (user before assistant for same timestamp)
+    query += " ORDER BY created_at ASC, CASE role WHEN 'user' THEN 0 WHEN 'system' THEN 1 WHEN 'assistant' THEN 2 END ASC, id ASC";
 
     if (options.limit) {
       query += " LIMIT ?";
