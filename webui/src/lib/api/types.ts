@@ -39,6 +39,9 @@ export interface Message {
   sessionId: string;
   role: "user" | "assistant" | "system";
   parentId: string | null;
+  providerId: string | null;
+  modelId: string | null;
+  agent: string | null;
   finishReason: string | null;
   cost: number;
   tokensInput: number;

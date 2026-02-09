@@ -41,6 +41,8 @@ export interface ToolCallProps {
   result?: unknown;
   /** Tool status */
   status: "pending" | "running" | "completed" | "error" | null;
+  /** Duration in ms (if completed) */
+  durationMs?: number | null;
   /** Project ID for file navigation */
   projectId: string;
   /** Optional tool call ID for matching */
@@ -59,6 +61,7 @@ export function ToolCall({
   args,
   result,
   status,
+  durationMs,
   projectId,
 }: ToolCallProps) {
   const [expanded, setExpanded] = useState(false);
@@ -277,7 +280,12 @@ export function ToolCall({
         {/* Spacer */}
         <span className="flex-1" />
 
-        {/* Status icon */}
+        {/* Duration + Status icon */}
+        {durationMs != null && status === "completed" && (
+          <span className="text-xs text-text-muted font-mono">
+            {durationMs < 1000 ? `${durationMs}ms` : `${(durationMs / 1000).toFixed(1)}s`}
+          </span>
+        )}
         {status && statusIcon[status]}
       </button>
 

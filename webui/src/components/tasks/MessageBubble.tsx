@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { User, Bot, AlertCircle, FileText, Loader2, ExternalLink, Settings } from "lucide-react";
+import { User, Bot, AlertCircle, FileText, Loader2, ExternalLink, Settings, Info } from "lucide-react";
 import type { MessageWithParts, MessagePart } from "@/lib/api/types";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
@@ -20,6 +20,35 @@ interface MessageBubbleProps {
   message: MessageWithParts;
   projectId: string;
   isOptimistic?: boolean;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const secs = ms / 1000;
+  if (secs < 60) return `${secs.toFixed(1)}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = Math.floor(secs % 60);
+  return `${mins}m ${remSecs}s`;
+}
+
+function MetadataTooltip({ message }: { message: MessageWithParts }) {
+  const duration = message.completedAt && message.createdAt
+    ? message.completedAt - message.createdAt
+    : null;
+
+  return (
+    <div className="text-xs text-text-muted space-y-0.5 whitespace-nowrap">
+      {message.modelId && (
+        <div className="font-mono">{message.modelId}</div>
+      )}
+      {duration !== null && (
+        <div>{formatDuration(duration)}</div>
+      )}
+      {(message.tokensInput > 0 || message.tokensOutput > 0) && (
+        <div>{message.tokensInput}→{message.tokensOutput} tokens</div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -132,12 +161,17 @@ function GroupedPartRenderer({
         | "error"
         | null;
 
+      const toolDuration = group.toolCallPart.createdAt && group.toolResultPart?.updatedAt
+        ? group.toolResultPart.updatedAt - group.toolCallPart.createdAt
+        : null;
+
       return (
         <ToolCall
           name={toolName}
           args={args}
           result={group.toolResultPart?.content}
           status={status}
+          durationMs={toolDuration}
           projectId={projectId}
         />
       );
@@ -223,6 +257,11 @@ export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbl
       >
         <GroupedMessageParts parts={message.parts || []} isUser={isUser} projectId={projectId} />
 
+        {/* Message metadata for assistant messages */}
+        {!isUser && !isStreaming && message.completedAt && (
+          <MessageMetadata message={message} />
+        )}
+
         {/* Streaming indicator */}
         {isStreaming && (!message.parts || message.parts.length === 0) && (
           <div className="flex items-center gap-2 text-text-muted text-sm">
@@ -244,6 +283,37 @@ export function MessageBubble({ message, projectId, isOptimistic }: MessageBubbl
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function MessageMetadata({ message }: { message: MessageWithParts }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const duration = message.completedAt && message.createdAt
+    ? message.completedAt - message.createdAt
+    : null;
+
+  if (!message.modelId && duration === null) return null;
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+      >
+        {message.modelId && (
+          <span className="font-mono">{message.modelId.replace(/^claude-|^gpt-|^gemini-/, (m) => m)}</span>
+        )}
+        {duration !== null && (
+          <span>· {formatDuration(duration)}</span>
+        )}
+      </button>
+      {showTooltip && (message.tokensInput > 0 || message.tokensOutput > 0) && (
+        <div className="absolute bottom-full left-0 mb-1 px-2.5 py-1.5 bg-bg-primary border border-border rounded-lg shadow-lg z-50">
+          <MetadataTooltip message={message} />
+        </div>
+      )}
     </div>
   );
 }
