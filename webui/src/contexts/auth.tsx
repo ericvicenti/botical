@@ -14,9 +14,10 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   mode: 'single-user' | 'multi-user';
-  login: (email: string) => Promise<void>;
+  login: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  pollLogin: (loginToken: string) => Promise<{ status: string; sessionToken?: string; isNewUser?: boolean; isAdmin?: boolean }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,12 +65,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (email: string): Promise<void> => {
+  const login = async (email: string): Promise<string> => {
     try {
-      await apiClient<{ success: boolean; message: string }>('/auth/magic-link', {
+      const response = await apiClient<{ success: boolean; message: string; loginToken: string }>('/auth/magic-link', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
+      return response.loginToken;
     } catch (error) {
       if (error instanceof ApiError) {
         throw new Error(error.data.error.message);
@@ -90,6 +92,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const pollLogin = async (loginToken: string) => {
+    try {
+      const response = await apiClient<{ status: string; sessionToken?: string; isNewUser?: boolean; isAdmin?: boolean }>(`/auth/poll-login?token=${encodeURIComponent(loginToken)}`);
+      
+      if (response.status === 'completed' && response.sessionToken) {
+        // Make an authenticated request to set the session cookie properly
+        await apiClient('/auth/set-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${response.sessionToken}`,
+          },
+        });
+        
+        // Trigger auth check to update user state
+        await checkAuth();
+      }
+      
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(error.data.error.message || 'Failed to poll login status');
+      }
+      throw new Error('Failed to poll login status');
+    }
+  };
+
   useEffect(() => {
     checkAuth();
     // Register the checkAuth function globally for error handling
@@ -104,6 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     checkAuth,
+    pollLogin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

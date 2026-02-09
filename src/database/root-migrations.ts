@@ -203,4 +203,25 @@ export const ROOT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 3,
+    name: "magic_link_polling",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- MAGIC LINK POLLING TOKENS
+        -- ============================================
+        -- Support for polling-based magic link auth flow
+        -- login_token is returned to frontend for polling
+        -- session_token is set when magic link is verified
+
+        ALTER TABLE email_verification_tokens ADD COLUMN login_token TEXT;
+        ALTER TABLE email_verification_tokens ADD COLUMN login_token_hash TEXT;
+        ALTER TABLE email_verification_tokens ADD COLUMN session_token TEXT;
+        ALTER TABLE email_verification_tokens ADD COLUMN completed_at INTEGER;
+
+        CREATE INDEX idx_email_tokens_login_token ON email_verification_tokens(login_token_hash);
+      `);
+    },
+  },
 ];

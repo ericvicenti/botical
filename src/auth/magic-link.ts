@@ -32,6 +32,17 @@ export interface VerifyResult {
   isAdmin: boolean;
 }
 
+export interface RequestResult {
+  loginToken: string;
+}
+
+export interface PollResult {
+  status: 'pending' | 'completed';
+  sessionToken?: string;
+  isNewUser?: boolean;
+  isAdmin?: boolean;
+}
+
 /**
  * Magic Link Service
  *
@@ -43,14 +54,17 @@ export class MagicLinkService {
    *
    * @param email - The email address to send the magic link to
    * @param metadata - Optional request metadata (IP, user agent)
+   * @returns Login token for polling
    */
-  static async request(email: string, metadata?: RequestMetadata): Promise<void> {
+  static async request(email: string, metadata?: RequestMetadata): Promise<RequestResult> {
     const db = DatabaseManager.getRootDb();
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Generate secure random token
+    // Generate secure random tokens
     const token = generateSecureToken(32);
     const tokenHash = hashSha256(token);
+    const loginToken = generateSecureToken(32);
+    const loginTokenHash = hashSha256(loginToken);
 
     // Check if user exists
     const existingUser = db
@@ -62,8 +76,8 @@ export class MagicLinkService {
     db.prepare(
       `
       INSERT INTO email_verification_tokens
-      (id, email, token_hash, token_type, user_id, created_at, expires_at, ip_address, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, email, token_hash, token_type, user_id, created_at, expires_at, ip_address, user_agent, login_token, login_token_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     ).run(
       id,
@@ -74,11 +88,15 @@ export class MagicLinkService {
       Date.now(),
       Date.now() + MAGIC_LINK_EXPIRY_MS,
       metadata?.ipAddress ?? null,
-      metadata?.userAgent ?? null
+      metadata?.userAgent ?? null,
+      loginToken,
+      loginTokenHash
     );
 
     // Send email (or log in dev mode)
     await EmailService.sendMagicLink(normalizedEmail, token);
+
+    return { loginToken };
   }
 
   /**
@@ -165,7 +183,74 @@ export class MagicLinkService {
       userId
     );
 
+    // Create session token for the login
+    const { session, token: sessionToken } = SessionService.create(userId, metadata);
+
+    // Store session token in the email verification record for polling
+    db.prepare("UPDATE email_verification_tokens SET session_token = ?, completed_at = ? WHERE id = ?").run(
+      sessionToken,
+      Date.now(),
+      tokenRecord.id
+    );
+
     return { userId, isNewUser, isAdmin };
+  }
+
+  /**
+   * Poll for login completion using login token
+   *
+   * @param loginToken - The login token returned from request()
+   * @returns Poll result with status and session info if completed
+   */
+  static poll(loginToken: string): PollResult {
+    const db = DatabaseManager.getRootDb();
+    const loginTokenHash = hashSha256(loginToken);
+
+    // Find the token record
+    const tokenRecord = db
+      .prepare(
+        `
+      SELECT * FROM email_verification_tokens
+      WHERE login_token_hash = ? AND expires_at > ?
+    `
+      )
+      .get(loginTokenHash, Date.now()) as any;
+
+    if (!tokenRecord) {
+      throw new AuthenticationError("Invalid or expired login token");
+    }
+
+    if (!tokenRecord.completed_at) {
+      return { status: 'pending' };
+    }
+
+    // Login has been completed, return session info
+    let isNewUser = false;
+    let isAdmin = false;
+
+    if (tokenRecord.user_id) {
+      const user = db.prepare("SELECT is_admin FROM users WHERE id = ?").get(tokenRecord.user_id) as
+        | { is_admin: number }
+        | undefined;
+      isAdmin = Boolean(user?.is_admin);
+    }
+
+    // Check if user was just created
+    if (tokenRecord.user_id) {
+      const user = db.prepare("SELECT created_at FROM users WHERE id = ?").get(tokenRecord.user_id) as
+        | { created_at: number }
+        | undefined;
+      if (user && Math.abs(user.created_at - (tokenRecord.completed_at || 0)) < 1000) {
+        isNewUser = true;
+      }
+    }
+
+    return {
+      status: 'completed',
+      sessionToken: tokenRecord.session_token,
+      isNewUser,
+      isAdmin,
+    };
   }
 
   /**

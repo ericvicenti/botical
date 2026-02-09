@@ -89,6 +89,10 @@ export interface EmailTokenRow {
   used_at: number | null;
   ip_address: string | null;
   user_agent: string | null;
+  login_token: string | null;
+  login_token_hash: string | null;
+  session_token: string | null;
+  completed_at: number | null;
 }
 
 export interface AuthSessionRow {

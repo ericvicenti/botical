@@ -1,12 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, pollLogin } = useAuth();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startPolling = async (loginToken: string) => {
+    setIsPolling(true);
+    setMessage('Check your email and click the magic link to sign in...');
+    
+    // Set 15 minute timeout
+    pollTimeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setError('Login timeout. Please try again.');
+    }, 15 * 60 * 1000);
+    
+    // Poll every 2 seconds
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const result = await pollLogin(loginToken);
+        
+        if (result.status === 'completed') {
+          stopPolling();
+          setMessage('Login successful! Redirecting...');
+          // Auth context will handle the redirect after checkAuth
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+        // Continue polling on errors (network issues, etc.)
+      }
+    }, 2000);
+  };
+  
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+    setIsPolling(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,17 +62,22 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await login(email);
-      setMessage(
-        'If this email is valid, a login link has been sent. Please check your email and click the link to sign in.'
-      );
+      const loginToken = await login(email);
       setEmail('');
+      await startPolling(loginToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send magic link');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-primary">
@@ -59,7 +106,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg bg-bg-elevated text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
               placeholder="Email address"
-              disabled={isLoading}
+              disabled={isLoading || isPolling}
             />
           </div>
 
@@ -77,11 +124,21 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isPolling}
             className="w-full py-2 px-4 bg-accent-primary hover:bg-accent-primary/80 disabled:bg-accent-primary/50 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
           >
-            {isLoading ? 'Sending...' : 'Send Magic Link'}
+            {isLoading ? 'Sending...' : isPolling ? 'Waiting for login...' : 'Send Magic Link'}
           </button>
+          
+          {isPolling && (
+            <button
+              type="button"
+              onClick={stopPolling}
+              className="w-full py-2 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors mt-2"
+            >
+              Cancel
+            </button>
+          )}
         </form>
 
         <div className="text-center text-text-muted text-sm">

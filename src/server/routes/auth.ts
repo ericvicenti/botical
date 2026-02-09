@@ -53,12 +53,13 @@ auth.post("/magic-link", async (c) => {
     userAgent: c.req.header("user-agent"),
   };
 
-  await MagicLinkService.request(email, metadata);
+  const { loginToken } = await MagicLinkService.request(email, metadata);
 
-  // Always return success to prevent email enumeration
+  // Return login token for polling and success message to prevent email enumeration
   return c.json({
     success: true,
     message: "If this email is valid, a login link has been sent",
+    loginToken,
   });
 });
 
@@ -80,13 +81,85 @@ auth.get("/verify", async (c) => {
     userAgent: c.req.header("user-agent"),
   };
 
-  // Verify token and get/create user
+  // Verify token and mark login as completed (session is stored for polling)
   const { userId, isNewUser, isAdmin } = MagicLinkService.verify(token, metadata);
 
-  // Create session
-  const { session, token: sessionToken } = SessionService.create(userId, metadata);
+  // Always return a simple HTML success page
+  const successHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Login Successful</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: system-ui, sans-serif; text-align: center; margin: 0; padding: 40px; background: #f5f5f5; }
+          .container { max-width: 400px; margin: 100px auto; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .success { color: #22c55e; font-size: 48px; margin-bottom: 20px; }
+          h1 { margin: 0 0 20px; color: #333; }
+          p { color: #666; line-height: 1.5; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success">✅</div>
+          <h1>Login Successful!</h1>
+          <p>You have been successfully logged in to Botical.</p>
+          <p>You can close this tab and return to your original browser window.</p>
+        </div>
+      </body>
+    </html>
+  `;
 
-  // Set cookie for browser clients
+  c.header("Content-Type", "text/html");
+  return c.body(successHtml);
+});
+
+/**
+ * Poll for login completion
+ *
+ * GET /auth/poll-login?token=<loginToken>
+ */
+auth.get("/poll-login", async (c) => {
+  const loginToken = c.req.query("token");
+
+  if (!loginToken) {
+    throw new ValidationError("Missing token parameter");
+  }
+
+  try {
+    const result = MagicLinkService.poll(loginToken);
+    return c.json(result);
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      return c.json({ error: error.message }, 401);
+    }
+    throw error;
+  }
+});
+
+/**
+ * Set session cookie
+ *
+ * POST /auth/set-session
+ * Headers: Authorization: Bearer <sessionToken>
+ */
+auth.post("/set-session", async (c) => {
+  const authHeader = c.req.header("Authorization");
+  
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return c.json({ error: "Missing or invalid authorization header" }, 401);
+  }
+  
+  const sessionToken = authHeader.substring(7);
+  
+  // Validate session token
+  const session = SessionService.getByToken(sessionToken);
+  if (!session) {
+    return c.json({ error: "Invalid session token" }, 401);
+  }
+  
+  // Set cookie
   const isProduction = process.env.NODE_ENV === "production";
   const cookieFlags = isProduction
     ? "HttpOnly; Secure; SameSite=Strict"
@@ -96,23 +169,8 @@ auth.get("/verify", async (c) => {
     "Set-Cookie",
     `botical_session=${sessionToken}; ${cookieFlags}; Path=/; Max-Age=${7 * 24 * 60 * 60}`
   );
-
-  // Check Accept header for response type
-  const acceptHeader = c.req.header("Accept") || "";
-  if (acceptHeader.includes("text/html")) {
-    // Redirect browser to appropriate page
-    const redirectUrl = isNewUser ? "/onboarding" : "/";
-    return c.redirect(redirectUrl);
-  }
-
-  // JSON response for API clients
-  return c.json({
-    success: true,
-    sessionId: session.id,
-    token: sessionToken,
-    isNewUser,
-    isAdmin,
-  });
+  
+  return c.json({ success: true });
 });
 
 /**
