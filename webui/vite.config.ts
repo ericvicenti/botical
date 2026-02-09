@@ -16,6 +16,7 @@ export default defineConfig({
   },
   server: {
     port: 6002, // Default to XX02 scheme (can be overridden with --port)
+    allowedHosts: ["tiger.verse.link", "localhost"],
     proxy: {
       "/api": {
         target: `http://localhost:${apiPort}`,
