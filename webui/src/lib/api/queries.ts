@@ -694,6 +694,54 @@ export function useAgents(projectId?: string) {
   });
 }
 
+export function useAgent(name: string, projectId?: string) {
+  return useQuery({
+    queryKey: ["agents", projectId, name],
+    queryFn: async () => {
+      const params = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+      const response = await apiClientRaw<AgentConfig>(`/api/agents/${encodeURIComponent(name)}${params}`);
+      return response.data;
+    },
+    enabled: !!name,
+  });
+}
+
+export function useCreateAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[]; mode?: string; saveToYaml?: boolean }) => {
+      return apiClient<AgentConfig>("/api/agents", { method: "POST", body: JSON.stringify(data) });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["agents", variables.projectId] });
+    },
+  });
+}
+
+export function useUpdateAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: string; name: string; description?: string; prompt?: string; modelId?: string; tools?: string[]; mode?: string }) => {
+      return apiClient<AgentConfig>(`/api/agents/${encodeURIComponent(data.name)}`, { method: "PUT", body: JSON.stringify(data) });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["agents", variables.projectId] });
+    },
+  });
+}
+
+export function useDeleteAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: string; name: string }) => {
+      return apiClient<{ deleted: boolean }>(`/api/agents/${encodeURIComponent(data.name)}?projectId=${encodeURIComponent(data.projectId)}`, { method: "DELETE" });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["agents", variables.projectId] });
+    },
+  });
+}
+
 // Services
 import type { Service } from "./types";
 
