@@ -23,6 +23,7 @@ export const UserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   username: z.string(),
+  displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   isAdmin: z.boolean(),
   canExecuteCode: z.boolean(),
@@ -76,6 +77,7 @@ export interface UserRow {
   created_at: number;
   updated_at: number;
   last_login_at: number | null;
+  display_name: string | null;
 }
 
 export interface EmailTokenRow {
@@ -115,6 +117,7 @@ export function rowToUser(row: UserRow): User {
     id: row.id,
     email: row.email || "",
     username: row.username,
+    displayName: row.display_name || null,
     avatarUrl: row.avatar_url,
     isAdmin: Boolean(row.is_admin),
     canExecuteCode: Boolean(row.can_execute_code),

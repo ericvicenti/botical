@@ -21,6 +21,7 @@ import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcu
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
 import { Route as SettingsExperimentsRouteImport } from './routes/settings/experiments'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProcessesProcessIdRouteImport } from './routes/processes/$processId'
@@ -93,6 +94,11 @@ const SettingsExperimentsRoute = SettingsExperimentsRouteImport.update({
 const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsAboutRoute = SettingsAboutRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/models': typeof SettingsModelsRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/folders/$': typeof FoldersSplatRoute
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/models': typeof SettingsModelsRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/experiments': typeof SettingsExperimentsRoute
   '/settings/models': typeof SettingsModelsRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/processes/$processId'
     | '/projects/$projectId'
     | '/settings/about'
+    | '/settings/account'
     | '/settings/api-keys'
     | '/settings/experiments'
     | '/settings/models'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/folders/$'
     | '/processes/$processId'
     | '/settings/about'
+    | '/settings/account'
     | '/settings/api-keys'
     | '/settings/experiments'
     | '/settings/models'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/processes/$processId'
     | '/projects/$projectId'
     | '/settings/about'
+    | '/settings/account'
     | '/settings/api-keys'
     | '/settings/experiments'
     | '/settings/models'
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsApiKeysRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/about': {
       id: '/settings/about'
       path: '/about'
@@ -526,6 +545,7 @@ declare module '@tanstack/react-router' {
 
 interface SettingsRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
+  SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   SettingsExperimentsRoute: typeof SettingsExperimentsRoute
   SettingsModelsRoute: typeof SettingsModelsRoute
@@ -536,6 +556,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
+  SettingsAccountRoute: SettingsAccountRoute,
   SettingsApiKeysRoute: SettingsApiKeysRoute,
   SettingsExperimentsRoute: SettingsExperimentsRoute,
   SettingsModelsRoute: SettingsModelsRoute,

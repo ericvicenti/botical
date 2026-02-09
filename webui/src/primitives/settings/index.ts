@@ -5,7 +5,8 @@
  */
 
 // Pages
-export { apiKeysPage, modelsPage, shortcutsPage, themePage, aboutPage } from "./pages";
+export { accountPage, apiKeysPage, modelsPage, shortcutsPage, themePage, aboutPage } from "./pages";
+export { default as AccountPage } from "./AccountPage";
 export { default as ApiKeysPage } from "./ApiKeysPage";
 export { default as ModelsPage } from "./ModelsPage";
 export { default as ShortcutsPage } from "./ShortcutsPage";

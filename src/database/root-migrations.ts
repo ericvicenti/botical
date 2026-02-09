@@ -224,4 +224,13 @@ export const ROOT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 4,
+    name: "user_display_name",
+    up: (db) => {
+      db.exec(`
+        ALTER TABLE users ADD COLUMN display_name TEXT;
+      `);
+    },
+  },
 ];

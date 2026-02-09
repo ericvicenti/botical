@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 import { useNavigate, useLocation } from "@tanstack/react-router";
-import { Key, Palette, Keyboard, Beaker, Info } from "lucide-react";
+import { Key, Palette, Keyboard, Beaker, Info, User } from "lucide-react";
 import type { SettingsPage } from "@/types/tabs";
 
 interface SettingsItem {
@@ -11,6 +11,7 @@ interface SettingsItem {
 }
 
 const SETTINGS_ITEMS: SettingsItem[] = [
+  { id: "account", label: "Account", icon: User, path: "/settings/account" },
   { id: "models", label: "Model Providers", icon: Key, path: "/settings/models" },
   { id: "theme", label: "Theme", icon: Palette, path: "/settings/theme" },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard, path: "/settings/shortcuts" },
@@ -38,7 +39,7 @@ export function SettingsPanel() {
       <div className="flex-1 overflow-auto py-1">
         {SETTINGS_ITEMS.map((item) => {
           const isActive = location.pathname === item.path ||
-            (location.pathname === "/settings" && item.id === "models");
+            (location.pathname === "/settings" && item.id === "account");
           return (
             <button
               key={item.id}

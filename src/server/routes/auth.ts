@@ -214,6 +214,38 @@ auth.get("/me", requireAuth(), async (c) => {
 });
 
 /**
+ * Update current user profile
+ *
+ * PATCH /auth/me
+ * Body: { displayName?: string }
+ */
+auth.patch("/me", requireAuth(), async (c) => {
+  const authContext = c.get("auth");
+  const body = await c.req.json();
+  const db = DatabaseManager.getRootDb();
+
+  const displayName = body.displayName !== undefined ? body.displayName : undefined;
+
+  if (displayName !== undefined) {
+    db.prepare("UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?").run(
+      displayName || null,
+      Date.now(),
+      authContext.userId
+    );
+  }
+
+  const userRow = db.prepare("SELECT * FROM users WHERE id = ?").get(authContext.userId) as
+    | UserRow
+    | undefined;
+
+  if (!userRow) {
+    return c.json({ user: null }, 404);
+  }
+
+  return c.json({ user: rowToUser(userRow) });
+});
+
+/**
  * List active sessions for current user
  *
  * GET /auth/sessions

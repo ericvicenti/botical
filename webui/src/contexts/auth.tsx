@@ -4,7 +4,9 @@ import { setGlobalAuthCheck } from '@/lib/auth/globalCheck';
 
 export interface User {
   userId: string;
+  id?: string;
   email: string;
+  displayName?: string | null;
   isAdmin: boolean;
   canExecuteCode: boolean;
 }
@@ -17,6 +19,7 @@ export interface AuthContextType {
   login: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateProfile: (data: { displayName?: string }) => Promise<void>;
   pollLogin: (loginToken: string) => Promise<{ status: string; sessionToken?: string; isNewUser?: boolean; isAdmin?: boolean }>;
 }
 
@@ -92,6 +95,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateProfile = async (data: { displayName?: string }) => {
+    const response = await apiClient<{ user: User }>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    setUser(response.user);
+  };
+
   const pollLogin = async (loginToken: string) => {
     try {
       const response = await apiClient<{ status: string; sessionToken?: string; isNewUser?: boolean; isAdmin?: boolean }>(`/auth/poll-login?token=${encodeURIComponent(loginToken)}`);
@@ -132,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     checkAuth,
+    updateProfile,
     pollLogin,
   };
 

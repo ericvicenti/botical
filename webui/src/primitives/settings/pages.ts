@@ -1,10 +1,34 @@
 import { z } from "zod";
 import { definePage } from "../registry";
+import AccountPage from "./AccountPage";
 import ApiKeysPage from "./ApiKeysPage";
 import ModelsPage from "./ModelsPage";
 import ShortcutsPage from "./ShortcutsPage";
 import ThemePage from "./ThemePage";
 import AboutPage from "./AboutPage";
+
+/**
+ * Page: Account Settings
+ */
+export const accountPage = definePage({
+  id: "settings.account",
+  icon: "user",
+  category: "settings",
+  description: "Manage your account",
+
+  getLabel: () => "Account",
+  getTitle: () => "Account - Settings",
+
+  params: z.object({}),
+
+  route: "/settings/account",
+
+  parseParams: () => ({}),
+
+  getRouteParams: () => ({}),
+
+  component: AccountPage,
+});
 
 /**
  * Page: Model Provider Settings
