@@ -111,16 +111,7 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
         apiKey = currentSettings.googleApiKey;
       }
 
-      await sendMessage.mutateAsync({
-        projectId,
-        sessionId: session.id,
-        content: message.trim(),
-        userId: currentSettings.userId,
-        providerId,
-        apiKey,
-        modelId,
-      });
-
+      // Navigate and close immediately, send message in background
       openTab({
         type: "task",
         sessionId: session.id,
@@ -129,6 +120,17 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       });
       navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
       onClose();
+
+      // Fire and forget — the task page will show the streaming response
+      sendMessage.mutate({
+        projectId,
+        sessionId: session.id,
+        content: message.trim(),
+        userId: currentSettings.userId,
+        providerId,
+        apiKey,
+        modelId,
+      });
     } catch (err) {
       console.error("Failed to create task:", err);
       alert(`Failed to create task: ${err instanceof Error ? err.message : "Unknown error"}`);
