@@ -138,6 +138,21 @@ export default function ModelsPage(_props: ModelsPageProps) {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  // Auto-check health on page load and when values change (debounced)
+  useEffect(() => {
+    const toCheck = PROVIDERS.filter(
+      (p) => enabled[p.id] && values[p.id] && health[p.id] === "idle"
+    );
+    if (toCheck.length === 0) return;
+
+    const timer = setTimeout(() => {
+      for (const p of toCheck) {
+        checkHealth(p.id);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [enabled, values, health]);
+
   const checkHealth = useCallback(async (providerId: string) => {
     const value = values[providerId];
     if (!value) return;
@@ -280,17 +295,8 @@ export default function ModelsPage(_props: ModelsPageProps) {
                   </div>
                 </div>
                 {/* Health indicator */}
-                {isEnabled && value && (
+                {isEnabled && value && status !== "idle" && (
                   <div className="flex items-center gap-1.5">
-                    {status === "idle" && (
-                      <button
-                        onClick={() => checkHealth(provider.id)}
-                        className="text-xs text-text-muted hover:text-accent-primary transition-colors"
-                        data-testid={`check-${provider.id}`}
-                      >
-                        Test
-                      </button>
-                    )}
                     {status === "checking" && (
                       <Loader2 className="w-4 h-4 text-text-muted animate-spin" />
                     )}
