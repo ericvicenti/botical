@@ -230,20 +230,27 @@ export function createWebSocketHandler() {
           return;
         }
 
-        // Multi-user mode: validate token
-        if (!token || !projectId) {
-          rawWs.close(4001, "Missing token or projectId");
+        // Multi-user mode: validate token (from query param or cookie)
+        const cookieHeader = c.req.header("Cookie");
+        const cookieToken = cookieHeader?.match(/botical_session=([^;]+)/)?.[1];
+        const authToken = token || cookieToken;
+
+        if (!authToken) {
+          rawWs.close(4001, "Missing authentication token");
           return;
         }
 
-        const userInfo = validateToken(token);
+        const userInfo = validateToken(authToken);
         if (!userInfo) {
           rawWs.close(4001, "Invalid token");
           return;
         }
 
-        // Check project access
-        if (!hasProjectAccess(userInfo.userId, projectId)) {
+        // Default to global if no projectId
+        const targetProjectId = projectId || "global";
+
+        // Check project access (skip for global connections)
+        if (targetProjectId !== "global" && !hasProjectAccess(userInfo.userId, targetProjectId)) {
           rawWs.close(4003, "Access denied to project");
           return;
         }
@@ -251,7 +258,7 @@ export function createWebSocketHandler() {
         // Store connection data
         userData = {
           userId: userInfo.userId,
-          projectId,
+          projectId: targetProjectId,
           connectionId,
         };
 
@@ -259,20 +266,20 @@ export function createWebSocketHandler() {
         ConnectionManager.add(connectionId, {
           ws: rawWs,
           userId: userInfo.userId,
-          projectId,
+          projectId: targetProjectId,
           connectedAt: Date.now(),
           lastActivity: Date.now(),
         });
 
         // Join project room
-        RoomManager.join(getProjectRoom(projectId), connectionId);
+        RoomManager.join(getProjectRoom(targetProjectId), connectionId);
 
         // Send welcome message
         rawWs.send(
           JSON.stringify(
             createEvent("connected", {
               connectionId,
-              projectId,
+              projectId: targetProjectId,
               userId: userInfo.userId,
             })
           )

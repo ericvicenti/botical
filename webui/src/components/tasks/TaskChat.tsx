@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useSession, useSettings, useProject, useCoreTools, useSkills } from "@/lib/api/queries";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { sessionsUpdateSystemPromptMutation, sessionsUpdateMutation } from "@/queries/sessions";
+import { useSession, useSettings, useProject, useCoreTools, useSkills, useUpdateSystemPrompt } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown, Edit, Save } from "lucide-react";
+import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
@@ -58,29 +56,12 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   } = useTaskMessages({ sessionId, projectId });
 
   // System prompt mutation
-  const queryClient = useQueryClient();
-
-  // System prompt mutation
-  const updateSystemPromptMutation = useMutation({
-    ...sessionsUpdateSystemPromptMutation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sessions.get", projectId, sessionId] });
-      setIsEditingSystemPrompt(false);
-    },
-  });
-
-  // Session update mutation
-  const updateSessionMutation = useMutation({
-    ...sessionsUpdateMutation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sessions.get", projectId, sessionId] });
-    },
-  });
+  const updateSystemPromptMutation = useUpdateSystemPrompt();
 
   const [input, setInput] = useState("");
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
   const [editedSystemPrompt, setEditedSystemPrompt] = useState("");
+  const [originalSystemPrompt, setOriginalSystemPrompt] = useState("");
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -176,25 +157,46 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     });
   };
 
-  const handleEditSystemPrompt = () => {
-    setEditedSystemPrompt(session?.systemPrompt || "");
-    setIsEditingSystemPrompt(true);
+  // Check if system prompt has been modified
+  const isSystemPromptDirty = editedSystemPrompt !== originalSystemPrompt;
+
+  const handleOpenSystemPrompt = () => {
+    const currentPrompt = session?.systemPrompt || "";
+    setEditedSystemPrompt(currentPrompt);
+    setOriginalSystemPrompt(currentPrompt);
+    setShowSystemPrompt(true);
   };
 
-  const handleSaveSystemPrompt = async () => {
+  const handleSaveSystemPrompt = useCallback(async () => {
     if (!session) return;
     
-    await updateSystemPromptMutation.mutateAsync({
-      projectId,
-      sessionId: session.id,
-      systemPrompt: editedSystemPrompt.trim() || null,
-    });
-  };
+    try {
+      await updateSystemPromptMutation.mutateAsync({
+        projectId,
+        sessionId: session.id,
+        systemPrompt: editedSystemPrompt.trim() || null,
+      });
+      
+      // Update the original after saving
+      setOriginalSystemPrompt(editedSystemPrompt);
+    } catch (error) {
+      console.error('Failed to save system prompt:', error);
+    }
+  }, [session, projectId, editedSystemPrompt, updateSystemPromptMutation]);
 
-  const handleCancelSystemPrompt = () => {
-    setIsEditingSystemPrompt(false);
-    setEditedSystemPrompt("");
-  };
+  const handleDiscardChanges = useCallback(() => {
+    setEditedSystemPrompt(originalSystemPrompt);
+  }, [originalSystemPrompt]);
+
+  const handleCloseSystemPrompt = useCallback(() => {
+    if (isSystemPromptDirty) {
+      const confirmed = window.confirm(
+        "You have unsaved changes to the system prompt. Are you sure you want to close without saving?"
+      );
+      if (!confirmed) return;
+    }
+    setShowSystemPrompt(false);
+  }, [isSystemPromptDirty]);
 
   // Filter models based on which API keys are configured
   const availableModels = useMemo(() => {
@@ -334,6 +336,29 @@ You have access to tools for reading, writing, and editing files, as well as exe
       return () => clearTimeout(timer);
     }
   }, [sessionId, isActive]);
+
+  // Handle keyboard shortcuts for system prompt
+  useEffect(() => {
+    if (!showSystemPrompt) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+S or Ctrl+S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (!updateSystemPromptMutation.isPending && isSystemPromptDirty) {
+          handleSaveSystemPrompt();
+        }
+      }
+      // Escape to close (with dirty state protection)
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleCloseSystemPrompt();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showSystemPrompt, updateSystemPromptMutation.isPending, isSystemPromptDirty, handleSaveSystemPrompt, handleCloseSystemPrompt]);
 
   // Close dropdowns and panels when clicking outside
   useEffect(() => {
@@ -495,7 +520,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
           <Sparkles className="w-5 h-5" />
         </button>
         <button
-          onClick={() => setShowSystemPrompt(true)}
+          onClick={handleOpenSystemPrompt}
           className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
           title="View system prompt"
         >
@@ -516,92 +541,101 @@ You have access to tools for reading, writing, and editing files, as well as exe
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-3">
                 <h3 className="font-medium text-text-primary">System Prompt</h3>
-                {session?.systemPrompt && (
+                {editedSystemPrompt.trim() && (
                   <span className="px-2 py-1 text-xs bg-accent-primary/10 text-accent-primary rounded-full">
                     Custom
                   </span>
                 )}
+                {isSystemPromptDirty && (
+                  <span className="px-2 py-1 text-xs bg-yellow-500/10 text-yellow-500 rounded-full">
+                    Unsaved Changes
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                {!isEditingSystemPrompt ? (
+                <button
+                  onClick={handleSaveSystemPrompt}
+                  disabled={!isSystemPromptDirty || updateSystemPromptMutation.isPending}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                    isSystemPromptDirty && !updateSystemPromptMutation.isPending
+                      ? "bg-accent-primary text-white hover:bg-accent-primary/90"
+                      : "bg-bg-elevated text-text-muted cursor-not-allowed"
+                  )}
+                  title={`Save changes ${isSystemPromptDirty ? "(Cmd+S)" : ""}`}
+                >
+                  {updateSystemPromptMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Save"
+                  )}
+                </button>
+                {isSystemPromptDirty && (
                   <button
-                    onClick={handleEditSystemPrompt}
-                    className="p-2 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
-                    title="Edit system prompt"
+                    onClick={handleDiscardChanges}
+                    disabled={updateSystemPromptMutation.isPending}
+                    className="px-3 py-1.5 rounded text-sm font-medium bg-bg-elevated text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors disabled:opacity-50"
+                    title="Discard changes"
                   >
-                    <Edit className="w-4 h-4" />
+                    Discard
                   </button>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={handleSaveSystemPrompt}
-                      disabled={updateSystemPromptMutation.isPending}
-                      className="p-2 hover:bg-bg-elevated rounded text-accent-primary hover:text-accent-primary/80 disabled:opacity-50"
-                      title="Save changes"
-                    >
-                      {updateSystemPromptMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={handleCancelSystemPrompt}
-                      disabled={updateSystemPromptMutation.isPending}
-                      className="p-2 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary disabled:opacity-50"
-                      title="Cancel changes"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
                 )}
                 <button
-                  onClick={() => setShowSystemPrompt(false)}
+                  onClick={handleCloseSystemPrompt}
                   className="p-1 hover:bg-bg-elevated rounded text-text-muted hover:text-text-primary"
+                  title={isSystemPromptDirty ? "Close (will confirm unsaved changes)" : "Close"}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {isEditingSystemPrompt ? (
-                <div className="h-full flex flex-col">
+              <div className="h-full flex flex-col gap-4">
+                {/* Always editable textarea */}
+                <div className="flex-1 flex flex-col">
+                  <label className="text-sm font-medium text-text-primary mb-2">
+                    Custom System Prompt
+                  </label>
                   <textarea
                     value={editedSystemPrompt}
                     onChange={(e) => setEditedSystemPrompt(e.target.value)}
-                    placeholder="Enter your custom system prompt..."
-                    className="flex-1 w-full p-4 bg-bg-secondary border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted font-mono resize-none focus:outline-none focus:border-accent-primary"
-                    style={{ minHeight: "400px" }}
+                    placeholder="Enter your custom system prompt... (leave empty to use default)"
+                    className={cn(
+                      "flex-1 w-full p-4 bg-bg-secondary border rounded-lg text-sm text-text-primary placeholder:text-text-muted font-mono resize-none focus:outline-none transition-colors",
+                      isSystemPromptDirty 
+                        ? "border-accent-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/50" 
+                        : "border-border focus:border-accent-primary"
+                    )}
+                    style={{ minHeight: "300px" }}
                   />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {session?.systemPrompt ? (
-                    <div>
-                      <h4 className="text-sm font-medium text-text-primary mb-2">Custom System Prompt</h4>
-                      <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
-                        {session.systemPrompt}
-                      </pre>
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="text-sm font-medium text-text-primary mb-2">Generated System Prompt</h4>
-                      <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono bg-bg-secondary p-4 rounded-lg">
-                        {systemPromptPreview}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
+
+                {/* Preview section when using default */}
+                {!editedSystemPrompt.trim() && (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-sm font-medium text-text-primary mb-2">Default System Prompt Preview</h4>
+                    <pre className="text-xs text-text-secondary whitespace-pre-wrap font-mono bg-bg-elevated p-3 rounded-lg max-h-40 overflow-y-auto">
+                      {systemPromptPreview}
+                    </pre>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="px-4 py-3 border-t border-border text-xs text-text-muted">
-              {isEditingSystemPrompt ? (
-                "Custom system prompts override the default agent prompt. Leave empty to use the default."
-              ) : session?.systemPrompt ? (
-                "Using custom system prompt. Click edit to modify or clear to use default."
-              ) : (
-                "Using default system prompt generated from agent configuration and project context."
-              )}
+            <div className="px-4 py-3 border-t border-border">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-muted">
+                  {editedSystemPrompt.trim() ? (
+                    "Custom system prompts override the default agent prompt."
+                  ) : (
+                    "Using default system prompt generated from agent configuration and project context."
+                  )}
+                </p>
+                {isSystemPromptDirty && (
+                  <p className="text-xs text-text-muted">
+                    Press <kbd className="px-1 py-0.5 text-xs bg-bg-elevated border border-border rounded">Cmd+S</kbd> to save
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
