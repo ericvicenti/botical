@@ -380,8 +380,12 @@ export class ProjectService {
     const params: (string | number | null)[] = [];
     const conditions: string[] = [];
 
-    // Join with members if filtering by memberId
-    if (options.memberId) {
+    // Scope to requesting user's projects (owner or member)
+    if (options.requestingUserId) {
+      query += " LEFT JOIN project_members pm ON p.id = pm.project_id";
+      conditions.push("(p.owner_id = ? OR pm.user_id = ?)");
+      params.push(options.requestingUserId, options.requestingUserId);
+    } else if (options.memberId) {
       query += " LEFT JOIN project_members pm ON p.id = pm.project_id";
       conditions.push("(p.owner_id = ? OR pm.user_id = ?)");
       params.push(options.memberId, options.memberId);

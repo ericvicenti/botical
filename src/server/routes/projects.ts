@@ -185,11 +185,21 @@ projects.get("/:id", async (c) => {
   const rootDb = DatabaseManager.getRootDb();
   const project = ProjectService.getByIdOrThrow(rootDb, projectId);
 
+  const auth = c.get("auth");
+
   // Root project requires admin access in multi-user mode
   if (projectId === ROOT_PROJECT_ID) {
-    const auth = c.get("auth");
     if (!auth || !ProjectService.hasRootAccess(rootDb, auth.userId)) {
       throw new ForbiddenError("Admin access required for root project");
+    }
+  } else if (auth) {
+    // Check user is owner or member
+    const isMember = rootDb.prepare(
+      "SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?"
+    ).get(projectId, auth.userId);
+    const isOwner = project.ownerId === auth.userId;
+    if (!isMember && !isOwner && !auth.isAdmin) {
+      throw new ForbiddenError("You do not have access to this project");
     }
   }
 
