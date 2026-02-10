@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { getTabRoute, parseUrlToTabData, generateTabId } from "@/lib/tabs";
+import { useUI } from "@/contexts/ui";
 import type { Tab } from "@/types/tabs";
 
 const TAB_ICONS = {
@@ -84,9 +85,16 @@ export function TabBar() {
   const effectiveActiveId = currentTabId;
 
   const handleTabClick = (tab: Tab) => {
-    setActiveTab(tab.id);
-    const route = getTabRoute(tab);
-    navigate({ to: route.to, params: route.params });
+    if (tab.id === effectiveActiveId) {
+      // Tapping the already-active tab: pin it if preview
+      if (tab.preview) pinTab(tab.id);
+    } else {
+      setActiveTab(tab.id);
+      // Pin on single tap for mobile (no double-tap UX)
+      if (tab.preview) pinTab(tab.id);
+      const route = getTabRoute(tab);
+      navigate({ to: route.to, params: route.params });
+    }
   };
 
   const handleTabDoubleClick = (tab: Tab) => {
@@ -115,9 +123,24 @@ export function TabBar() {
     closeTab(tab.id);
   };
 
+  const { toggleSidebar } = useUI();
+
+  const hamburgerButton = (
+    <button
+      onClick={toggleSidebar}
+      className="md:hidden w-9 h-9 flex items-center justify-center hover:bg-bg-elevated transition-colors text-text-secondary shrink-0"
+      title="Toggle sidebar"
+    >
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  );
+
   if (tabs.length === 0 && !currentTabData) {
     return (
       <div className="h-9 bg-bg-secondary border-b border-border flex items-center px-3">
+        {hamburgerButton}
         <span className="text-sm text-text-muted">No open tabs</span>
       </div>
     );
@@ -125,6 +148,7 @@ export function TabBar() {
 
   return (
     <div className="h-9 bg-bg-secondary border-b border-border flex overflow-x-auto scrollbar-thin">
+      {hamburgerButton}
       {tabs.map((tab) => {
         const Icon = getTabIcon(tab);
         const isActive = tab.id === effectiveActiveId;
@@ -135,7 +159,7 @@ export function TabBar() {
             onDoubleClick={() => handleTabDoubleClick(tab)}
             className={cn(
               "group h-full px-3 flex items-center gap-2 border-r border-border cursor-pointer shrink-0",
-              "hover:bg-bg-elevated transition-colors max-w-48",
+              "sm:hover:bg-bg-elevated active:bg-bg-elevated transition-colors max-w-48 touch-manipulation",
               isActive
                 ? "bg-bg-primary text-text-primary border-b-2 border-b-accent-primary"
                 : "text-text-secondary border-b-2 border-b-transparent",
@@ -155,7 +179,7 @@ export function TabBar() {
                   e.stopPropagation();
                   handleCloseTab(tab);
                 }}
-                className="opacity-0 group-hover:opacity-100 hover:bg-bg-elevated rounded p-0.5 shrink-0"
+                className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto hover:bg-bg-elevated rounded p-0.5 shrink-0"
               >
                 <X className="w-3 h-3" />
               </button>

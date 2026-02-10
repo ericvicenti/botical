@@ -212,6 +212,7 @@ function FileTreeNode({
   const { data: children, isLoading } = useFiles(projectId, file.path);
   const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
+  const { closeSidebarOnMobile } = useUI();
   const renameFile = useRenameFile();
 
   // Check if this node should be expanded to reveal the target path
@@ -271,8 +272,9 @@ function FileTreeNode({
         path: file.path,
       });
       navigate({ to: `/files/${projectId}/${file.path}` });
+      closeSidebarOnMobile();
     }
-  }, [file, projectId, expanded, openPreviewTab, navigate, isRenaming]);
+  }, [file, projectId, expanded, openPreviewTab, navigate, isRenaming, closeSidebarOnMobile]);
 
   // Double click opens permanent tab
   const handleDoubleClick = useCallback(() => {
@@ -291,8 +293,9 @@ function FileTreeNode({
         path: file.path,
       });
       navigate({ to: `/files/${projectId}/${file.path}` });
+      closeSidebarOnMobile();
     }
-  }, [file, projectId, openTab, navigate, isRenaming]);
+  }, [file, projectId, openTab, navigate, isRenaming, closeSidebarOnMobile]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();

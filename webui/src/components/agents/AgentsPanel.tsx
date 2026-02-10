@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAgents, useCreateAgent, useDeleteAgent } from "@/lib/api/queries";
+import { useUI } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
 import { Bot, Plus, Trash2, ChevronRight, X, Check } from "lucide-react";
 
@@ -10,6 +11,7 @@ interface AgentsPanelProps {
 
 export function AgentsPanel({ projectId }: AgentsPanelProps) {
   const navigate = useNavigate();
+  const { closeSidebarOnMobile } = useUI();
   const { data: agents, isLoading } = useAgents(projectId);
   const createAgent = useCreateAgent();
   const deleteAgent = useDeleteAgent();
@@ -31,6 +33,7 @@ export function AgentsPanel({ projectId }: AgentsPanelProps) {
       setIsCreating(false);
       // Navigate to the new agent page
       navigate({ to: "/projects/$projectId/agents/$agentName", params: { projectId, agentName: name } });
+      closeSidebarOnMobile();
     } catch (err) {
       alert(`Failed to create agent: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
@@ -109,14 +112,14 @@ export function AgentsPanel({ projectId }: AgentsPanelProps) {
           <div className="px-3 py-2 text-sm text-text-muted">Loading...</div>
         ) : agents && agents.length > 0 ? (
           agents.map((agent) => (
-            <div
+            <button
               key={agent.id}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 group",
-                "hover:bg-bg-elevated transition-colors cursor-pointer",
+                "w-full flex items-center gap-2 px-3 py-2 text-left group",
+                "hover:bg-bg-elevated active:bg-bg-elevated transition-colors",
                 "text-sm text-text-primary"
               )}
-              onClick={() => navigate({ to: "/projects/$projectId/agents/$agentName", params: { projectId, agentName: agent.name } })}
+              onClick={() => { navigate({ to: "/projects/$projectId/agents/$agentName", params: { projectId, agentName: agent.name } }); closeSidebarOnMobile(); }}
             >
               <Bot className="w-4 h-4 text-accent-primary shrink-0" />
               <div className="flex-1 min-w-0">
@@ -130,14 +133,14 @@ export function AgentsPanel({ projectId }: AgentsPanelProps) {
               ) : (
                 <button
                   onClick={(e) => handleDelete(agent.name, e)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 text-text-muted hover:text-accent-error transition-all"
+                  className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto p-0.5 text-text-muted hover:text-accent-error transition-all"
                   title="Delete agent"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
               <ChevronRight className="w-3.5 h-3.5 text-text-muted shrink-0" />
-            </div>
+            </button>
           ))
         ) : (
           <div className="px-3 py-4 text-center">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSessions } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
+import { useUI } from "@/contexts/ui";
 import { cn } from "@/lib/utils/cn";
 import { Plus, MessageSquare, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -108,6 +109,7 @@ function TaskItem({
 }) {
   const { openPreviewTab } = useTabs();
   const navigate = useNavigate();
+  const { closeSidebarOnMobile } = useUI();
 
   const handleClick = () => {
     openPreviewTab({
@@ -117,6 +119,7 @@ function TaskItem({
       title: session.title,
     });
     navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
+    closeSidebarOnMobile();
   };
 
   const timeAgo = formatTimeAgo(session.createdAt);
@@ -147,7 +150,7 @@ function TaskItem({
           e.stopPropagation();
           // TODO: Show context menu
         }}
-        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-bg-secondary rounded"
+        className="p-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto hover:bg-bg-secondary rounded"
       >
         <MoreHorizontal className="w-3 h-3 text-text-muted" />
       </button>

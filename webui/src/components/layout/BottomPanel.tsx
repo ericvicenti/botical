@@ -5,7 +5,7 @@ export function BottomPanel() {
   const { status } = useWebSocket();
 
   return (
-    <div className="h-6 bg-bg-secondary border-t border-border flex items-center justify-end px-3">
+    <div className="h-6 bg-bg-secondary border-t border-border hidden sm:flex items-center justify-end px-3">
       <ConnectionStatus status={status} />
     </div>
   );

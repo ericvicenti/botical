@@ -50,6 +50,20 @@
     @apply antialiased;
   }
 
+  /* Eliminate 300ms tap delay on all interactive elements */
+  a, button, [role="button"], input, select, textarea, [tabindex] {
+    touch-action: manipulation;
+  }
+
+  /* Provide active/tap feedback on touch devices since hover: is disabled */
+  @media (hover: none) {
+    button:active,
+    [role="button"]:active,
+    a:active {
+      background-color: var(--color-bg-elevated);
+    }
+  }
+
   * {
     @apply border-border;
   }
@@ -74,6 +88,16 @@
 }
 
 @layer components {
+  /* Mobile sidebar: full width on small screens, use JS width on desktop */
+  .sidebar-mobile {
+    width: 100vw;
+  }
+  @media (min-width: 768px) {
+    .sidebar-mobile {
+      width: var(--sidebar-width, 240px);
+    }
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: theme("colors.border") transparent;

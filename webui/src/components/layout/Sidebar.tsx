@@ -116,6 +116,7 @@ export function Sidebar() {
   }, [isResizing, resize, stopResizing]);
 
   // Unified sidebar with animation support
+  // On mobile (< md), always show full width when visible (collapsed means hidden via parent)
   const effectiveWidth = sidebarCollapsed ? 48 : sidebarWidth;
 
   // Handler for icon clicks when collapsed - expand and switch to panel
@@ -127,8 +128,8 @@ export function Sidebar() {
   return (
     <div
       ref={sidebarRef}
-      className="bg-bg-secondary border-r border-border flex flex-col relative transition-[width] duration-200 ease-out"
-      style={{ width: effectiveWidth }}
+      className="bg-bg-secondary border-r border-border flex flex-col relative transition-[width] duration-200 ease-out h-full sidebar-mobile"
+      style={{ '--sidebar-width': `${effectiveWidth}px` } as React.CSSProperties}
     >
       {/* Project selector - only show when expanded and project selected */}
       {selectedProjectId && !sidebarCollapsed && <ProjectSelector />}
@@ -272,7 +273,7 @@ function ResizeHandle({
 
 function ProjectList() {
   const { data: projects, isLoading } = useProjects();
-  const { setSelectedProject } = useUI();
+  const { setSelectedProject, closeSidebarOnMobile } = useUI();
   const { openPreviewTab, openTab } = useTabs();
   const navigate = useNavigate();
 
@@ -284,6 +285,7 @@ function ProjectList() {
       projectName: project.name,
     });
     navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
+    closeSidebarOnMobile();
   };
 
   const handleCreateProject = () => {
@@ -544,6 +546,7 @@ function ServicesPanelWrapper({ selectedProjectId }: { selectedProjectId: string
 
 function WorkflowsPanel({ selectedProjectId }: { selectedProjectId: string | null }) {
   const navigate = useNavigate();
+  const { closeSidebarOnMobile } = useUI();
   const { data: workflows, isLoading } = useWorkflows(selectedProjectId || "");
   const createWorkflow = useCreateWorkflow();
 
@@ -601,7 +604,7 @@ function WorkflowsPanel({ selectedProjectId }: { selectedProjectId: string | nul
           workflows.map((workflow) => (
             <button
               key={workflow.id}
-              onClick={() => navigate({ to: `/workflows/${workflow.id}` })}
+              onClick={() => { navigate({ to: `/workflows/${workflow.id}` }); closeSidebarOnMobile(); }}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 text-left",
                 "hover:bg-bg-elevated transition-colors",

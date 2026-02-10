@@ -1,39 +1,39 @@
 /**
  * Email Service
  *
- * Sends emails via Resend API in production, logs to console in development.
- * Uses Resend for reliable delivery (good IP reputation with Gmail etc).
- * Stalwart handles inbound email only.
- *
- * Configuration:
- * - RESEND_API_KEY: Resend API key (required for production)
- * - EMAIL_FROM: From address for emails
- * - APP_URL: Base URL for magic links
+ * Sends emails via:
+ * 1. SMTP (nodemailer) if SMTP_HOST is configured
+ * 2. Resend API if RESEND_API_KEY is configured
+ * 3. Console logging in dev mode (neither configured)
  */
 
 import { z } from "zod";
+import nodemailer from "nodemailer";
 
 const EmailConfigSchema = z.object({
   resendApiKey: z.string().optional(),
+  smtpHost: z.string().optional(),
+  smtpPort: z.coerce.number().optional().default(465),
+  smtpUser: z.string().optional(),
+  smtpPass: z.string().optional(),
   fromEmail: z.string().default("noreply@botical.local"),
   appUrl: z.string().url().default("http://localhost:6001"),
 });
 
 type EmailConfig = z.infer<typeof EmailConfigSchema>;
 
-/**
- * Email Service for sending transactional emails
- *
- * In development mode (no RESEND_API_KEY), magic links are logged to console.
- * In production mode, emails are sent via Resend API (good deliverability).
- */
 class EmailServiceClass {
   private config: EmailConfig | null = null;
+  private transporter: nodemailer.Transporter | null = null;
 
   private getConfig(): EmailConfig {
     if (!this.config) {
       this.config = EmailConfigSchema.parse({
         resendApiKey: process.env.RESEND_API_KEY,
+        smtpHost: process.env.SMTP_HOST,
+        smtpPort: process.env.SMTP_PORT,
+        smtpUser: process.env.SMTP_USER,
+        smtpPass: process.env.SMTP_PASS,
         fromEmail: process.env.EMAIL_FROM,
         appUrl: process.env.APP_URL,
       });
@@ -41,8 +41,25 @@ class EmailServiceClass {
     return this.config;
   }
 
+  private getTransporter(): nodemailer.Transporter {
+    if (!this.transporter) {
+      const config = this.getConfig();
+      this.transporter = nodemailer.createTransport({
+        host: config.smtpHost,
+        port: config.smtpPort,
+        secure: config.smtpPort === 465,
+        auth: config.smtpUser
+          ? { user: config.smtpUser, pass: config.smtpPass }
+          : undefined,
+        tls: { rejectUnauthorized: false },
+      });
+    }
+    return this.transporter;
+  }
+
   isDevMode(): boolean {
-    return !this.getConfig().resendApiKey;
+    const config = this.getConfig();
+    return !config.resendApiKey && !config.smtpHost;
   }
 
   getAppUrl(): string {
@@ -53,7 +70,7 @@ class EmailServiceClass {
     const config = this.getConfig();
     const magicLink = `${config.appUrl}/auth/verify?token=${token}`;
 
-    if (!config.resendApiKey) {
+    if (this.isDevMode()) {
       console.log("\n========================================");
       console.log("MAGIC LINK (dev mode)");
       console.log(`Email: ${email}`);
@@ -87,13 +104,13 @@ class EmailServiceClass {
 
     const text = `Login to Botical\n\nClick this link to log in: ${magicLink}\n\nThis link expires in 15 minutes.\n\nIf you didn't request this, ignore this email.`;
 
-    await this.sendViaResend(email, "Your Botical Login Link", html, text);
+    await this.send(email, "Your Botical Login Link", html, text);
   }
 
   async send(to: string, subject: string, html: string, text: string): Promise<void> {
     const config = this.getConfig();
 
-    if (!config.resendApiKey) {
+    if (this.isDevMode()) {
       console.log("\n========================================");
       console.log("EMAIL (dev mode)");
       console.log(`To: ${to}`);
@@ -104,7 +121,24 @@ class EmailServiceClass {
       return;
     }
 
-    await this.sendViaResend(to, subject, html, text);
+    if (config.smtpHost) {
+      await this.sendViaSMTP(to, subject, html, text);
+    } else if (config.resendApiKey) {
+      await this.sendViaResend(to, subject, html, text);
+    }
+  }
+
+  private async sendViaSMTP(to: string, subject: string, html: string, text: string): Promise<void> {
+    const config = this.getConfig();
+    const transporter = this.getTransporter();
+
+    await transporter.sendMail({
+      from: config.fromEmail,
+      to,
+      subject,
+      html,
+      text,
+    });
   }
 
   private async sendViaResend(to: string, subject: string, html: string, text: string): Promise<void> {

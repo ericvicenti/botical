@@ -457,12 +457,29 @@ You have access to tools for reading, writing, and editing files, as well as exe
       >
         {/* Model selector in top right */}
         <div className="relative" ref={modelDropdownRef}>
+          {/* Mobile: icon only */}
           <button
             type="button"
             onClick={() => setShowModelDropdown(!showModelDropdown)}
             disabled={availableModels.length === 0}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
+              "sm:hidden p-1.5 rounded-lg transition-colors",
+              showModelDropdown
+                ? "bg-accent-primary/20 text-accent-primary"
+                : "hover:bg-bg-elevated text-text-muted hover:text-text-primary",
+              availableModels.length === 0 && "opacity-50 cursor-not-allowed"
+            )}
+            title={`Current model: ${currentModel?.name || 'None'}`}
+          >
+            <Bot className="w-4 h-4" />
+          </button>
+          {/* Desktop: full dropdown button */}
+          <button
+            type="button"
+            onClick={() => setShowModelDropdown(!showModelDropdown)}
+            disabled={availableModels.length === 0}
+            className={cn(
+              "hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
               "bg-bg-primary border border-border",
               "hover:border-accent-primary/50 transition-colors",
               "text-text-primary min-w-0",
@@ -475,93 +492,136 @@ You have access to tools for reading, writing, and editing files, as well as exe
             <ChevronDown className="w-3.5 h-3.5 text-text-muted shrink-0" />
           </button>
           {showModelDropdown && availableModels.length > 0 && (
-            <div className="absolute top-full right-0 mt-1 w-80 bg-bg-primary border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
-              <div className="py-1">
-                {/* Group models by provider */}
-                {["anthropic", "openai", "google"].map(providerId => {
-                  const providerModels = availableModels.filter(m => m.providerId === providerId);
-                  if (providerModels.length === 0) return null;
-                  return (
-                    <div key={providerId}>
-                      <div className="px-3 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
-                        {providerModels[0]?.providerName}
-                      </div>
-                      {providerModels.map((model) => (
-                        <button
-                          key={model.id}
-                          type="button"
-                          onClick={() => handleModelChange(model.id)}
-                          className={cn(
-                            "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
-                            currentModel?.id === model.id && "bg-bg-elevated"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-text-primary">
-                                {model.name}
-                              </div>
-                            </div>
-                            {currentModel?.id === model.id && (
-                              <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
+            <>
+              {/* Mobile: full-screen panel */}
+              <div className="sm:hidden fixed inset-0 z-50 flex flex-col bg-bg-primary">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <h3 className="text-lg font-medium text-text-primary">Select Model</h3>
+                  <button
+                    onClick={() => setShowModelDropdown(false)}
+                    className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {["anthropic", "openai", "google"].map(providerId => {
+                    const providerModels = availableModels.filter(m => m.providerId === providerId);
+                    if (providerModels.length === 0) return null;
+                    return (
+                      <div key={providerId}>
+                        <div className="px-4 py-2 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
+                          {providerModels[0]?.providerName}
+                        </div>
+                        {providerModels.map((model) => (
+                          <button
+                            key={model.id}
+                            type="button"
+                            onClick={() => handleModelChange(model.id)}
+                            className={cn(
+                              "w-full px-4 py-3 text-left hover:bg-bg-elevated transition-colors",
+                              currentModel?.id === model.id && "bg-bg-elevated"
                             )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-text-primary">
+                                  {model.name}
+                                </div>
+                              </div>
+                              {currentModel?.id === model.id && (
+                                <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+              {/* Desktop: dropdown */}
+              <div className="hidden sm:block absolute top-full right-0 mt-1 w-80 bg-bg-primary border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+                <div className="py-1">
+                  {["anthropic", "openai", "google"].map(providerId => {
+                    const providerModels = availableModels.filter(m => m.providerId === providerId);
+                    if (providerModels.length === 0) return null;
+                    return (
+                      <div key={providerId}>
+                        <div className="px-3 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider bg-bg-secondary">
+                          {providerModels[0]?.providerName}
+                        </div>
+                        {providerModels.map((model) => (
+                          <button
+                            key={model.id}
+                            type="button"
+                            onClick={() => handleModelChange(model.id)}
+                            className={cn(
+                              "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
+                              currentModel?.id === model.id && "bg-bg-elevated"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm text-text-primary">
+                                  {model.name}
+                                </div>
+                              </div>
+                              {currentModel?.id === model.id && (
+                                <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
         {/* Toolbar buttons */}
-        <div className="h-6 w-px bg-border" /> {/* Separator */}
+        <div className="h-6 w-px bg-border hidden sm:block" /> {/* Separator */}
         <button
           onClick={() => setShowToolsPanel(!showToolsPanel)}
           className={cn(
-            "p-2 rounded-lg transition-colors relative",
+            "p-1.5 sm:p-2 rounded-lg transition-colors relative",
             showToolsPanel
               ? "bg-accent-primary/20 text-accent-primary"
               : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
           )}
           title="Configure agent tools"
         >
-          <Wrench className="w-5 h-5" />
+          <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <button
           onClick={() => setShowSkillsPanel(!showSkillsPanel)}
           className={cn(
-            "p-2 rounded-lg transition-colors relative",
+            "p-1.5 sm:p-2 rounded-lg transition-colors relative",
             showSkillsPanel
               ? "bg-accent-primary/20 text-accent-primary"
               : "hover:bg-bg-elevated text-text-muted hover:text-text-primary"
           )}
           title="View available skills"
         >
-          <Sparkles className="w-5 h-5" />
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <TTSToggle enabled={ttsEnabled} onToggle={setTtsEnabled} />
         <button
           onClick={handleOpenSystemPrompt}
-          className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
+          className="p-1.5 sm:p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
           title="View system prompt"
         >
-          <Info className="w-5 h-5" />
-        </button>
-        <button
-          className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted hover:text-text-primary"
-          title="Task options"
-        >
-          <MoreHorizontal className="w-5 h-5" />
+          <Info className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </ContentHeader>
 
       {/* System Prompt Modal */}
       {showSystemPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-bg-primary border border-border rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center sm:bg-black/50">
+          <div className="bg-bg-primary sm:border sm:border-border sm:rounded-lg shadow-xl sm:max-w-4xl w-full sm:mx-4 h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-3">
                 <h3 className="font-medium text-text-primary">System Prompt</h3>
@@ -667,25 +727,55 @@ You have access to tools for reading, writing, and editing files, as well as exe
 
       {/* Floating Tools Panel */}
       {showToolsPanel && (
-        <div className="fixed inset-0 z-40" style={{ pointerEvents: showToolsPanel ? 'auto' : 'none' }}>
-          <div className="absolute inset-0 bg-black/20" onClick={() => setShowToolsPanel(false)} />
-          <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={toolsPanelRef}>
-            <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+        <>
+          {/* Mobile: full-screen panel */}
+          <div className="sm:hidden fixed inset-0 z-50 flex flex-col bg-bg-primary">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h3 className="text-lg font-medium text-text-primary">Tools</h3>
+              <button
+                onClick={() => setShowToolsPanel(false)}
+                className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
               <ToolsPanel
                 enabledTools={enabledTools}
                 onToggleTool={handleToggleTool}
               />
             </div>
           </div>
-        </div>
+          {/* Desktop: floating panel */}
+          <div className="hidden sm:block fixed inset-0 z-40" style={{ pointerEvents: 'auto' }}>
+            <div className="absolute inset-0 bg-black/20" onClick={() => setShowToolsPanel(false)} />
+            <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={toolsPanelRef}>
+              <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+                <ToolsPanel
+                  enabledTools={enabledTools}
+                  onToggleTool={handleToggleTool}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
-      {/* Floating Skills Panel */}
+      {/* Skills Panel */}
       {showSkillsPanel && (
-        <div className="fixed inset-0 z-40" style={{ pointerEvents: showSkillsPanel ? 'auto' : 'none' }}>
-          <div className="absolute inset-0 bg-black/20" onClick={() => setShowSkillsPanel(false)} />
-          <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={skillsPanelRef}>
-            <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+        <>
+          {/* Mobile: full-screen panel */}
+          <div className="sm:hidden fixed inset-0 z-50 flex flex-col bg-bg-primary">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h3 className="text-lg font-medium text-text-primary">Skills</h3>
+              <button
+                onClick={() => setShowSkillsPanel(false)}
+                className="p-2 hover:bg-bg-elevated rounded-lg text-text-muted"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
               <SkillsPanel
                 projectId={projectId}
                 enabledSkills={enabledSkills}
@@ -695,7 +785,22 @@ You have access to tools for reading, writing, and editing files, as well as exe
               />
             </div>
           </div>
-        </div>
+          {/* Desktop: floating panel */}
+          <div className="hidden sm:block fixed inset-0 z-40" style={{ pointerEvents: 'auto' }}>
+            <div className="absolute inset-0 bg-black/20" onClick={() => setShowSkillsPanel(false)} />
+            <div className="absolute top-16 right-4 w-96 max-h-[calc(100vh-120px)]" ref={skillsPanelRef}>
+              <div className="bg-bg-primary border border-border rounded-lg shadow-xl overflow-hidden">
+                <SkillsPanel
+                  projectId={projectId}
+                  enabledSkills={enabledSkills}
+                  loadedSkills={loadedSkills}
+                  onToggleSkill={handleToggleSkill}
+                  onOpenSkillFile={handleOpenSkillFile}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Error message */}
@@ -709,7 +814,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-auto p-4 relative"
+        className="flex-1 overflow-auto p-2 sm:p-4 relative"
       >
         {messages.length === 0 && !streamingMessage ? (
           <EmptyState />
@@ -759,8 +864,8 @@ You have access to tools for reading, writing, and editing files, as well as exe
             <div className="flex-1">
               <p className="text-sm text-text-primary">
                 No API key configured. Please add your API key in{" "}
-                <Link to="/settings" className="text-accent-primary hover:underline">
-                  Settings
+                <Link to="/settings/models" className="text-accent-primary hover:underline">
+                  Settings → Model Providers
                 </Link>{" "}
                 to start chatting.
               </p>
@@ -770,7 +875,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
       )}
 
       {/* Input */}
-      <div className="border-t border-border bg-bg-secondary p-4">
+      <div className="border-t border-border bg-bg-secondary p-2 sm:p-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           {/* Voice interim indicator */}
           {voiceInterim && (
@@ -787,7 +892,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
             </div>
           )}
           
-          <div className="flex gap-3 items-end">
+          <div className="flex gap-2 sm:gap-3 items-end">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}

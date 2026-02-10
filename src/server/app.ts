@@ -136,7 +136,12 @@ export function createApp() {
 
     // SPA fallback: serve index.html for any unmatched routes
     // This enables client-side routing in the React app
+    // Skip asset paths — if a static file wasn't found, it's a real 404
     app.get("*", async (c) => {
+      const path = c.req.path;
+      if (path.startsWith("/assets/") || path.match(/\.(css|js|map|png|jpg|svg|ico|woff2?)$/)) {
+        return c.notFound();
+      }
       const indexPath = `${staticDir}/index.html`;
       if (existsSync(indexPath)) {
         const content = await Bun.file(indexPath).text();

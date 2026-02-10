@@ -33,14 +33,32 @@ function RootLayoutInner() {
 
   const { showNewTaskModal, closeNewTaskModal, selectedProjectId } = useUI();
 
+  const { sidebarCollapsed, toggleSidebar } = useUI();
+
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
+      {/* Mobile sidebar overlay */}
+      {!sidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+
       {/* Main area with sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
+        {/* Sidebar: on mobile, position fixed overlay; on desktop, normal flow */}
+        <div className={`
+          md:relative md:z-auto
+          fixed inset-y-0 left-0 z-50
+          transition-transform duration-200 ease-out
+          ${sidebarCollapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}
+        `}>
+          <Sidebar />
+        </div>
 
         {/* Content area with tabs on top */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <TabBar />
           <main className="flex-1 overflow-auto scrollbar-thin">
             <Outlet />

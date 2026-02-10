@@ -214,7 +214,7 @@ function ExtensionServiceItem({ extension }: { extension: Extension }) {
     <div
       className={cn(
         "flex items-center gap-2 px-2 py-1.5 rounded",
-        "hover:bg-bg-elevated transition-colors cursor-pointer"
+        "hover:bg-bg-elevated active:bg-bg-elevated transition-colors cursor-pointer"
       )}
     >
       <div className={cn(

@@ -19,6 +19,10 @@ interface StoredUIState {
   theme: ThemePreference;
 }
 
+function isMobileViewport(): boolean {
+  return typeof window !== "undefined" && window.innerWidth < 768;
+}
+
 function loadUIFromStorage(): StoredUIState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -27,7 +31,8 @@ function loadUIFromStorage(): StoredUIState {
       return {
         selectedProjectId: parsed.selectedProjectId ?? null,
         sidebarWidth: parsed.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
-        sidebarCollapsed: parsed.sidebarCollapsed ?? false,
+        // On mobile, always start collapsed (sidebar is an overlay)
+        sidebarCollapsed: isMobileViewport() ? true : (parsed.sidebarCollapsed ?? false),
         sidebarPanel: parsed.sidebarPanel ?? "files",
         theme: parsed.theme ?? "system",
       };
@@ -38,7 +43,7 @@ function loadUIFromStorage(): StoredUIState {
   return {
     selectedProjectId: null,
     sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
-    sidebarCollapsed: false,
+    sidebarCollapsed: isMobileViewport() ? true : false,
     sidebarPanel: "files",
     theme: "system",
   };
@@ -79,6 +84,7 @@ interface UIState {
 
 interface UIContextValue extends UIState {
   toggleSidebar: () => void;
+  closeSidebarOnMobile: () => void;
   setSidebarPanel: (panel: UIState["sidebarPanel"]) => void;
   setSidebarWidth: (width: number) => void;
   setTheme: (theme: ThemePreference) => void;
@@ -145,6 +151,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }));
   }, []);
 
+  const closeSidebarOnMobile = useCallback(() => {
+    if (isMobileViewport()) {
+      setState((s) => ({ ...s, sidebarCollapsed: true }));
+    }
+  }, []);
+
   const setSidebarPanel = useCallback((panel: SidebarPanel) => {
     setState((s) => ({ ...s, sidebarPanel: panel }));
   }, []);
@@ -187,6 +199,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const value: UIContextValue = {
     ...state,
     toggleSidebar,
+    closeSidebarOnMobile,
     setSidebarPanel,
     setSidebarWidth: (width) => {
       const clampedWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));

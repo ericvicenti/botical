@@ -28,6 +28,7 @@
     "hono": "^4.7.0",
     "js-yaml": "^4.1.1",
     "node-pty": "^1.1.0",
+    "nodemailer": "^8.0.1",
     "ollama-ai-provider-v2": "^3.0.4",
     "simple-git": "^3.30.0",
     "yaml": "^2.8.2",

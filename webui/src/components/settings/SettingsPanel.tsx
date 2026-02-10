@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 import { useNavigate, useLocation } from "@tanstack/react-router";
+import { useUI } from "@/contexts/ui";
 import { Key, Palette, Keyboard, Beaker, Info, User } from "lucide-react";
 import type { SettingsPage } from "@/types/tabs";
 
@@ -22,11 +23,11 @@ const SETTINGS_ITEMS: SettingsItem[] = [
 export function SettingsPanel() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { closeSidebarOnMobile } = useUI();
 
   const handleItemClick = (item: SettingsItem) => {
-    // Just navigate - the TabBar will show a preview tab
-    // User can click the preview tab to make it permanent
     navigate({ to: item.path });
+    closeSidebarOnMobile();
   };
 
   return (
