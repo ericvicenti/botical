@@ -311,16 +311,16 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
   return (
     <div className="h-full flex flex-col bg-bg-primary" data-testid="workflow-editor">
       {/* Header */}
-      <div className="border-b border-border px-4 py-3 bg-bg-secondary">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-text-primary font-medium flex items-center gap-2" data-testid="workflow-label">
+      <div className="border-b border-border px-3 sm:px-4 py-3 bg-bg-secondary">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-text-primary font-medium flex items-center gap-2 truncate" data-testid="workflow-label">
               {label || "Untitled Workflow"}
-              {isDirty && <span className="w-2 h-2 rounded-full bg-accent-warning" data-testid="workflow-dirty-indicator" />}
+              {isDirty && <span className="w-2 h-2 rounded-full bg-accent-warning shrink-0" data-testid="workflow-dirty-indicator" />}
             </span>
-            <span className="text-xs text-text-muted font-mono" data-testid="workflow-name">{name || "new-workflow"}</span>
+            <span className="text-xs text-text-muted font-mono hidden sm:inline" data-testid="workflow-name">{name || "new-workflow"}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleSave}
               disabled={!isDirty || saveMutation.isPending}
@@ -363,7 +363,7 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Metadata */}
           <section className="space-y-4">
@@ -386,7 +386,7 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
                 />
                 <p className="text-xs text-text-muted mt-1">Display name shown in the sidebar</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-text-secondary mb-1">Name (ID)</label>
                   <input
@@ -444,13 +444,13 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
                       className="p-3 bg-bg-secondary rounded border border-border space-y-2"
                     >
                       {/* Main row */}
-                      <div className="flex items-center gap-3">
-                        <GripVertical size={16} className="text-text-muted" />
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <GripVertical size={16} className="text-text-muted hidden sm:block" />
                         <input
                           type="text"
                           value={field.name}
                           onChange={(e) => updateInputField(index, { name: e.target.value })}
-                          className="w-32 px-2 py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
+                          className="w-full sm:w-32 px-2 py-1.5 sm:py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
                           placeholder="name"
                         />
                         <select
@@ -458,7 +458,7 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
                           onChange={(e) =>
                             updateInputField(index, { type: e.target.value as WorkflowInputField["type"] })
                           }
-                          className="px-2 py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
+                          className="px-2 py-1.5 sm:py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
                         >
                           <option value="string">String</option>
                           <option value="number">Number</option>
@@ -469,7 +469,7 @@ export default function WorkflowEditorPage({ params }: WorkflowEditorPageProps) 
                           type="text"
                           value={field.label}
                           onChange={(e) => updateInputField(index, { label: e.target.value })}
-                          className="flex-1 px-2 py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
+                          className="flex-1 min-w-0 px-2 py-1.5 sm:py-1 bg-bg-primary rounded border border-border text-text-primary text-sm"
                           placeholder="Label"
                         />
                         <button
@@ -864,8 +864,8 @@ function ParamEditor({ param, binding, inputFields, previousSteps, onChange }: P
   const bindingType = binding?.type || "literal";
 
   return (
-    <div className="flex items-start gap-2">
-      <div className="w-32 shrink-0">
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+      <div className="sm:w-32 sm:shrink-0">
         <label className="text-xs text-text-muted">
           {param.name}
           {param.required && <span className="text-red-400">*</span>}

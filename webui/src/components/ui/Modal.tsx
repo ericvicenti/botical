@@ -77,9 +77,10 @@ export function Modal({
       {/* Content */}
       <div
         className={cn(
-          "absolute left-1/2 -translate-x-1/2 transition-all duration-150",
+          "absolute inset-x-0 mx-auto px-2 sm:px-0 transition-all duration-150",
+          "w-full sm:w-auto sm:left-1/2 sm:-translate-x-1/2",
           position === "center" && "top-1/2 -translate-y-1/2",
-          position === "top" && (isAnimating ? "top-[15%]" : "top-[10%]"),
+          position === "top" && (isAnimating ? "top-2 sm:top-[15%]" : "top-0 sm:top-[10%]"),
           isAnimating ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       >
@@ -87,6 +88,7 @@ export function Modal({
           <div
             className={cn(
               "bg-bg-secondary border border-border rounded-lg shadow-xl",
+              "max-h-[95vh] sm:max-h-[85vh]",
               className
             )}
             role="dialog"

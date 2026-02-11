@@ -113,15 +113,15 @@ export function ScheduleDetail({ scheduleId, projectId, onDelete }: ScheduleDeta
     <div className="flex flex-col h-full" data-testid="schedule-detail">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-lg font-medium text-text-primary">{schedule.name}</h2>
             {schedule.description && (
               <p className="text-sm text-text-muted mt-1">{schedule.description}</p>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleTrigger}
               disabled={isPending}
@@ -179,7 +179,7 @@ export function ScheduleDetail({ scheduleId, projectId, onDelete }: ScheduleDeta
         </div>
 
         {/* Schedule Info */}
-        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <div className="text-text-muted">Status</div>
             <div className={cn("font-medium", schedule.enabled ? "text-green-500" : "text-text-muted")}>

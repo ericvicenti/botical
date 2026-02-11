@@ -36,7 +36,7 @@ export default function AccountPage(_props: AccountPageProps) {
   const hasChanges = (displayName.trim() || "") !== (user?.displayName || "");
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
+    <div className="max-w-2xl mx-auto p-4 sm:p-8">
       <h1 className="text-2xl font-bold text-text-primary mb-2">Account</h1>
       <p className="text-text-muted mb-8">
         Manage your account settings.

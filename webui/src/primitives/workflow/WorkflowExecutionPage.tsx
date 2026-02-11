@@ -96,12 +96,12 @@ export default function WorkflowExecutionPage({ params }: WorkflowExecutionPageP
   return (
     <div className="h-full flex flex-col bg-bg-primary" data-testid="workflow-execution">
       {/* Header */}
-      <div className="border-b border-border px-4 py-3 bg-bg-secondary">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="border-b border-border px-3 sm:px-4 py-3 bg-bg-secondary">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             <StatusBadge status={execution.status} />
             <span className="text-text-primary font-medium">Workflow Run</span>
-            <span className="text-xs text-text-muted font-mono">{execution.id}</span>
+            <span className="text-xs text-text-muted font-mono truncate hidden sm:inline">{execution.id}</span>
           </div>
           <div className="text-xs text-text-muted">
             Started {new Date(execution.startedAt).toLocaleString()}

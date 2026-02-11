@@ -326,8 +326,8 @@ export function ContainerDetailPage({ params }: ContainerDetailPageProps) {
                 const [key, ...valueParts] = env.split("=");
                 const value = valueParts.join("=");
                 return (
-                  <div key={i} className="flex py-1.5 border-b border-border text-sm font-mono">
-                    <span className="text-accent-primary min-w-[200px]">{key}</span>
+                  <div key={i} className="flex flex-col sm:flex-row py-1.5 border-b border-border text-sm font-mono gap-1 sm:gap-0">
+                    <span className="text-accent-primary sm:min-w-[200px] shrink-0 break-all">{key}</span>
                     <span className="text-text-primary break-all">{value}</span>
                   </div>
                 );

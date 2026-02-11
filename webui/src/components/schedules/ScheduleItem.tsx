@@ -183,7 +183,7 @@ export function ScheduleItem({ schedule, projectId }: ScheduleItemProps) {
             <div className="absolute right-0 top-full mt-1 z-50 bg-bg-elevated border border-border rounded shadow-lg py-1 min-w-36">
               <button
                 onClick={handleTrigger}
-                className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+                className="w-full px-3 py-2.5 sm:py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
               >
                 <Play className="w-3.5 h-3.5" />
                 Run Now
@@ -192,7 +192,7 @@ export function ScheduleItem({ schedule, projectId }: ScheduleItemProps) {
               {schedule.enabled ? (
                 <button
                   onClick={handleDisable}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+                  className="w-full px-3 py-2.5 sm:py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
                 >
                   <Pause className="w-3.5 h-3.5" />
                   Disable
@@ -200,7 +200,7 @@ export function ScheduleItem({ schedule, projectId }: ScheduleItemProps) {
               ) : (
                 <button
                   onClick={handleEnable}
-                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+                  className="w-full px-3 py-2.5 sm:py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
                 >
                   <Play className="w-3.5 h-3.5" />
                   Enable
@@ -211,7 +211,7 @@ export function ScheduleItem({ schedule, projectId }: ScheduleItemProps) {
 
               <button
                 onClick={handleDelete}
-                className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2 text-red-500"
+                className="w-full px-3 py-2.5 sm:py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2 text-red-500"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete

@@ -142,8 +142,8 @@ export function OpenProjectModal({
   const isValidSelection = selectedPath && projectName.trim();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} position="top" className="w-[600px]">
-      <div className="flex flex-col max-h-[70vh]">
+    <Modal isOpen={isOpen} onClose={onClose} position="top" className="w-full sm:w-[600px]">
+      <div className="flex flex-col max-h-[95vh] sm:max-h-[70vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">
@@ -151,7 +151,7 @@ export function OpenProjectModal({
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-bg-tertiary transition-colors text-text-secondary"
+            className="p-2 rounded hover:bg-bg-tertiary transition-colors text-text-secondary"
           >
             <X className="w-5 h-5" />
           </button>

@@ -42,8 +42,8 @@ export function ResultDialogProvider({ children }: { children: React.ReactNode }
   return (
     <ResultDialogContext.Provider value={{ showResult }}>
       {children}
-      <Modal isOpen={state.isOpen} onClose={close} className="w-[600px] max-h-[80vh]">
-        <div className="flex flex-col max-h-[80vh]">
+      <Modal isOpen={state.isOpen} onClose={close} className="w-full sm:w-[600px]">
+        <div className="flex flex-col max-h-[95vh] sm:max-h-[80vh]">
           {/* Header */}
           <div
             className={cn(

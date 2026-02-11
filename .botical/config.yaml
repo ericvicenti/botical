@@ -1,0 +1,25 @@
+name: Botical
+description: A project managed by Botical
+
+# Default agent configuration
+defaultAgent:
+  name: default
+  tools:
+    - read
+    - write
+    - edit
+    - bash
+    - glob
+    - grep
+
+# Model configuration
+model:
+  temperature: 0.7
+
+# Sidebar configuration
+sidebar:
+  panels:
+    - files
+    - tasks
+    - git
+    - run

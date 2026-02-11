@@ -37,7 +37,7 @@ export default function ShortcutsPage(_props: ShortcutsPageProps) {
   const categoryOrder = ["view", "tab", "file", "project", "mission", "process", "other"];
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
+    <div className="max-w-2xl mx-auto p-4 sm:p-8">
       <h1 className="text-2xl font-bold text-text-primary mb-2">Keyboard Shortcuts</h1>
       <p className="text-text-muted mb-8">
         Quick reference for all available keyboard shortcuts.

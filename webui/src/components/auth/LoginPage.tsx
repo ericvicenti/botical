@@ -104,7 +104,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-bg-elevated text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+              className="w-full px-3 py-3 border border-border rounded-lg bg-bg-elevated text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-base"
               placeholder="Email address"
               disabled={isLoading || isPolling}
             />
@@ -125,7 +125,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading || isPolling}
-            className="w-full py-2 px-4 bg-accent-primary hover:bg-accent-primary/80 disabled:bg-accent-primary/50 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
+            className="w-full py-3 px-4 bg-accent-primary hover:bg-accent-primary/80 disabled:bg-accent-primary/50 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 text-base"
           >
             {isLoading ? 'Sending...' : isPolling ? 'Waiting for login...' : 'Send Magic Link'}
           </button>
@@ -134,7 +134,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={stopPolling}
-              className="w-full py-2 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors mt-2"
+              className="w-full py-3 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors mt-2 text-base"
             >
               Cancel
             </button>

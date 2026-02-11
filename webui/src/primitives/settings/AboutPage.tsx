@@ -7,7 +7,7 @@ interface AboutPageProps {
 
 export default function AboutPage(_props: AboutPageProps) {
   return (
-    <div className="max-w-2xl mx-auto p-8">
+    <div className="max-w-2xl mx-auto p-4 sm:p-8">
       <h1 className="text-2xl font-bold text-text-primary mb-2">About Botical</h1>
       <p className="text-text-muted mb-8">
         An AI-powered development environment.

@@ -212,7 +212,7 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
       )}
 
       {/* Header with breadcrumb navigation */}
-      <div className="border-b border-border px-4 py-3 bg-bg-secondary">
+      <div className="border-b border-border px-3 sm:px-4 py-3 bg-bg-secondary">
         {/* Project link */}
         <button
           onClick={handleNavigateToProject}
@@ -249,8 +249,8 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
       </div>
 
       {/* Folder stats */}
-      <div className="border-b border-border px-4 py-2 bg-bg-primary">
-        <div className="flex items-center gap-4 text-sm text-text-muted">
+      <div className="border-b border-border px-3 sm:px-4 py-2 bg-bg-primary">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-text-muted">
           <span>
             <strong className="text-text-primary">{formatSize(folder.totalSize)}</strong> total
           </span>
@@ -288,19 +288,19 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
                 Name <SortIcon field="name" />
               </th>
               <th
-                className="text-left px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-24"
+                className="text-left px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-24 hidden lg:table-cell"
                 onClick={() => handleSort("permissions")}
               >
                 Permissions <SortIcon field="permissions" />
               </th>
               <th
-                className="text-right px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-24"
+                className="text-right px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-24 hidden sm:table-cell"
                 onClick={() => handleSort("size")}
               >
                 Size <SortIcon field="size" />
               </th>
               <th
-                className="text-right px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-36"
+                className="text-right px-4 py-2 font-medium text-text-muted cursor-pointer hover:text-text-primary w-36 hidden sm:table-cell"
                 onClick={() => handleSort("modified")}
               >
                 Modified <SortIcon field="modified" />
@@ -337,13 +337,13 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-text-muted">
+                    <td className="px-4 py-2 font-mono text-xs text-text-muted hidden lg:table-cell">
                       {entry.permissions}
                     </td>
-                    <td className="px-4 py-2 text-right text-text-muted tabular-nums">
+                    <td className="px-4 py-2 text-right text-text-muted tabular-nums hidden sm:table-cell">
                       {formatSize(entry.size)}
                     </td>
-                    <td className="px-4 py-2 text-right text-text-muted tabular-nums">
+                    <td className="px-4 py-2 text-right text-text-muted tabular-nums hidden sm:table-cell">
                       {formatDate(entry.modified)}
                     </td>
                   </tr>

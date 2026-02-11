@@ -16,7 +16,9 @@ import { ResultDialogProvider } from "@/components/ui/ResultDialog";
 import { RunningCommandProvider } from "@/components/ui/RunningCommandDialog";
 import { registerAllCommands } from "@/commands/definitions";
 import { useUI } from "@/contexts/ui";
+import { useCommands } from "@/commands/context";
 import { NewTaskModal } from "@/components/tasks/NewTaskModal";
+import { Command } from "lucide-react";
 
 // Register commands on app load
 registerAllCommands();
@@ -32,8 +34,8 @@ function RootLayoutInner() {
   useAutoDocumentTitle();
 
   const { showNewTaskModal, closeNewTaskModal, selectedProjectId } = useUI();
-
   const { sidebarCollapsed, toggleSidebar } = useUI();
+  const { openPalette } = useCommands();
 
   return (
     <div className="h-screen flex flex-col bg-bg-primary">
@@ -68,6 +70,15 @@ function RootLayoutInner() {
 
       {/* Bottom Panel */}
       <BottomPanel />
+
+      {/* Mobile FAB for Command Palette */}
+      <button
+        onClick={openPalette}
+        className="sm:hidden fixed bottom-4 left-4 z-30 w-12 h-12 rounded-full bg-accent-primary text-white shadow-lg flex items-center justify-center active:bg-accent-primary/80"
+        title="Command Palette"
+      >
+        <Command className="w-5 h-5" />
+      </button>
 
       {/* Command Palette */}
       <CommandPalette />

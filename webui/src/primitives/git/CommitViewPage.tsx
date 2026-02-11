@@ -191,13 +191,13 @@ export default function CommitViewPage({ params }: CommitViewPageProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Commit header */}
-      <div className="p-4 border-b border-border bg-bg-secondary flex-shrink-0">
+      <div className="p-3 sm:p-4 border-b border-border bg-bg-secondary flex-shrink-0">
         <div className="flex items-start gap-3">
-          <GitCommit className="w-6 h-6 text-accent mt-1" />
+          <GitCommit className="w-6 h-6 text-accent mt-1 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-sm text-accent">{commit.hashShort}</span>
-              <span className="text-xs text-text-secondary font-mono">
+              <span className="text-xs text-text-secondary font-mono hidden sm:inline">
                 ({commit.hash})
               </span>
             </div>
@@ -207,11 +207,11 @@ export default function CommitViewPage({ params }: CommitViewPageProps) {
                 {commit.body}
               </p>
             )}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary">
-              <div className="flex items-center gap-1.5">
-                <User className="w-4 h-4" />
-                <span>{commit.author}</span>
-                <span className="text-text-secondary">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-text-secondary">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <User className="w-4 h-4 shrink-0" />
+                <span className="truncate">{commit.author}</span>
+                <span className="text-text-secondary hidden sm:inline">
                   {"<"}
                   {commit.email}
                   {">"}

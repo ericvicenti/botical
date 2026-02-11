@@ -93,7 +93,7 @@ export default function CreateProjectPage(_props: CreateProjectPageProps) {
   const error = createProject.error || cloneProject.error;
 
   return (
-    <div className="p-6 max-w-lg">
+    <div className="p-4 sm:p-6 max-w-lg">
       <h1 className="text-2xl font-bold text-text-primary mb-6">
         Create New Project
       </h1>

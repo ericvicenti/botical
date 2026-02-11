@@ -127,7 +127,7 @@ export function ProjectSelector() {
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-bg-elevated border border-border rounded-b-lg shadow-lg max-h-64 overflow-auto">
+        <div className="absolute top-full left-0 right-0 z-50 bg-bg-elevated border border-border rounded-b-lg shadow-lg max-h-[70vh] sm:max-h-64 overflow-auto">
           {isLoading ? (
             <div className="px-3 py-2 text-sm text-text-muted">Loading...</div>
           ) : (

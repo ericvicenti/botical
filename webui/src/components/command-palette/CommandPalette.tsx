@@ -252,7 +252,7 @@ export function CommandPalette() {
       isOpen={isPaletteOpen}
       onClose={closePalette}
       position="top"
-      className="w-[500px] max-h-[500px] overflow-hidden"
+      className="w-full sm:w-[500px] max-h-[95vh] sm:max-h-[500px] overflow-hidden"
     >
       <div onKeyDown={handleKeyDown}>
         {/* Search input / Command header */}

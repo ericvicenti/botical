@@ -53,7 +53,7 @@ export function RunningCommandProvider({ children }: { children: React.ReactNode
   return (
     <RunningCommandContext.Provider value={{ showRunning, hideRunning, isRunning: state.isOpen }}>
       {children}
-      <Modal isOpen={state.isOpen} onClose={() => {}} className="w-[400px]">
+      <Modal isOpen={state.isOpen} onClose={() => {}} className="w-full sm:w-[400px]">
         <div className="flex flex-col p-6">
           {/* Spinner and title */}
           <div className="flex items-center gap-3">

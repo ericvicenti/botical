@@ -267,12 +267,12 @@ export default function ReviewCommitPage({ params }: ReviewCommitPageProps) {
                 autoFocus
               />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <span className="text-sm text-text-secondary">
                 {status.files.length} file{status.files.length !== 1 ? "s" : ""} will be
                 committed
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() =>

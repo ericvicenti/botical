@@ -226,7 +226,7 @@ function ExtensionActions({ extensionId, enabled }: { extensionId: string; enabl
               onClick={() => !hasRequiredParams && handleExecuteAction(action.id, action.label)}
               disabled={!enabled || executeAction.isPending || hasRequiredParams}
               className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-left",
+                "w-full flex items-center gap-2 px-2 py-2.5 sm:py-1.5 rounded text-left",
                 "hover:bg-bg-primary transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 !hasRequiredParams && "cursor-pointer"

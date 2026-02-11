@@ -160,7 +160,7 @@ export function FilePalette() {
       isOpen={isOpen}
       onClose={close}
       position="top"
-      className="w-[500px] max-h-[500px] overflow-hidden"
+      className="w-full sm:w-[500px] max-h-[95vh] sm:max-h-[500px] overflow-hidden"
     >
       <div onKeyDown={handleKeyDown}>
         {/* Search input */}

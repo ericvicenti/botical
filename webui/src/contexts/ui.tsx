@@ -158,7 +158,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSidebarPanel = useCallback((panel: SidebarPanel) => {
-    setState((s) => ({ ...s, sidebarPanel: panel }));
+    setState((s) => ({ ...s, sidebarPanel: panel, sidebarCollapsed: false }));
   }, []);
 
   const openNewTaskModal = useCallback(() => {

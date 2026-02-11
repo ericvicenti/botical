@@ -77,7 +77,7 @@ export function BranchPicker({ projectId, currentBranch }: BranchPickerProps) {
                 <button
                   key={branch.name}
                   onClick={() => handleBranchSelect(branch)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-bg-tertiary text-sm text-left"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 sm:py-1.5 hover:bg-bg-tertiary text-sm text-left"
                   disabled={checkoutMutation.isPending}
                 >
                   <GitBranch className="w-3.5 h-3.5 text-text-secondary" />

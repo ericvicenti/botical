@@ -123,13 +123,13 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-bg-primary border border-border rounded-lg w-full max-w-xl shadow-xl">
+      <div className="bg-bg-primary border border-border rounded-lg w-full max-w-xl mx-2 sm:mx-0 shadow-xl max-h-[95vh] sm:max-h-[85vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">New Task</h2>
           <button
             onClick={onClose}
-            className="p-1 text-text-muted hover:text-text-primary rounded"
+            className="p-2 text-text-muted hover:text-text-primary rounded"
           >
             <X className="w-5 h-5" />
           </button>

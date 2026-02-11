@@ -380,11 +380,11 @@ function FilePart({ content, projectId }: { content: { path: string }; projectId
   return (
     <button
       onClick={handleOpenFile}
-      className="px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm flex items-center gap-2 hover:border-accent-primary transition-colors"
+      className="max-w-full px-3 py-2 bg-bg-secondary border border-border rounded-lg text-sm flex items-center gap-2 hover:border-accent-primary transition-colors"
     >
-      <FileText className="w-4 h-4 text-accent-primary" />
-      <span className="font-mono text-text-primary">{content.path}</span>
-      <ExternalLink className="w-3 h-3 text-text-muted" />
+      <FileText className="w-4 h-4 text-accent-primary shrink-0" />
+      <span className="font-mono text-text-primary truncate">{content.path}</span>
+      <ExternalLink className="w-3 h-3 text-text-muted shrink-0" />
     </button>
   );
 }
