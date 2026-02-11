@@ -30,6 +30,10 @@ export default defineConfig({
         target: `ws://localhost:${apiPort}`,
         ws: true,
       },
+      "/oauth": {
+        target: `http://localhost:${apiPort}`,
+        changeOrigin: true,
+      },
     },
   },
 });
