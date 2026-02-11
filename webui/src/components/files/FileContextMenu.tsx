@@ -20,8 +20,9 @@
  * />
  */
 import { useRef, useEffect, useState } from "react";
-import { FilePlus, FolderPlus, Pencil, Trash2, Upload } from "lucide-react";
+import { FilePlus, FolderPlus, Pencil, Trash2, Upload, Copy } from "lucide-react";
 import { useCreateFile, useCreateFolder, useDeleteFile } from "@/lib/api/queries";
+import { useToast } from "@/components/ui/Toast";
 
 /** Position coordinates for the context menu */
 export interface ContextMenuPosition {
@@ -67,6 +68,7 @@ export function FileContextMenu({
 }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const deleteFile = useDeleteFile();
+  const { showToast } = useToast();
 
   // Close when clicking outside
   useEffect(() => {
@@ -94,6 +96,17 @@ export function FileContextMenu({
   const handleUpload = () => {
     const parentPath = target.type === "folder" ? target.path : "";
     onUploadFiles?.(parentPath);
+    onClose();
+  };
+
+  const handleCopyPath = async () => {
+    const path = target.type === "empty" ? target.parentPath || "/" : target.path;
+    try {
+      await navigator.clipboard.writeText(path);
+      showToast("Path copied to clipboard", "success");
+    } catch {
+      showToast("Failed to copy path", "error");
+    }
     onClose();
   };
 
@@ -148,9 +161,16 @@ export function FileContextMenu({
           </button>
         </>
       )}
-      {showCreateOptions && showFileOptions && (
+      {(showCreateOptions || showFileOptions) && (
         <div className="my-1 border-t border-border" />
       )}
+      <button
+        onClick={handleCopyPath}
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+      >
+        <Copy className="w-3.5 h-3.5" />
+        Copy Path
+      </button>
       {showFileOptions && (
         <>
           <button

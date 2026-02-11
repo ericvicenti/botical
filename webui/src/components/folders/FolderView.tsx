@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useFolderDetails, useProject } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,6 +13,11 @@ import {
   EyeOff,
 } from "lucide-react";
 import type { DetailedFileEntry } from "@/lib/api/types";
+import {
+  FileContextMenu,
+  type ContextMenuPosition,
+  type ContextMenuTarget,
+} from "@/components/files/FileContextMenu";
 
 interface FolderViewProps {
   projectId: string;
@@ -80,6 +85,29 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
   const [showHidden, setShowHidden] = useState(false);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [contextMenu, setContextMenu] = useState<{
+    position: ContextMenuPosition;
+    target: ContextMenuTarget;
+  } | null>(null);
+
+  const handleRowContextMenu = useCallback((e: React.MouseEvent, entry: DetailedFileEntry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      target: entry.type === "directory"
+        ? { type: "folder", path: entry.path, name: entry.name }
+        : { type: "file", path: entry.path, name: entry.name },
+    });
+  }, []);
+
+  const handleEmptyContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      target: { type: "empty", parentPath: path },
+    });
+  }, [path]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -277,7 +305,7 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
       </div>
 
       {/* File table */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" onContextMenu={handleEmptyContextMenu}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-bg-secondary border-b border-border">
             <tr>
@@ -322,6 +350,7 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
                     key={entry.path}
                     onClick={() => handleOpenItem(entry)}
                     onDoubleClick={() => handleOpenItemPermanent(entry)}
+                    onContextMenu={(e) => handleRowContextMenu(e, entry)}
                     className={cn(
                       "cursor-pointer border-b border-border/50 hover:bg-bg-elevated transition-colors",
                       entry.isHidden && "opacity-60"
@@ -353,6 +382,16 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <FileContextMenu
+          projectId={projectId}
+          position={contextMenu.position}
+          target={contextMenu.target}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }
