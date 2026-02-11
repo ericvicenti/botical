@@ -4,8 +4,9 @@ import { useSettings } from "@/lib/api/queries";
 export interface ModelOption {
   id: string;
   name: string;
-  providerId: "anthropic" | "openai" | "google" | "ollama";
+  providerId: "anthropic" | "anthropic-oauth" | "openai" | "google" | "ollama";
   providerName: string;
+  isFree?: boolean;
 }
 
 async function fetchAnthropicModels(apiKey: string): Promise<ModelOption[]> {
@@ -118,14 +119,56 @@ async function fetchOllamaModels(baseUrl: string): Promise<ModelOption[]> {
   }
 }
 
+async function fetchAnthropicOAuthModels(tokens: { access: string; refresh: string; expires: number }): Promise<ModelOption[]> {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/models?beta=true", {
+      headers: {
+        "Authorization": `Bearer ${tokens.access}`,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "oauth-2025-04-20",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const models = (data.data || []) as Array<{ id: string; display_name?: string }>;
+    const PREFERRED_ANTHROPIC = [
+      "claude-opus-4-20250514",
+      "claude-sonnet-4-20250514",
+      "claude-3-5-haiku-20241022",
+    ];
+    const filtered = models
+      .filter((m) => m.id.includes("claude"))
+      .map((m) => ({
+        id: m.id,
+        name: m.display_name || m.id,
+        providerId: "anthropic-oauth" as const,
+        providerName: "Anthropic (Pro/Max)",
+        isFree: true,
+      }));
+    return filtered.sort((a, b) => {
+      const aIdx = PREFERRED_ANTHROPIC.indexOf(a.id);
+      const bIdx = PREFERRED_ANTHROPIC.indexOf(b.id);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  } catch {
+    return [];
+  }
+}
+
 async function fetchAllModels(settings: {
   anthropicApiKey?: string;
+  anthropicOAuthTokens?: { access: string; refresh: string; expires: number };
   openaiApiKey?: string;
   googleApiKey?: string;
   ollamaBaseUrl?: string;
 }): Promise<ModelOption[]> {
   const promises: Promise<ModelOption[]>[] = [];
   if (settings.anthropicApiKey) promises.push(fetchAnthropicModels(settings.anthropicApiKey));
+  if (settings.anthropicOAuthTokens) promises.push(fetchAnthropicOAuthModels(settings.anthropicOAuthTokens));
   if (settings.openaiApiKey) promises.push(fetchOpenAIModels(settings.openaiApiKey));
   if (settings.googleApiKey) promises.push(fetchGoogleModels(settings.googleApiKey));
   if (settings.ollamaBaseUrl) promises.push(fetchOllamaModels(settings.ollamaBaseUrl));
@@ -141,6 +184,7 @@ export function useAvailableModels() {
   const keyFingerprint = settings
     ? [
         settings.anthropicApiKey ? "a" : "",
+        settings.anthropicOAuthTokens ? "ao" : "",
         settings.openaiApiKey ? "o" : "",
         settings.googleApiKey ? "g" : "",
         settings.ollamaBaseUrl ? "l" : "",

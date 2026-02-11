@@ -55,7 +55,7 @@ const SendMessageSchema = z.object({
   content: z.string().min(1),
   userId: z.string().min(1),
   // All optional — backend resolves from session/agent config
-  providerId: z.enum(["anthropic", "openai", "google", "ollama"]).optional(),
+  providerId: z.enum(["anthropic", "anthropic-oauth", "openai", "google", "ollama"]).optional(),
   modelId: z.string().nullable().optional(),
   agentName: z.string().optional(),
   canExecuteCode: z.boolean().default(false),

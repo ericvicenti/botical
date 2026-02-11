@@ -139,9 +139,24 @@ const OLLAMA_MODELS: ModelConfig[] = [
 ];
 
 /**
+ * Anthropic OAuth models — same as ANTHROPIC_MODELS but zero cost
+ */
+const ANTHROPIC_OAUTH_MODELS: ModelConfig[] = ANTHROPIC_MODELS.map((m) => ({
+  ...m,
+  costPer1kInput: 0,
+  costPer1kOutput: 0,
+}));
+
+/**
  * Provider configurations
  */
 const PROVIDERS: Record<ProviderId, ProviderConfig> = {
+  "anthropic-oauth": {
+    id: "anthropic-oauth",
+    name: "Anthropic (Pro/Max)",
+    defaultModel: "claude-sonnet-4-20250514",
+    models: ANTHROPIC_OAUTH_MODELS,
+  },
   anthropic: {
     id: "anthropic",
     name: "Anthropic",
@@ -245,6 +260,57 @@ export class ProviderRegistry {
     }
 
     switch (providerId) {
+      case "anthropic-oauth": {
+        // credentials is a JSON blob: {access, refresh, expires}
+        let tokens: { access: string; refresh: string; expires: number };
+        try {
+          tokens = JSON.parse(credentials);
+        } catch {
+          throw new Error("Invalid OAuth credentials for anthropic-oauth");
+        }
+
+        const oauthFetch: typeof globalThis.fetch = async (input, init) => {
+          // Auto-refresh if expired
+          if (Date.now() >= tokens.expires) {
+            const refreshResp = await globalThis.fetch(
+              "https://console.anthropic.com/v1/oauth/token",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                  grant_type: "refresh_token",
+                  refresh_token: tokens.refresh,
+                  client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+                }),
+              }
+            );
+            if (refreshResp.ok) {
+              const data = await refreshResp.json();
+              tokens.access = data.access_token;
+              tokens.refresh = data.refresh_token || tokens.refresh;
+              tokens.expires = Date.now() + (data.expires_in || 3600) * 1000;
+            }
+          }
+
+          const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url;
+          const newUrl = url.includes("/v1/messages") && !url.includes("beta=true")
+            ? url + (url.includes("?") ? "&" : "?") + "beta=true"
+            : url;
+
+          const headers = new Headers((init as RequestInit)?.headers);
+          headers.delete("x-api-key");
+          headers.set("Authorization", `Bearer ${tokens.access}`);
+          headers.set("anthropic-beta", "oauth-2025-04-20,interleaved-thinking-2025-05-14");
+
+          return globalThis.fetch(newUrl, { ...init, headers });
+        };
+
+        const anthropicOAuth = createAnthropic({
+          apiKey: "placeholder",
+          fetch: oauthFetch,
+        });
+        return anthropicOAuth(effectiveModelId);
+      }
       case "anthropic": {
         const anthropic = createAnthropic({ apiKey: credentials });
         return anthropic(effectiveModelId);

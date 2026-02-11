@@ -176,6 +176,7 @@ const SETTINGS_KEY = "botical:settings";
  */
 export interface AppSettings {
   anthropicApiKey?: string;
+  anthropicOAuthTokens?: { access: string; refresh: string; expires: number };
   openaiApiKey?: string;
   googleApiKey?: string;
   ollamaBaseUrl?: string;

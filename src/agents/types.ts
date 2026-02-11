@@ -13,6 +13,7 @@ import { z } from "zod";
  */
 export const ProviderIds = {
   anthropic: "anthropic",
+  "anthropic-oauth": "anthropic-oauth",
   openai: "openai",
   google: "google",
   ollama: "ollama",

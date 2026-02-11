@@ -49,6 +49,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [showToolsPanel, setShowToolsPanel] = useState(false);
   const [showSkillsPanel, setShowSkillsPanel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set());
   const [toolsInitialized, setToolsInitialized] = useState(false);
@@ -210,10 +211,13 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   }, [session, availableModels, defaultModel, selectedModel, agentConfig]);
 
   const currentModelId = selectedModel ?? session?.modelId ?? defaultModel;
-  const currentModel = availableModels.find(m => m.id === currentModelId) ?? availableModels[0];
+  const currentModel = (selectedProviderId
+    ? availableModels.find(m => m.id === currentModelId && m.providerId === selectedProviderId)
+    : availableModels.find(m => m.id === currentModelId)) ?? availableModels[0];
 
-  const handleModelChange = async (modelId: string) => {
+  const handleModelChange = async (modelId: string, providerId?: string) => {
     setSelectedModel(modelId);
+    setSelectedProviderId(providerId || null);
     setShowModelDropdown(false);
     
     // Persist model change to session
@@ -228,7 +232,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     }
   };
 
-  const hasApiKey = settings?.anthropicApiKey || settings?.openaiApiKey || settings?.googleApiKey;
+  const hasApiKey = settings?.anthropicApiKey || settings?.anthropicOAuthTokens || settings?.openaiApiKey || settings?.googleApiKey;
 
   // Generate system prompt preview (matches server-side generation)
   const systemPromptPreview = `You are an AI coding assistant with access to tools for reading, writing, and editing files, as well as executing commands.
@@ -505,7 +509,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {["anthropic", "openai", "google"].map(providerId => {
+                  {["anthropic-oauth", "anthropic", "openai", "google"].map(providerId => {
                     const providerModels = availableModels.filter(m => m.providerId === providerId);
                     if (providerModels.length === 0) return null;
                     return (
@@ -515,12 +519,12 @@ You have access to tools for reading, writing, and editing files, as well as exe
                         </div>
                         {providerModels.map((model) => (
                           <button
-                            key={model.id}
+                            key={`${providerId}-${model.id}`}
                             type="button"
-                            onClick={() => handleModelChange(model.id)}
+                            onClick={() => handleModelChange(model.id, model.providerId)}
                             className={cn(
                               "w-full px-4 py-3 text-left hover:bg-bg-elevated transition-colors",
-                              currentModel?.id === model.id && "bg-bg-elevated"
+                              currentModel?.id === model.id && currentModel?.providerId === model.providerId && "bg-bg-elevated"
                             )}
                           >
                             <div className="flex items-center gap-2">
@@ -529,7 +533,10 @@ You have access to tools for reading, writing, and editing files, as well as exe
                                   {model.name}
                                 </div>
                               </div>
-                              {currentModel?.id === model.id && (
+                              {model.isFree && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded-full font-medium">Free</span>
+                              )}
+                              {currentModel?.id === model.id && currentModel?.providerId === model.providerId && (
                                 <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
                               )}
                             </div>
@@ -543,7 +550,7 @@ You have access to tools for reading, writing, and editing files, as well as exe
               {/* Desktop: dropdown */}
               <div className="hidden sm:block absolute top-full right-0 mt-1 w-80 bg-bg-primary border border-border rounded-lg shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
                 <div className="py-1">
-                  {["anthropic", "openai", "google"].map(providerId => {
+                  {["anthropic-oauth", "anthropic", "openai", "google"].map(providerId => {
                     const providerModels = availableModels.filter(m => m.providerId === providerId);
                     if (providerModels.length === 0) return null;
                     return (
@@ -553,12 +560,12 @@ You have access to tools for reading, writing, and editing files, as well as exe
                         </div>
                         {providerModels.map((model) => (
                           <button
-                            key={model.id}
+                            key={`${providerId}-${model.id}`}
                             type="button"
-                            onClick={() => handleModelChange(model.id)}
+                            onClick={() => handleModelChange(model.id, model.providerId)}
                             className={cn(
                               "w-full px-3 py-2 text-left hover:bg-bg-elevated transition-colors",
-                              currentModel?.id === model.id && "bg-bg-elevated"
+                              currentModel?.id === model.id && currentModel?.providerId === model.providerId && "bg-bg-elevated"
                             )}
                           >
                             <div className="flex items-center gap-2">
@@ -567,7 +574,10 @@ You have access to tools for reading, writing, and editing files, as well as exe
                                   {model.name}
                                 </div>
                               </div>
-                              {currentModel?.id === model.id && (
+                              {model.isFree && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded-full font-medium">Free</span>
+                              )}
+                              {currentModel?.id === model.id && currentModel?.providerId === model.providerId && (
                                 <div className="w-2 h-2 rounded-full bg-accent-primary shrink-0" />
                               )}
                             </div>

@@ -19,7 +19,7 @@ import { NotFoundError, ConflictError } from "../utils/errors.ts";
 /**
  * Supported AI providers
  */
-export const SUPPORTED_PROVIDERS = ["openai", "anthropic", "google", "ollama"] as const;
+export const SUPPORTED_PROVIDERS = ["openai", "anthropic", "anthropic-oauth", "google", "ollama"] as const;
 export type Provider = (typeof SUPPORTED_PROVIDERS)[number];
 
 /**
@@ -329,6 +329,7 @@ export class ProviderCredentialsService {
     const result: Record<Provider, boolean> = {
       openai: false,
       anthropic: false,
+      "anthropic-oauth": false,
       google: false,
       ollama: false,
     };

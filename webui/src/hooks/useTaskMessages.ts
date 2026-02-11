@@ -338,6 +338,7 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
     const providerId = options?.providerId;
     let apiKey: string | undefined;
     if (providerId === "anthropic") apiKey = settings.anthropicApiKey;
+    else if (providerId === "anthropic-oauth") apiKey = settings.anthropicOAuthTokens ? JSON.stringify(settings.anthropicOAuthTokens) : undefined;
     else if (providerId === "openai") apiKey = settings.openaiApiKey;
     else if (providerId === "google") apiKey = settings.googleApiKey;
     // If no provider specified, send all keys — backend picks the right one

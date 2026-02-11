@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSettings, useSaveSettings } from "@/lib/api/queries";
+import { useSettings, useSaveSettings, type AppSettings } from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
 import {
   Save,
@@ -10,6 +10,8 @@ import {
   CircleCheck,
   CircleX,
   CircleDashed,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 
 interface ModelsPageProps {
@@ -74,6 +76,52 @@ const SETTINGS_KEY_MAP: Record<string, string> = {
   ollama: "ollamaBaseUrl",
 };
 
+// --- Anthropic OAuth helpers ---
+const OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
+const OAUTH_AUTHORIZE_URL = "https://claude.ai/oauth/authorize";
+const OAUTH_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token";
+const OAUTH_REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback";
+const OAUTH_SCOPES = "org:create_api_key user:profile user:inference";
+
+async function generatePKCE() {
+  const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(verifier)
+  );
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return { verifier, challenge };
+}
+
+async function exchangeCodeForTokens(code: string, verifier: string) {
+  const resp = await fetch(OAUTH_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      client_id: OAUTH_CLIENT_ID,
+      redirect_uri: OAUTH_REDIRECT_URI,
+      code_verifier: verifier,
+    }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "");
+    throw new Error(`Token exchange failed: ${resp.status} ${body}`);
+  }
+  const data = await resp.json();
+  return {
+    access: data.access_token as string,
+    refresh: data.refresh_token as string,
+    expires: Date.now() + (data.expires_in || 3600) * 1000,
+  };
+}
+
 export default function ModelsPage(_props: ModelsPageProps) {
   const { data: settings, isLoading } = useSettings();
   const saveSettings = useSaveSettings();
@@ -84,6 +132,11 @@ export default function ModelsPage(_props: ModelsPageProps) {
   const [health, setHealth] = useState<Record<string, HealthStatus>>({});
   const [healthMsg, setHealthMsg] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
+  const [oauthState, setOauthState] = useState<"idle" | "waiting" | "exchanging" | "connected" | "error">("idle");
+  const [oauthError, setOauthError] = useState("");
+  const [oauthCodeInput, setOauthCodeInput] = useState("");
+  const [pkceVerifier, setPkceVerifier] = useState<string | null>(null);
+  const [pkceState, setPkceState] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -97,6 +150,10 @@ export default function ModelsPage(_props: ModelsPageProps) {
       }
       setEnabled(newEnabled);
       setValues(newValues);
+      // Init OAuth state
+      if (settings.anthropicOAuthTokens) {
+        setOauthState("connected");
+      }
     }
   }, [settings]);
 
@@ -392,6 +449,163 @@ export default function ModelsPage(_props: ModelsPageProps) {
             </div>
           );
         })}
+      </div>
+
+      {/* Anthropic OAuth Card */}
+      <div className="mt-4">
+        <div
+          className={cn(
+            "border rounded-lg transition-colors",
+            oauthState === "connected"
+              ? "border-green-500/40 bg-green-500/5"
+              : "border-border bg-bg-secondary/50"
+          )}
+        >
+          <div className="flex items-center gap-3 p-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-text-primary">
+                  Anthropic (OAuth)
+                </span>
+                <span className="text-xs text-text-muted">
+                  Claude Pro/Max — free via subscription
+                </span>
+                <span className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded-full font-medium">
+                  $0
+                </span>
+              </div>
+            </div>
+            {oauthState === "connected" && (
+              <CircleCheck className="w-4 h-4 text-green-500" />
+            )}
+          </div>
+          <div className="px-4 pb-4 pt-0">
+            {oauthState === "idle" && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const { verifier, challenge } = await generatePKCE();
+                  const state = crypto.randomUUID();
+                  setPkceVerifier(verifier);
+                  setPkceState(state);
+                  const params = new URLSearchParams({
+                    response_type: "code",
+                    client_id: OAUTH_CLIENT_ID,
+                    redirect_uri: OAUTH_REDIRECT_URI,
+                    scope: OAUTH_SCOPES,
+                    state,
+                    code_challenge: challenge,
+                    code_challenge_method: "S256",
+                  });
+                  window.open(`${OAUTH_AUTHORIZE_URL}?${params}`, "_blank");
+                  setOauthState("waiting");
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in with Claude
+              </button>
+            )}
+            {oauthState === "waiting" && (
+              <div className="space-y-3">
+                <p className="text-sm text-text-muted">
+                  After authorizing, paste the <code className="text-xs bg-bg-elevated px-1 py-0.5 rounded">code#state</code> from the callback page:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={oauthCodeInput}
+                    onChange={(e) => setOauthCodeInput(e.target.value)}
+                    placeholder="paste code#state here"
+                    className="flex-1 px-3 py-2 bg-bg-primary border border-border rounded-lg text-text-primary placeholder:text-text-muted font-mono text-sm focus:outline-none focus:border-accent-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setOauthState("exchanging");
+                      setOauthError("");
+                      try {
+                        const raw = oauthCodeInput.trim();
+                        let code = raw;
+                        if (raw.includes("#")) {
+                          const [c, s] = raw.split("#");
+                          code = c;
+                          if (pkceState && s !== pkceState) {
+                            throw new Error("State mismatch — possible CSRF. Try again.");
+                          }
+                        }
+                        if (!pkceVerifier) throw new Error("Missing PKCE verifier");
+                        const tokens = await exchangeCodeForTokens(code, pkceVerifier);
+                        if (!settings) throw new Error("Settings not loaded");
+                        await saveSettings.mutateAsync({
+                          ...settings,
+                          anthropicOAuthTokens: tokens,
+                        });
+                        setOauthState("connected");
+                        setOauthCodeInput("");
+                      } catch (err) {
+                        setOauthError(err instanceof Error ? err.message : "Exchange failed");
+                        setOauthState("waiting");
+                      }
+                    }}
+                    disabled={!oauthCodeInput.trim()}
+                    className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm disabled:opacity-50"
+                  >
+                    Connect
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOauthState("idle");
+                    setOauthCodeInput("");
+                    setOauthError("");
+                  }}
+                  className="text-xs text-text-muted hover:text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {oauthState === "exchanging" && (
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Exchanging code for tokens...
+              </div>
+            )}
+            {oauthState === "connected" && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  Connected — using your Claude subscription
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!settings) return;
+                    const { anthropicOAuthTokens: _, ...rest } = settings;
+                    await saveSettings.mutateAsync({ ...rest, userId: settings.userId } as AppSettings);
+                    setOauthState("idle");
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-text-muted hover:text-red-500 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Disconnect
+                </button>
+              </div>
+            )}
+            {oauthState === "error" && (
+              <p className="text-sm text-red-500">{oauthError}</p>
+            )}
+            {oauthError && oauthState === "waiting" && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                {oauthError}
+              </p>
+            )}
+            <p className="text-xs text-text-muted mt-2">
+              Use your Claude Pro or Max subscription for API access at no additional cost.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Save Button */}
