@@ -276,8 +276,8 @@ export class ProviderRegistry {
               "https://console.anthropic.com/v1/oauth/token",
               {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
                   grant_type: "refresh_token",
                   refresh_token: tokens.refresh,
                   client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
@@ -297,12 +297,87 @@ export class ProviderRegistry {
             ? url + (url.includes("?") ? "&" : "?") + "beta=true"
             : url;
 
-          const headers = new Headers((init as RequestInit)?.headers);
-          headers.delete("x-api-key");
-          headers.set("Authorization", `Bearer ${tokens.access}`);
-          headers.set("anthropic-beta", "oauth-2025-04-20,interleaved-thinking-2025-05-14");
+          // Merge all incoming headers
+          const headers = new Headers();
+          const incomingInit = init as RequestInit | undefined;
+          if (incomingInit?.headers) {
+            const h = incomingInit.headers;
+            if (h instanceof Headers) {
+              h.forEach((v, k) => headers.set(k, v));
+            } else if (Array.isArray(h)) {
+              for (const [k, v] of h) { if (v !== undefined) headers.set(k, String(v)); }
+            } else {
+              for (const [k, v] of Object.entries(h)) { if (v !== undefined) headers.set(k, String(v)); }
+            }
+          }
 
-          return globalThis.fetch(newUrl, { ...init, headers });
+          // OAuth headers — must match Claude Code's expectations
+          headers.delete("x-api-key");
+          headers.set("authorization", `Bearer ${tokens.access}`);
+          headers.set("user-agent", "claude-cli/2.1.2 (external, cli)");
+
+          // Merge required betas with any existing ones
+          const existingBeta = headers.get("anthropic-beta") || "";
+          const existingBetas = existingBeta.split(",").map(b => b.trim()).filter(Boolean);
+          const requiredBetas = ["oauth-2025-04-20", "interleaved-thinking-2025-05-14"];
+          headers.set("anthropic-beta", [...new Set([...requiredBetas, ...existingBetas])].join(","));
+
+          // Transform request body: prefix tool names with mcp_
+          let body = incomingInit?.body;
+          if (body && typeof body === "string") {
+            try {
+              const parsed = JSON.parse(body);
+              const TOOL_PREFIX = "mcp_";
+
+              // Prefix tool definitions
+              if (parsed.tools && Array.isArray(parsed.tools)) {
+                parsed.tools = parsed.tools.map((tool: any) => ({
+                  ...tool,
+                  name: tool.name ? `${TOOL_PREFIX}${tool.name}` : tool.name,
+                }));
+              }
+              // Prefix tool_use blocks in messages
+              if (parsed.messages && Array.isArray(parsed.messages)) {
+                parsed.messages = parsed.messages.map((msg: any) => {
+                  if (msg.content && Array.isArray(msg.content)) {
+                    msg.content = msg.content.map((block: any) => {
+                      if (block.type === "tool_use" && block.name) {
+                        return { ...block, name: `${TOOL_PREFIX}${block.name}` };
+                      }
+                      return block;
+                    });
+                  }
+                  return msg;
+                });
+              }
+              body = JSON.stringify(parsed);
+            } catch { /* ignore parse errors */ }
+          }
+
+          const response = await globalThis.fetch(newUrl, { ...init, body, headers });
+
+          // Transform streaming response: remove mcp_ prefix from tool names
+          if (response.body) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+              async pull(controller) {
+                const { done, value } = await reader.read();
+                if (done) { controller.close(); return; }
+                let text = decoder.decode(value, { stream: true });
+                text = text.replace(/"name"\s*:\s*"mcp_([^"]+)"/g, '"name": "$1"');
+                controller.enqueue(encoder.encode(text));
+              },
+            });
+            return new Response(stream, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+            });
+          }
+
+          return response;
         };
 
         const anthropicOAuth = createAnthropic({
