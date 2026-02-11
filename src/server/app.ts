@@ -22,7 +22,7 @@ import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { requireAuth } from "../auth/middleware.ts";
-import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules, oauthProxy } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -71,6 +71,7 @@ export function createApp() {
   app.route("/health", health);
   app.route("/auth", auth);
   app.route("/credentials", credentials);
+  app.route("/oauth", oauthProxy);
 
   // Global auth middleware for all API routes
   // In single-user mode, this auto-authenticates as the local user

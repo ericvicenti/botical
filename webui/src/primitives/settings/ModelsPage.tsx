@@ -99,10 +99,11 @@ async function generatePKCE() {
 }
 
 async function exchangeCodeForTokens(code: string, verifier: string) {
-  const resp = await fetch(OAUTH_TOKEN_URL, {
+  // Proxy through backend to avoid CORS issues with Anthropic's token endpoint
+  const resp = await fetch("/oauth/anthropic/token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
       grant_type: "authorization_code",
       code,
       client_id: OAUTH_CLIENT_ID,

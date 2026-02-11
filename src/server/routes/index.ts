@@ -19,3 +19,4 @@ export { skills } from "./skills.ts";
 export { templates } from "./templates.ts";
 export { extensionsRouter } from "./extensions.ts";
 export { projectSchedules, schedules } from "./schedules.ts";
+export { oauthProxy } from "./oauth-proxy.ts";
