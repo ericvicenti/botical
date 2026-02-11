@@ -98,14 +98,20 @@ async function generatePKCE() {
   return { verifier, challenge };
 }
 
-async function exchangeCodeForTokens(code: string, verifier: string) {
+async function exchangeCodeForTokens(rawCode: string, verifier: string) {
+  // Anthropic returns "code#state" — split and send both fields
+  const [code, state] = rawCode.includes("#")
+    ? rawCode.split("#")
+    : [rawCode, undefined];
+
   // Proxy through backend to avoid CORS issues with Anthropic's token endpoint
   const resp = await fetch("/oauth/anthropic/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      grant_type: "authorization_code",
       code,
+      state,
+      grant_type: "authorization_code",
       client_id: OAUTH_CLIENT_ID,
       redirect_uri: OAUTH_REDIRECT_URI,
       code_verifier: verifier,
@@ -486,17 +492,19 @@ export default function ModelsPage(_props: ModelsPageProps) {
                 type="button"
                 onClick={async () => {
                   const { verifier, challenge } = await generatePKCE();
-                  const state = crypto.randomUUID();
+                  // OpenCode uses the PKCE verifier as the state parameter
+                  const state = verifier;
                   setPkceVerifier(verifier);
                   setPkceState(state);
                   const params = new URLSearchParams({
-                    response_type: "code",
+                    code: "true",
                     client_id: OAUTH_CLIENT_ID,
+                    response_type: "code",
                     redirect_uri: OAUTH_REDIRECT_URI,
                     scope: OAUTH_SCOPES,
-                    state,
                     code_challenge: challenge,
                     code_challenge_method: "S256",
+                    state,
                   });
                   window.open(`${OAUTH_AUTHORIZE_URL}?${params}`, "_blank");
                   setOauthState("waiting");
@@ -527,16 +535,8 @@ export default function ModelsPage(_props: ModelsPageProps) {
                       setOauthError("");
                       try {
                         const raw = oauthCodeInput.trim();
-                        let code = raw;
-                        if (raw.includes("#")) {
-                          const [c, s] = raw.split("#");
-                          code = c;
-                          if (pkceState && s !== pkceState) {
-                            throw new Error("State mismatch — possible CSRF. Try again.");
-                          }
-                        }
                         if (!pkceVerifier) throw new Error("Missing PKCE verifier");
-                        const tokens = await exchangeCodeForTokens(code, pkceVerifier);
+                        const tokens = await exchangeCodeForTokens(raw, pkceVerifier);
                         if (!settings) throw new Error("Settings not loaded");
                         await saveSettings.mutateAsync({
                           ...settings,
