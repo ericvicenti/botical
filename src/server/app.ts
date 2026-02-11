@@ -70,7 +70,7 @@ export function createApp() {
   // Mount routes
   app.route("/health", health);
   app.route("/auth", auth);
-  app.route("/credentials", credentials);
+  app.route("/api/credentials", credentials);
   app.route("/oauth", oauthProxy);
 
   // Global auth middleware for all API routes

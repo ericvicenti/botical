@@ -79,9 +79,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
 
       const currentSettings = settings || getSettings();
 
-      // Send the first available API key — backend will pick the right provider
-      const apiKey = currentSettings.anthropicApiKey || currentSettings.openaiApiKey || currentSettings.googleApiKey;
-
       // Navigate and close immediately, send message in background
       openTab({
         type: "task",
@@ -92,13 +89,12 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
       onClose();
 
-      // Fire and forget — backend resolves model/provider from session config
+      // Fire and forget — backend resolves model/provider from stored credentials
       sendMessage.mutate({
         projectId,
         sessionId: session.id,
         content: message.trim(),
         userId: currentSettings.userId,
-        apiKey,
       });
     } catch (err) {
       console.error("Failed to create task:", err);

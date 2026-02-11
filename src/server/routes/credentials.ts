@@ -6,12 +6,14 @@
  *
  * Endpoints:
  * - GET    /credentials         - List all credentials
- * - POST   /credentials         - Create new credential
+ * - POST   /credentials         - Create/upsert a credential
  * - GET    /credentials/:id     - Get credential details
  * - PATCH  /credentials/:id     - Update credential
  * - DELETE /credentials/:id     - Delete credential
  * - POST   /credentials/:id/default - Set as default
  * - GET    /credentials/check   - Check which providers are configured
+ * - GET    /credentials/models  - Fetch available models for all configured providers
+ * - POST   /credentials/health  - Check health of a provider credential
  */
 
 import { Hono } from "hono";
@@ -20,6 +22,8 @@ import {
   ProviderCredentialsService,
   ProviderCredentialCreateSchema,
   ProviderCredentialUpdateSchema,
+  SUPPORTED_PROVIDERS,
+  type Provider,
 } from "../../services/provider-credentials.ts";
 import { ValidationError } from "../../utils/errors.ts";
 
@@ -53,7 +57,164 @@ credentials.get("/check", async (c) => {
 });
 
 /**
- * Create a new credential
+ * Fetch available models for all configured providers (server-side)
+ *
+ * GET /credentials/models
+ */
+credentials.get("/models", async (c) => {
+  const auth = c.get("auth");
+  const models: Array<{
+    id: string;
+    name: string;
+    providerId: string;
+    providerName: string;
+    isFree?: boolean;
+  }> = [];
+
+  const configured = ProviderCredentialsService.hasCredentials(auth.userId);
+
+  const fetchers: Promise<void>[] = [];
+
+  if (configured.anthropic) {
+    const apiKey = ProviderCredentialsService.getApiKey(auth.userId, "anthropic");
+    if (apiKey) {
+      fetchers.push(
+        fetchAnthropicModels(apiKey).then((m) => { models.push(...m); })
+      );
+    }
+  }
+
+  if (configured["anthropic-oauth"]) {
+    const tokenJson = ProviderCredentialsService.getApiKey(auth.userId, "anthropic-oauth");
+    if (tokenJson) {
+      try {
+        const tokens = JSON.parse(tokenJson);
+        fetchers.push(
+          fetchAnthropicOAuthModels(tokens).then((m) => { models.push(...m); })
+        );
+      } catch { /* ignore bad JSON */ }
+    }
+  }
+
+  if (configured.openai) {
+    const apiKey = ProviderCredentialsService.getApiKey(auth.userId, "openai");
+    if (apiKey) {
+      fetchers.push(
+        fetchOpenAIModels(apiKey).then((m) => { models.push(...m); })
+      );
+    }
+  }
+
+  if (configured.google) {
+    const apiKey = ProviderCredentialsService.getApiKey(auth.userId, "google");
+    if (apiKey) {
+      fetchers.push(
+        fetchGoogleModels(apiKey).then((m) => { models.push(...m); })
+      );
+    }
+  }
+
+  if (configured.ollama) {
+    const baseUrl = ProviderCredentialsService.getApiKey(auth.userId, "ollama");
+    if (baseUrl) {
+      fetchers.push(
+        fetchOllamaModels(baseUrl).then((m) => { models.push(...m); })
+      );
+    }
+  }
+
+  await Promise.allSettled(fetchers);
+
+  return c.json({ models });
+});
+
+/**
+ * Check health of a specific provider
+ *
+ * POST /credentials/health
+ * Body: { provider: string }
+ */
+credentials.post("/health", async (c) => {
+  const auth = c.get("auth");
+  const body = await c.req.json();
+  const provider = body.provider as Provider;
+
+  if (!SUPPORTED_PROVIDERS.includes(provider)) {
+    throw new ValidationError(`Unsupported provider: ${provider}`);
+  }
+
+  const apiKey = ProviderCredentialsService.getApiKey(auth.userId, provider);
+  if (!apiKey) {
+    return c.json({ status: "no_key", message: "No credential configured" });
+  }
+
+  try {
+    if (provider === "ollama") {
+      const url = apiKey.replace(/\/+$/, "");
+      const resp = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
+      if (resp.ok) {
+        const data = await resp.json() as { models?: unknown[] };
+        const modelCount = data.models?.length || 0;
+        return c.json({ status: "ok", message: `Connected — ${modelCount} model${modelCount !== 1 ? "s" : ""} available` });
+      }
+      return c.json({ status: "error", message: `HTTP ${resp.status}` });
+    }
+
+    if (provider === "anthropic-oauth") {
+      try {
+        const tokens = JSON.parse(apiKey);
+        const resp = await fetch("https://api.anthropic.com/v1/models?beta=true&limit=1", {
+          headers: {
+            "Authorization": `Bearer ${tokens.access}`,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "oauth-2025-04-20",
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (resp.ok) return c.json({ status: "ok", message: "OAuth tokens valid" });
+        return c.json({ status: "error", message: `HTTP ${resp.status}` });
+      } catch {
+        return c.json({ status: "error", message: "Invalid OAuth token data" });
+      }
+    }
+
+    // API key-based providers
+    let testUrl = "";
+    let testHeaders: Record<string, string> = {};
+
+    if (provider === "anthropic") {
+      testUrl = "https://api.anthropic.com/v1/models?limit=1";
+      testHeaders = { "x-api-key": apiKey, "anthropic-version": "2023-06-01" };
+    } else if (provider === "openai") {
+      testUrl = "https://api.openai.com/v1/models?limit=1";
+      testHeaders = { Authorization: `Bearer ${apiKey}` };
+    } else if (provider === "google") {
+      testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}&pageSize=1`;
+    }
+
+    const resp = await fetch(testUrl, { headers: testHeaders, signal: AbortSignal.timeout(10000) });
+    if (resp.ok) {
+      return c.json({ status: "ok", message: "API key is valid" });
+    }
+
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const respBody = await resp.text();
+      const j = JSON.parse(respBody);
+      msg = j.error?.message || j.error?.type || msg;
+    } catch { /* ignore */ }
+
+    return c.json({ status: "error", message: msg });
+  } catch (err) {
+    const message = err instanceof Error
+      ? err.name === "TimeoutError" ? "Connection timed out" : err.message
+      : "Connection failed";
+    return c.json({ status: "error", message });
+  }
+});
+
+/**
+ * Create a new credential (or upsert by provider)
  *
  * POST /credentials
  * Body: { provider, apiKey, name?, isDefault? }
@@ -67,6 +228,18 @@ credentials.post("/", async (c) => {
     throw new ValidationError(
       result.error.errors[0]?.message || "Invalid credential data"
     );
+  }
+
+  // Upsert: if a default credential exists for this provider, update it
+  const existing = ProviderCredentialsService.list(auth.userId)
+    .find(c => c.provider === result.data.provider && c.isDefault);
+
+  if (existing) {
+    const credential = ProviderCredentialsService.update(auth.userId, existing.id, {
+      apiKey: result.data.apiKey,
+      name: result.data.name,
+    });
+    return c.json({ credential });
   }
 
   const credential = ProviderCredentialsService.create(auth.userId, result.data);
@@ -145,5 +318,109 @@ credentials.post("/:id/default", async (c) => {
 
   return c.json({ success: true });
 });
+
+// ---- Model fetching helpers ----
+
+interface ModelOption {
+  id: string;
+  name: string;
+  providerId: string;
+  providerName: string;
+  isFree?: boolean;
+}
+
+const PREFERRED_ANTHROPIC = [
+  "claude-opus-4-20250514",
+  "claude-sonnet-4-20250514",
+  "claude-3-5-haiku-20241022",
+];
+
+async function fetchAnthropicModels(apiKey: string): Promise<ModelOption[]> {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/models", {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as { data?: Array<{ id: string; display_name?: string }> };
+    return (data.data || [])
+      .filter((m) => m.id.includes("claude"))
+      .map((m) => ({ id: m.id, name: m.display_name || m.id, providerId: "anthropic", providerName: "Anthropic" }))
+      .sort((a, b) => {
+        const aIdx = PREFERRED_ANTHROPIC.indexOf(a.id);
+        const bIdx = PREFERRED_ANTHROPIC.indexOf(b.id);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  } catch { return []; }
+}
+
+async function fetchAnthropicOAuthModels(tokens: { access: string }): Promise<ModelOption[]> {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/models?beta=true", {
+      headers: {
+        "Authorization": `Bearer ${tokens.access}`,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "oauth-2025-04-20",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as { data?: Array<{ id: string; display_name?: string }> };
+    return (data.data || [])
+      .filter((m) => m.id.includes("claude"))
+      .map((m) => ({ id: m.id, name: m.display_name || m.id, providerId: "anthropic-oauth", providerName: "Anthropic (Pro/Max)", isFree: true }))
+      .sort((a, b) => {
+        const aIdx = PREFERRED_ANTHROPIC.indexOf(a.id);
+        const bIdx = PREFERRED_ANTHROPIC.indexOf(b.id);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  } catch { return []; }
+}
+
+async function fetchOpenAIModels(apiKey: string): Promise<ModelOption[]> {
+  try {
+    const res = await fetch("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as { data?: Array<{ id: string }> };
+    return (data.data || [])
+      .filter((m) => /^(gpt-|o1|o3|chatgpt)/.test(m.id))
+      .map((m) => ({ id: m.id, name: m.id, providerId: "openai", providerName: "OpenAI" }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+  } catch { return []; }
+}
+
+async function fetchGoogleModels(apiKey: string): Promise<ModelOption[]> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      { signal: AbortSignal.timeout(10000) },
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { models?: Array<{ name: string; displayName: string; supportedGenerationMethods?: string[] }> };
+    return (data.models || [])
+      .filter((m) => m.name.includes("gemini") && m.supportedGenerationMethods?.includes("generateContent"))
+      .map((m) => ({ id: m.name.replace("models/", ""), name: m.displayName || m.name, providerId: "google", providerName: "Google" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch { return []; }
+}
+
+async function fetchOllamaModels(baseUrl: string): Promise<ModelOption[]> {
+  try {
+    const url = baseUrl.replace(/\/+$/, "");
+    const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const data = await res.json() as { models?: Array<{ name: string }> };
+    return (data.models || []).map((m) => ({ id: m.name, name: m.name, providerId: "ollama", providerName: "Ollama" }));
+  } catch { return []; }
+}
 
 export { credentials };

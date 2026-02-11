@@ -232,7 +232,8 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
     }
   };
 
-  const hasApiKey = settings?.anthropicApiKey || settings?.anthropicOAuthTokens || settings?.openaiApiKey || settings?.googleApiKey;
+  // API keys are now stored server-side; assume configured if settings exist
+  const hasApiKey = true;
 
   // Generate system prompt preview (matches server-side generation)
   const systemPromptPreview = `You are an AI coding assistant with access to tools for reading, writing, and editing files, as well as executing commands.

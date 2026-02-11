@@ -146,7 +146,6 @@ export function useSendMessage() {
       content: string;
       userId: string;
       providerId?: string;
-      apiKey?: string;
       modelId?: string;
     }) =>
       apiClient<{ message: MessageWithParts; parts: MessagePart[] }>("/api/messages", {
@@ -157,7 +156,6 @@ export function useSendMessage() {
           content: data.content,
           userId: data.userId,
           ...(data.providerId && { providerId: data.providerId }),
-          ...(data.apiKey && { apiKey: data.apiKey }),
           ...(data.modelId && { modelId: data.modelId }),
         }),
       }),
@@ -168,13 +166,21 @@ export function useSendMessage() {
   });
 }
 
-// Settings - stored in localStorage for now
+// Settings - userId stored in localStorage, credentials on server
 const SETTINGS_KEY = "botical:settings";
 
 /**
- * App Settings - stored in localStorage
+ * App Settings - only non-sensitive data in localStorage
+ * API keys are stored server-side via /api/credentials
  */
 export interface AppSettings {
+  userId: string;
+}
+
+/**
+ * @deprecated Use AppSettings instead. Legacy interface kept for migration.
+ */
+export interface LegacyAppSettings {
   anthropicApiKey?: string;
   anthropicOAuthTokens?: { access: string; refresh: string; expires: number };
   openaiApiKey?: string;
@@ -187,7 +193,8 @@ export function getSettings(): AppSettings {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      return { userId: parsed.userId };
     }
   } catch (e) {
     console.warn("Failed to load settings:", e);
@@ -198,8 +205,39 @@ export function getSettings(): AppSettings {
   };
 }
 
+/**
+ * Get legacy settings (for one-time migration to server-side credentials)
+ */
+export function getLegacySettings(): LegacyAppSettings | null {
+  try {
+    const stored = localStorage.getItem(SETTINGS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Check if any API keys exist
+      if (parsed.anthropicApiKey || parsed.openaiApiKey || parsed.googleApiKey || parsed.ollamaBaseUrl || parsed.anthropicOAuthTokens) {
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+/**
+ * Clear legacy API keys from localStorage after migration
+ */
+export function clearLegacyKeys(): void {
+  try {
+    const stored = localStorage.getItem(SETTINGS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const cleaned = { userId: parsed.userId };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(cleaned));
+    }
+  } catch { /* ignore */ }
+}
+
 export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ userId: settings.userId }));
 }
 
 export function useSettings() {
@@ -220,6 +258,91 @@ export function useSaveSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+// Provider Credentials (server-side)
+
+export interface ProviderCredential {
+  id: string;
+  provider: string;
+  name: string | null;
+  isDefault: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export function useCredentials() {
+  return useQuery({
+    queryKey: ["credentials"],
+    queryFn: async () => {
+      const response = await apiClientRaw<ProviderCredential[]>("/api/credentials");
+      // The API returns { credentials: [...] } not wrapped in data
+      return (response as unknown as { credentials: ProviderCredential[] }).credentials;
+    },
+  });
+}
+
+export function useCredentialsCheck() {
+  return useQuery({
+    queryKey: ["credentials", "check"],
+    queryFn: async () => {
+      const resp = await fetch("/api/credentials/check");
+      const data = await resp.json();
+      return data.configured as Record<string, boolean>;
+    },
+  });
+}
+
+export function useSaveCredential() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { provider: string; apiKey: string; name?: string }) => {
+      const resp = await fetch("/api/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error?.message || "Failed to save credential");
+      }
+      return resp.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credentials"] });
+      queryClient.invalidateQueries({ queryKey: ["available-models"] });
+    },
+  });
+}
+
+export function useDeleteCredential() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (credentialId: string) => {
+      const resp = await fetch(`/api/credentials/${credentialId}`, { method: "DELETE" });
+      if (!resp.ok) throw new Error("Failed to delete credential");
+      return resp.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credentials"] });
+      queryClient.invalidateQueries({ queryKey: ["available-models"] });
+    },
+  });
+}
+
+export function useCheckProviderHealth() {
+  return useMutation({
+    mutationFn: async (provider: string) => {
+      const resp = await fetch("/api/credentials/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      return resp.json() as Promise<{ status: string; message: string }>;
     },
   });
 }
@@ -1625,17 +1748,15 @@ export function useGenerateCommitMessage() {
       diff,
       userId,
       providerId = "anthropic",
-      apiKey,
     }: {
       projectId: string;
       diff: string;
       userId: string;
       providerId?: "anthropic" | "openai" | "google";
-      apiKey?: string;
     }) =>
       apiClient<{ message: string }>(`/api/projects/${projectId}/git/generate-message`, {
         method: "POST",
-        body: JSON.stringify({ diff, userId, providerId, apiKey }),
+        body: JSON.stringify({ diff, userId, providerId }),
       }),
   });
 }

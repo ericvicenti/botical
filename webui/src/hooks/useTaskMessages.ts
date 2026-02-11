@@ -334,17 +334,8 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
       return [...prev, optimisticMessage];
     });
 
-    // Resolve API key if provider/model specified
+    // API keys are now stored server-side — no need to send from frontend
     const providerId = options?.providerId;
-    let apiKey: string | undefined;
-    if (providerId === "anthropic") apiKey = settings.anthropicApiKey;
-    else if (providerId === "anthropic-oauth") apiKey = settings.anthropicOAuthTokens ? JSON.stringify(settings.anthropicOAuthTokens) : undefined;
-    else if (providerId === "openai") apiKey = settings.openaiApiKey;
-    else if (providerId === "google") apiKey = settings.googleApiKey;
-    // If no provider specified, send all keys — backend picks the right one
-    if (!apiKey && !providerId) {
-      apiKey = settings.anthropicApiKey || settings.openaiApiKey || settings.googleApiKey;
-    }
 
     // Send via REST API
     log("sendMessage", "Sending API request");
@@ -358,7 +349,6 @@ export function useTaskMessages({ sessionId, projectId }: UseTaskMessagesOptions
           content,
           userId: settings.userId,
           ...(providerId && { providerId }),
-          ...(apiKey && { apiKey }),
           ...(options?.modelId && { modelId: options.modelId }),
           ...(options?.agentName && { agentName: options.agentName }),
           canExecuteCode: options?.canExecuteCode ?? false,

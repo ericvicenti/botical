@@ -1,18 +1,24 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSettings, useSaveSettings, type AppSettings } from "@/lib/api/queries";
+import { useState, useEffect } from "react";
+import {
+  useCredentials,
+  useSaveCredential,
+  useDeleteCredential,
+  useCheckProviderHealth,
+  getLegacySettings,
+  clearLegacyKeys,
+  type ProviderCredential,
+} from "@/lib/api/queries";
 import { cn } from "@/lib/utils/cn";
 import {
-  Save,
   Eye,
   EyeOff,
-  Check,
   Loader2,
   CircleCheck,
   CircleX,
-  CircleDashed,
   LogIn,
   LogOut,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ModelsPageProps {
   params: Record<string, never>;
@@ -24,10 +30,9 @@ interface ProviderConfig {
   name: string;
   description: string;
   keyPlaceholder?: string;
-  keyPrefix?: string;
   helpUrl?: string;
   helpLabel?: string;
-  isUrlBased?: boolean; // e.g. Ollama — no API key, just a URL
+  isUrlBased?: boolean;
   defaultUrl?: string;
 }
 
@@ -69,17 +74,9 @@ const PROVIDERS: ProviderConfig[] = [
 
 type HealthStatus = "idle" | "checking" | "ok" | "error";
 
-const SETTINGS_KEY_MAP: Record<string, string> = {
-  anthropic: "anthropicApiKey",
-  openai: "openaiApiKey",
-  google: "googleApiKey",
-  ollama: "ollamaBaseUrl",
-};
-
 // --- Anthropic OAuth helpers ---
 const OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const OAUTH_AUTHORIZE_URL = "https://claude.ai/oauth/authorize";
-const OAUTH_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token";
 const OAUTH_REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback";
 const OAUTH_SCOPES = "org:create_api_key user:profile user:inference";
 
@@ -99,12 +96,10 @@ async function generatePKCE() {
 }
 
 async function exchangeCodeForTokens(rawCode: string, verifier: string) {
-  // Anthropic returns "code#state" — split and send both fields
   const [code, state] = rawCode.includes("#")
     ? rawCode.split("#")
     : [rawCode, undefined];
 
-  // Proxy through backend to avoid CORS issues with Anthropic's token endpoint
   const resp = await fetch("/oauth/anthropic/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -130,175 +125,159 @@ async function exchangeCodeForTokens(rawCode: string, verifier: string) {
 }
 
 export default function ModelsPage(_props: ModelsPageProps) {
-  const { data: settings, isLoading } = useSettings();
-  const saveSettings = useSaveSettings();
+  const { data: credentials, isLoading: credsLoading } = useCredentials();
+  const saveCredential = useSaveCredential();
+  const deleteCredential = useDeleteCredential();
+  const checkHealth = useCheckProviderHealth();
+  const queryClient = useQueryClient();
 
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({});
   const [values, setValues] = useState<Record<string, string>>({});
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [health, setHealth] = useState<Record<string, HealthStatus>>({});
   const [healthMsg, setHealthMsg] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [migrated, setMigrated] = useState(false);
+
+  // OAuth state
   const [oauthState, setOauthState] = useState<"idle" | "waiting" | "exchanging" | "connected" | "error">("idle");
   const [oauthError, setOauthError] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
   const [pkceVerifier, setPkceVerifier] = useState<string | null>(null);
-  const [pkceState, setPkceState] = useState<string | null>(null);
 
+  // Build a set of configured providers from server credentials
+  const configuredProviders = new Set(
+    (credentials || []).map((c: ProviderCredential) => c.provider)
+  );
+
+  // Check if OAuth is configured
   useEffect(() => {
-    if (settings) {
-      const newEnabled: Record<string, boolean> = {};
-      const newValues: Record<string, string> = {};
-      for (const p of PROVIDERS) {
-        const key = SETTINGS_KEY_MAP[p.id];
-        const val = (settings as Record<string, unknown>)[key] as string | undefined;
-        newValues[p.id] = val || "";
-        newEnabled[p.id] = !!val;
-      }
-      setEnabled(newEnabled);
-      setValues(newValues);
-      // Init OAuth state
-      if (settings.anthropicOAuthTokens) {
-        setOauthState("connected");
-      }
+    if (configuredProviders.has("anthropic-oauth")) {
+      setOauthState("connected");
     }
-  }, [settings]);
+  }, [credentials]);
 
-  const handleToggle = (providerId: string) => {
-    const provider = PROVIDERS.find((p) => p.id === providerId)!;
-    const newState = !enabled[providerId];
-    setEnabled((prev) => ({ ...prev, [providerId]: newState }));
-    if (newState && provider.isUrlBased && !values[providerId]) {
-      setValues((prev) => ({ ...prev, [providerId]: provider.defaultUrl || "" }));
+  // Migrate legacy localStorage keys on first load
+  useEffect(() => {
+    if (migrated || credsLoading || !credentials) return;
+    setMigrated(true);
+
+    const legacy = getLegacySettings();
+    if (!legacy) return;
+
+    const migrations: Promise<unknown>[] = [];
+    const PROVIDER_KEY_MAP: Record<string, string> = {
+      anthropic: "anthropicApiKey",
+      openai: "openaiApiKey",
+      google: "googleApiKey",
+      ollama: "ollamaBaseUrl",
+    };
+
+    for (const [provider, settingsKey] of Object.entries(PROVIDER_KEY_MAP)) {
+      const val = (legacy as unknown as Record<string, unknown>)[settingsKey] as string | undefined;
+      if (val && !configuredProviders.has(provider)) {
+        migrations.push(
+          fetch("/api/credentials", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey: val }),
+          })
+        );
+      }
     }
-    if (!newState) {
-      setValues((prev) => ({ ...prev, [providerId]: "" }));
-      setHealth((prev) => ({ ...prev, [providerId]: "idle" }));
-      setHealthMsg((prev) => ({ ...prev, [providerId]: "" }));
+
+    // Migrate OAuth tokens
+    if (legacy.anthropicOAuthTokens && !configuredProviders.has("anthropic-oauth")) {
+      migrations.push(
+        fetch("/api/credentials", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: "anthropic-oauth",
+            apiKey: JSON.stringify(legacy.anthropicOAuthTokens),
+          }),
+        })
+      );
     }
-  };
+
+    if (migrations.length > 0) {
+      Promise.allSettled(migrations).then(() => {
+        clearLegacyKeys();
+        queryClient.invalidateQueries({ queryKey: ["credentials"] });
+        queryClient.invalidateQueries({ queryKey: ["available-models"] });
+      });
+    }
+  }, [credentials, credsLoading, migrated]);
+
+  // Run health checks for configured providers
+  useEffect(() => {
+    if (!credentials) return;
+    for (const cred of credentials) {
+      if (cred.provider === "anthropic-oauth") continue; // OAuth handled separately
+      if (health[cred.provider] && health[cred.provider] !== "idle") continue;
+      setHealth((prev) => ({ ...prev, [cred.provider]: "checking" }));
+      checkHealth.mutateAsync(cred.provider).then((result) => {
+        setHealth((prev) => ({ ...prev, [cred.provider]: result.status === "ok" ? "ok" : "error" }));
+        setHealthMsg((prev) => ({ ...prev, [cred.provider]: result.message }));
+      }).catch(() => {
+        setHealth((prev) => ({ ...prev, [cred.provider]: "error" }));
+        setHealthMsg((prev) => ({ ...prev, [cred.provider]: "Health check failed" }));
+      });
+    }
+  }, [credentials]);
 
   const handleValueChange = (providerId: string, val: string) => {
     setValues((prev) => ({ ...prev, [providerId]: val }));
-    // Auto-enable when user types a key
-    if (val && !enabled[providerId]) {
-      setEnabled((prev) => ({ ...prev, [providerId]: true }));
-    }
-    // Reset health on change
     setHealth((prev) => ({ ...prev, [providerId]: "idle" }));
   };
 
-  const handleSave = async () => {
-    if (!settings) return;
-
-    const updated = { ...settings } as Record<string, unknown>;
-    for (const p of PROVIDERS) {
-      const key = SETTINGS_KEY_MAP[p.id];
-      updated[key] = enabled[p.id] ? values[p.id] || undefined : undefined;
+  const handleSaveProvider = async (providerId: string) => {
+    const value = values[providerId];
+    if (!value) {
+      // Delete credential
+      const cred = (credentials || []).find(
+        (c: ProviderCredential) => c.provider === providerId && c.isDefault
+      );
+      if (cred) {
+        await deleteCredential.mutateAsync(cred.id);
+      }
+      setHealth((prev) => ({ ...prev, [providerId]: "idle" }));
+      setHealthMsg((prev) => ({ ...prev, [providerId]: "" }));
+      return;
     }
 
-    await saveSettings.mutateAsync(updated as typeof settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  // Auto-check health on page load and when values change (debounced)
-  useEffect(() => {
-    const toCheck = PROVIDERS.filter(
-      (p) => enabled[p.id] && values[p.id] && health[p.id] === "idle"
-    );
-    if (toCheck.length === 0) return;
-
-    const timer = setTimeout(() => {
-      for (const p of toCheck) {
-        checkHealth(p.id);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [enabled, values, health]);
-
-  const checkHealth = useCallback(async (providerId: string) => {
-    const value = values[providerId];
-    if (!value) return;
-
-    setHealth((prev) => ({ ...prev, [providerId]: "checking" }));
-    setHealthMsg((prev) => ({ ...prev, [providerId]: "" }));
-
+    setSaving(true);
     try {
-      const provider = PROVIDERS.find((p) => p.id === providerId)!;
-
-      if (provider.isUrlBased) {
-        // Ollama: just check if the server responds
-        const resp = await fetch(value + "/api/tags", {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          const modelCount = data.models?.length || 0;
-          setHealth((prev) => ({ ...prev, [providerId]: "ok" }));
-          setHealthMsg((prev) => ({
-            ...prev,
-            [providerId]: `Connected — ${modelCount} model${modelCount !== 1 ? "s" : ""} available`,
-          }));
-        } else {
-          throw new Error(`HTTP ${resp.status}`);
-        }
-      } else {
-        // API key providers: use a lightweight API call
-        let testUrl = "";
-        let testHeaders: Record<string, string> = {};
-
-        if (providerId === "anthropic") {
-          testUrl = "https://api.anthropic.com/v1/models?limit=1";
-          testHeaders = {
-            "x-api-key": value,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-          };
-        } else if (providerId === "openai") {
-          testUrl = "https://api.openai.com/v1/models?limit=1";
-          testHeaders = { Authorization: `Bearer ${value}` };
-        } else if (providerId === "google") {
-          testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${value}&pageSize=1`;
-        }
-
-        const resp = await fetch(testUrl, {
-          headers: testHeaders,
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (resp.ok) {
-          setHealth((prev) => ({ ...prev, [providerId]: "ok" }));
-          setHealthMsg((prev) => ({ ...prev, [providerId]: "API key is valid" }));
-        } else {
-          const body = await resp.text().catch(() => "");
-          let msg = `HTTP ${resp.status}`;
-          try {
-            const j = JSON.parse(body);
-            msg = j.error?.message || j.error?.type || msg;
-          } catch {
-            // ignore
-          }
-          setHealth((prev) => ({ ...prev, [providerId]: "error" }));
-          setHealthMsg((prev) => ({ ...prev, [providerId]: msg }));
-        }
-      }
+      await saveCredential.mutateAsync({ provider: providerId, apiKey: value });
+      setValues((prev) => ({ ...prev, [providerId]: "" })); // Clear input after save
+      // Run health check
+      setHealth((prev) => ({ ...prev, [providerId]: "checking" }));
+      const result = await checkHealth.mutateAsync(providerId);
+      setHealth((prev) => ({ ...prev, [providerId]: result.status === "ok" ? "ok" : "error" }));
+      setHealthMsg((prev) => ({ ...prev, [providerId]: result.message }));
     } catch (err) {
       setHealth((prev) => ({ ...prev, [providerId]: "error" }));
       setHealthMsg((prev) => ({
         ...prev,
-        [providerId]:
-          err instanceof Error
-            ? err.name === "TimeoutError"
-              ? "Connection timed out"
-              : err.message
-            : "Connection failed",
+        [providerId]: err instanceof Error ? err.message : "Save failed",
       }));
+    } finally {
+      setSaving(false);
     }
-  }, [values]);
+  };
 
-  if (isLoading) {
+  const handleRemoveProvider = async (providerId: string) => {
+    const cred = (credentials || []).find(
+      (c: ProviderCredential) => c.provider === providerId && c.isDefault
+    );
+    if (cred) {
+      await deleteCredential.mutateAsync(cred.id);
+      setHealth((prev) => ({ ...prev, [providerId]: "idle" }));
+      setHealthMsg((prev) => ({ ...prev, [providerId]: "" }));
+      setValues((prev) => ({ ...prev, [providerId]: "" }));
+    }
+  };
+
+  if (credsLoading) {
     return (
       <div className="h-full flex items-center justify-center text-text-muted">
         Loading settings...
@@ -312,12 +291,12 @@ export default function ModelsPage(_props: ModelsPageProps) {
         Model Providers
       </h1>
       <p className="text-text-muted mb-8">
-        Enable the AI providers you want to use.
+        Enable the AI providers you want to use. Keys are stored securely on the server.
       </p>
 
       <div className="space-y-4">
         {PROVIDERS.map((provider) => {
-          const isEnabled = enabled[provider.id] || false;
+          const isConfigured = configuredProviders.has(provider.id);
           const value = values[provider.id] || "";
           const status = health[provider.id] || "idle";
           const msg = healthMsg[provider.id] || "";
@@ -327,26 +306,13 @@ export default function ModelsPage(_props: ModelsPageProps) {
               key={provider.id}
               className={cn(
                 "border rounded-lg transition-colors",
-                isEnabled
+                isConfigured
                   ? "border-accent-primary/40 bg-accent-primary/5"
                   : "border-border bg-bg-secondary/50"
               )}
             >
-              {/* Header with checkbox */}
+              {/* Header */}
               <div className="flex items-center gap-3 p-4">
-                <button
-                  type="button"
-                  onClick={() => handleToggle(provider.id)}
-                  className={cn(
-                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0",
-                    isEnabled
-                      ? "bg-accent-primary border-accent-primary"
-                      : "border-border hover:border-text-muted"
-                  )}
-                  data-testid={`toggle-${provider.id}`}
-                >
-                  {isEnabled && <Check className="w-3.5 h-3.5 text-white" />}
-                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-text-primary">
@@ -358,7 +324,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
                   </div>
                 </div>
                 {/* Health indicator */}
-                {isEnabled && value && status !== "idle" && (
+                {isConfigured && status !== "idle" && (
                   <div className="flex items-center gap-1.5">
                     {status === "checking" && (
                       <Loader2 className="w-4 h-4 text-text-muted animate-spin" />
@@ -373,86 +339,130 @@ export default function ModelsPage(_props: ModelsPageProps) {
                 )}
               </div>
 
-              {/* Expanded content when enabled */}
-              {isEnabled && (
-                <div className="px-4 pb-4 pt-0">
-                  <div className="relative">
-                    <input
-                      type={
-                        provider.isUrlBased || showKeys[provider.id]
-                          ? "text"
-                          : "password"
-                      }
-                      value={value}
-                      onChange={(e) =>
-                        handleValueChange(provider.id, e.target.value)
-                      }
-                      placeholder={
-                        provider.isUrlBased
-                          ? provider.defaultUrl
-                          : provider.keyPlaceholder
-                      }
-                      className={cn(
-                        "w-full px-3 py-2 bg-bg-primary border border-border rounded-lg",
-                        "text-text-primary placeholder:text-text-muted",
-                        "focus:outline-none focus:border-accent-primary",
-                        "font-mono text-sm",
-                        !provider.isUrlBased && "pr-10"
+              {/* Content */}
+              <div className="px-4 pb-4 pt-0">
+                {isConfigured && !value ? (
+                  /* Configured - show status */
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {msg && (
+                        <p
+                          className={cn(
+                            "text-xs",
+                            status === "ok"
+                              ? "text-green-600 dark:text-green-400"
+                              : status === "error"
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-text-muted"
+                          )}
+                        >
+                          {msg}
+                        </p>
                       )}
-                      data-testid={`input-${provider.id}`}
-                    />
-                    {!provider.isUrlBased && (
+                      <p className="text-xs text-text-muted mt-1">
+                        {provider.isUrlBased ? "URL" : "API key"} configured ·{" "}
+                        <button
+                          type="button"
+                          onClick={() => setValues((prev) => ({ ...prev, [provider.id]: " " }))}
+                          className="text-accent-primary hover:underline"
+                        >
+                          Update
+                        </button>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProvider(provider.id)}
+                          className="text-red-500 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Input for new/update */
+                  <div>
+                    <div className="relative">
+                      <input
+                        type={
+                          provider.isUrlBased || showKeys[provider.id]
+                            ? "text"
+                            : "password"
+                        }
+                        value={value === " " ? "" : value}
+                        onChange={(e) =>
+                          handleValueChange(provider.id, e.target.value)
+                        }
+                        placeholder={
+                          provider.isUrlBased
+                            ? provider.defaultUrl
+                            : provider.keyPlaceholder
+                        }
+                        className={cn(
+                          "w-full px-3 py-2 bg-bg-primary border border-border rounded-lg",
+                          "text-text-primary placeholder:text-text-muted",
+                          "focus:outline-none focus:border-accent-primary",
+                          "font-mono text-sm",
+                          !provider.isUrlBased && "pr-10"
+                        )}
+                        data-testid={`input-${provider.id}`}
+                      />
+                      {!provider.isUrlBased && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowKeys((prev) => ({
+                              ...prev,
+                              [provider.id]: !prev[provider.id],
+                            }))
+                          }
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary"
+                        >
+                          {showKeys[provider.id] ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          setShowKeys((prev) => ({
-                            ...prev,
-                            [provider.id]: !prev[provider.id],
-                          }))
-                        }
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary"
+                        onClick={() => handleSaveProvider(provider.id)}
+                        disabled={saving || (!value || value === " ")}
+                        className="px-3 py-1.5 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors text-sm font-medium disabled:opacity-50"
                       >
-                        {showKeys[provider.id] ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                        {saving ? "Saving..." : isConfigured ? "Update" : "Save"}
                       </button>
+                      {isConfigured && (
+                        <button
+                          type="button"
+                          onClick={() => setValues((prev) => ({ ...prev, [provider.id]: "" }))}
+                          className="px-3 py-1.5 text-text-muted hover:text-text-primary text-sm"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+
+                    {provider.helpUrl && (
+                      <p className="text-xs text-text-muted mt-2">
+                        {provider.isUrlBased ? "Download from " : "Get your key from "}
+                        <a
+                          href={provider.helpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent-primary hover:underline"
+                        >
+                          {provider.helpLabel}
+                        </a>
+                      </p>
                     )}
                   </div>
-
-                  {/* Health message */}
-                  {msg && (
-                    <p
-                      className={cn(
-                        "text-xs mt-1.5",
-                        status === "ok"
-                          ? "text-green-600 dark:text-green-400"
-                          : status === "error"
-                            ? "text-red-600 dark:text-red-400"
-                            : "text-text-muted"
-                      )}
-                    >
-                      {msg}
-                    </p>
-                  )}
-
-                  {/* Help link */}
-                  {provider.helpUrl && (
-                    <p className="text-xs text-text-muted mt-1.5">
-                      {provider.isUrlBased ? "Download from " : "Get your key from "}
-                      <a
-                        href={provider.helpUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-accent-primary hover:underline"
-                      >
-                        {provider.helpLabel}
-                      </a>
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
@@ -492,10 +502,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
                 type="button"
                 onClick={async () => {
                   const { verifier, challenge } = await generatePKCE();
-                  // OpenCode uses the PKCE verifier as the state parameter
-                  const state = verifier;
                   setPkceVerifier(verifier);
-                  setPkceState(state);
                   const params = new URLSearchParams({
                     code: "true",
                     client_id: OAUTH_CLIENT_ID,
@@ -504,7 +511,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
                     scope: OAUTH_SCOPES,
                     code_challenge: challenge,
                     code_challenge_method: "S256",
-                    state,
+                    state: verifier,
                   });
                   window.open(`${OAUTH_AUTHORIZE_URL}?${params}`, "_blank");
                   setOauthState("waiting");
@@ -537,10 +544,10 @@ export default function ModelsPage(_props: ModelsPageProps) {
                         const raw = oauthCodeInput.trim();
                         if (!pkceVerifier) throw new Error("Missing PKCE verifier");
                         const tokens = await exchangeCodeForTokens(raw, pkceVerifier);
-                        if (!settings) throw new Error("Settings not loaded");
-                        await saveSettings.mutateAsync({
-                          ...settings,
-                          anthropicOAuthTokens: tokens,
+                        // Save OAuth tokens as a server credential
+                        await saveCredential.mutateAsync({
+                          provider: "anthropic-oauth",
+                          apiKey: JSON.stringify(tokens),
                         });
                         setOauthState("connected");
                         setOauthCodeInput("");
@@ -582,9 +589,10 @@ export default function ModelsPage(_props: ModelsPageProps) {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (!settings) return;
-                    const { anthropicOAuthTokens: _, ...rest } = settings;
-                    await saveSettings.mutateAsync({ ...rest, userId: settings.userId } as AppSettings);
+                    const cred = (credentials || []).find(
+                      (c: ProviderCredential) => c.provider === "anthropic-oauth"
+                    );
+                    if (cred) await deleteCredential.mutateAsync(cred.id);
                     setOauthState("idle");
                   }}
                   className="flex items-center gap-1.5 text-xs text-text-muted hover:text-red-500 transition-colors"
@@ -593,9 +601,6 @@ export default function ModelsPage(_props: ModelsPageProps) {
                   Disconnect
                 </button>
               </div>
-            )}
-            {oauthState === "error" && (
-              <p className="text-sm text-red-500">{oauthError}</p>
             )}
             {oauthError && oauthState === "waiting" && (
               <p className="text-xs text-red-600 dark:text-red-400 mt-2">
@@ -607,35 +612,6 @@ export default function ModelsPage(_props: ModelsPageProps) {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex items-center gap-4 pt-6">
-        <button
-          onClick={handleSave}
-          disabled={saveSettings.isPending}
-          className={cn(
-            "px-6 py-2.5 rounded-lg font-medium",
-            "flex items-center gap-2 transition-colors",
-            "bg-accent-primary text-white hover:bg-accent-primary/90",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          data-testid="save-settings-button"
-        >
-          {saveSettings.isPending ? (
-            <>Saving...</>
-          ) : saved ? (
-            <>
-              <Check className="w-4 h-4" />
-              Saved!
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Save
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

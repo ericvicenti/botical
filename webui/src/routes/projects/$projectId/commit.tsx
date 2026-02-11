@@ -159,24 +159,15 @@ function ReviewCommitPageRoute() {
     ) {
       hasTriedAutoGenerate.current = true;
 
-      // Get API key for anthropic (default provider)
-      const providerId = "anthropic";
-      const apiKey = providerId === "anthropic"
-        ? settings.anthropicApiKey
-        : providerId === "openai"
-        ? settings.openaiApiKey
-        : settings.googleApiKey;
-
-      if (apiKey) {
-        generateMutation.mutate(
-          { projectId, diff, userId: settings.userId, providerId, apiKey },
-          {
-            onSuccess: (data) => {
-              setCommitMessage(data.message);
-            },
-          }
-        );
-      }
+      // API keys are stored server-side — just pass userId and provider
+      generateMutation.mutate(
+        { projectId, diff, userId: settings.userId, providerId: "anthropic" },
+        {
+          onSuccess: (data) => {
+            setCommitMessage(data.message);
+          },
+        }
+      );
     }
   }, [diff, commitMessage, settings, projectId, generateMutation]);
 
