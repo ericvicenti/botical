@@ -614,6 +614,52 @@ export function useRenameFile() {
   });
 }
 
+export function useUploadFiles() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      targetPath,
+      files,
+    }: {
+      projectId: string;
+      targetPath: string;
+      files: File[];
+    }) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("file", file);
+      }
+
+      const API_BASE = import.meta.env.VITE_API_URL || "";
+      const encodedPath = targetPath ? encodeURIComponent(targetPath) : "";
+      const url = `${API_BASE}/api/projects/${projectId}/upload/${encodedPath}`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error?.message || "Upload failed");
+      }
+
+      return data.data as { uploaded: string[]; count: number };
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "files"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "git", "status"],
+      });
+    },
+  });
+}
+
 export function useCreateFolder() {
   const queryClient = useQueryClient();
 

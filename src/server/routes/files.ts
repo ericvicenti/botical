@@ -728,4 +728,141 @@ files.post("/:projectId/folders/*", async (c) => {
   }, 201);
 });
 
+/**
+ * POST /api/projects/:projectId/upload/*
+ * Upload files via multipart/form-data
+ * The wildcard path is the target directory within the project
+ */
+files.post("/:projectId/upload/*", async (c) => {
+  const { projectId } = c.req.param();
+  // Extract target directory from URL
+  const targetDir = c.req.path.replace(
+    new RegExp(`^/api/projects/${projectId}/upload/?`),
+    ""
+  );
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    throw new ValidationError("Project has no filesystem path");
+  }
+
+  const body = await c.req.parseBody({ all: true });
+
+  // Collect files from the parsed body
+  const files: globalThis.File[] = [];
+  for (const [, value] of Object.entries(body)) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (v instanceof globalThis.File) files.push(v);
+      }
+    } else if (value instanceof globalThis.File) {
+      files.push(value);
+    }
+  }
+
+  if (files.length === 0) {
+    throw new ValidationError("No files provided");
+  }
+
+  const decodedDir = decodeURIComponent(targetDir);
+  const uploaded: string[] = [];
+
+  for (const file of files) {
+    const relativePath = decodedDir ? `${decodedDir}/${file.name}` : file.name;
+    const fullPath = resolveProjectPath(project.path, relativePath);
+
+    // Ensure parent directory exists
+    const dir = path.dirname(fullPath);
+    await fs.mkdir(dir, { recursive: true });
+
+    // Write file
+    const arrayBuffer = await file.arrayBuffer();
+    await fs.writeFile(fullPath, Buffer.from(arrayBuffer));
+
+    uploaded.push(relativePath);
+  }
+
+  return c.json({
+    data: {
+      uploaded,
+      count: uploaded.length,
+    },
+  });
+});
+
+/**
+ * GET /api/projects/:projectId/files-raw/*
+ * Serve raw file with correct Content-Type (for images, SVGs, etc.)
+ */
+files.get("/:projectId/files-raw/*", async (c) => {
+  const { projectId } = c.req.param();
+  const filePath = c.req.path.replace(`/api/projects/${projectId}/files-raw/`, "");
+
+  if (!filePath) {
+    throw new ValidationError("File path required");
+  }
+
+  const rootDb = DatabaseManager.getRootDb();
+  const project = ProjectService.getById(rootDb, projectId);
+
+  if (!project) {
+    throw new NotFoundError("Project", projectId);
+  }
+
+  if (!project.path) {
+    throw new NotFoundError("File", filePath);
+  }
+
+  const decodedPath = decodeURIComponent(filePath);
+  const fullPath = resolveProjectPath(project.path, decodedPath);
+
+  try {
+    const stat = await fs.stat(fullPath);
+    if (stat.isDirectory()) {
+      throw new ValidationError("Path is a directory, not a file");
+    }
+
+    // Limit to 20MB for raw files
+    if (stat.size > 20 * 1024 * 1024) {
+      throw new ValidationError("File too large (max 20MB)");
+    }
+
+    const buffer = await fs.readFile(fullPath);
+    const ext = path.extname(decodedPath).toLowerCase();
+
+    const mimeTypes: Record<string, string> = {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".bmp": "image/bmp",
+      ".ico": "image/x-icon",
+      ".svg": "image/svg+xml",
+      ".pdf": "application/pdf",
+    };
+
+    const contentType = mimeTypes[ext] || "application/octet-stream";
+
+    return new Response(buffer, {
+      headers: {
+        "Content-Type": contentType,
+        "Content-Length": stat.size.toString(),
+        "Cache-Control": "no-cache",
+      },
+    });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new NotFoundError("File", decodedPath);
+    }
+    throw err;
+  }
+});
+
 export default files;

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles, Bot } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Upload, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles, Bot } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -487,6 +487,17 @@ function FilesPanel({ selectedProjectId }: { selectedProjectId: string | null })
               >
                 <FolderPlus className="w-3.5 h-3.5" />
                 New Folder
+              </button>
+              <div className="my-1 border-t border-border" />
+              <button
+                onClick={() => {
+                  fileTreeRef.current?.uploadFiles();
+                  setMenuOpen(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload Files
               </button>
             </div>
           )}

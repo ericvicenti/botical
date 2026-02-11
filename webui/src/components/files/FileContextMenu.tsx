@@ -20,7 +20,7 @@
  * />
  */
 import { useRef, useEffect, useState } from "react";
-import { FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { FilePlus, FolderPlus, Pencil, Trash2, Upload } from "lucide-react";
 import { useCreateFile, useCreateFolder, useDeleteFile } from "@/lib/api/queries";
 
 /** Position coordinates for the context menu */
@@ -52,6 +52,8 @@ interface FileContextMenuProps {
   onStartRename?: () => void;
   /** Callback to start inline creation (for empty area/folders) */
   onStartCreate?: (type: "file" | "folder", parentPath: string) => void;
+  /** Callback to trigger file upload to a folder */
+  onUploadFiles?: (targetPath: string) => void;
 }
 
 export function FileContextMenu({
@@ -61,6 +63,7 @@ export function FileContextMenu({
   onClose,
   onStartRename,
   onStartCreate,
+  onUploadFiles,
 }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const deleteFile = useDeleteFile();
@@ -85,6 +88,12 @@ export function FileContextMenu({
   const handleNewFolder = () => {
     const parentPath = target.type === "folder" ? target.path : "";
     onStartCreate?.("folder", parentPath);
+    onClose();
+  };
+
+  const handleUpload = () => {
+    const parentPath = target.type === "folder" ? target.path : "";
+    onUploadFiles?.(parentPath);
     onClose();
   };
 
@@ -129,6 +138,13 @@ export function FileContextMenu({
           >
             <FolderPlus className="w-3.5 h-3.5" />
             New Folder
+          </button>
+          <button
+            onClick={handleUpload}
+            className="w-full px-3 py-1.5 text-left text-sm hover:bg-bg-primary flex items-center gap-2"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload Files
           </button>
         </>
       )}

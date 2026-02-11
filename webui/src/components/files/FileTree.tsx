@@ -24,7 +24,8 @@
  * @see CreateInput - Inline input component for file/folder creation
  */
 import { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
-import { useFiles, useRenameFile, type FileEntry } from "@/lib/api/queries";
+import { useFiles, useRenameFile, useUploadFiles, type FileEntry } from "@/lib/api/queries";
+import { useToast } from "@/components/ui/Toast";
 import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
 import { useNavigate } from "@tanstack/react-router";
@@ -64,6 +65,8 @@ export interface FileTreeRef {
   createFile: () => void;
   /** Triggers inline folder creation at the root level */
   createFolder: () => void;
+  /** Triggers file upload dialog, uploading to root */
+  uploadFiles: () => void;
 }
 
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree({ projectId }, ref) {
@@ -75,6 +78,11 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
     target: ContextMenuTarget;
   } | null>(null);
   const [createState, setCreateState] = useState<CreateState | null>(null);
+  const [dragOverRoot, setDragOverRoot] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTargetPath, setUploadTargetPath] = useState("");
+  const uploadFiles = useUploadFiles();
+  const { showToast } = useToast();
 
   // Get the active file/folder path from the current tab
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -86,11 +94,74 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
     setCreateState({ type, parentPath });
   }, []);
 
+  const handleUploadToPath = useCallback((targetPath: string) => {
+    setUploadTargetPath(targetPath);
+    // Trigger native file picker
+    if (uploadInputRef.current) {
+      uploadInputRef.current.value = "";
+      uploadInputRef.current.click();
+    }
+  }, []);
+
+  const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const result = await uploadFiles.mutateAsync({
+        projectId,
+        targetPath: uploadTargetPath,
+        files: Array.from(files),
+      });
+      showToast(`Uploaded ${result.count} file${result.count !== 1 ? "s" : ""}`, "success");
+    } catch (err) {
+      showToast(`Upload failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+    }
+  }, [projectId, uploadTargetPath, uploadFiles, showToast]);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetPath: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverRoot(false);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const result = await uploadFiles.mutateAsync({
+        projectId,
+        targetPath,
+        files: Array.from(files),
+      });
+      showToast(`Uploaded ${result.count} file${result.count !== 1 ? "s" : ""}`, "success");
+    } catch (err) {
+      showToast(`Upload failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+    }
+  }, [projectId, uploadFiles, showToast]);
+
+  const handleRootDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types.includes("Files")) {
+      setDragOverRoot(true);
+    }
+  }, []);
+
+  const handleRootDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    // Only reset if leaving the container (not entering a child)
+    const relatedTarget = e.relatedTarget as Node | null;
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDragOverRoot(false);
+    }
+  }, []);
+
   // Expose methods via ref for external triggering
   useImperativeHandle(ref, () => ({
     createFile: () => handleStartCreate("file", ""),
     createFolder: () => handleStartCreate("folder", ""),
-  }), [handleStartCreate]);
+    uploadFiles: () => handleUploadToPath(""),
+  }), [handleStartCreate, handleUploadToPath]);
 
   const handleEmptyContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -100,17 +171,35 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
     });
   };
 
+  // Hidden file input for upload
+  const fileInput = (
+    <input
+      ref={uploadInputRef}
+      type="file"
+      multiple
+      className="hidden"
+      onChange={handleFileInputChange}
+    />
+  );
+
   if (isLoading) {
-    return <div className="p-2 text-text-secondary text-sm">Loading...</div>;
+    return <div className="p-2 text-text-secondary text-sm">{fileInput}Loading...</div>;
   }
 
   if (!rootFiles?.length) {
     return (
       <div
-        className="h-full min-h-16 p-2 text-text-muted text-sm"
+        className={cn(
+          "h-full min-h-16 p-2 text-text-muted text-sm",
+          dragOverRoot && "ring-2 ring-accent-primary/50 bg-accent-primary/10 rounded"
+        )}
         onContextMenu={handleEmptyContextMenu}
+        onDragOver={handleRootDragOver}
+        onDragLeave={handleRootDragLeave}
+        onDrop={(e) => handleDrop(e, "")}
       >
-        No files
+        {fileInput}
+        {uploadFiles.isPending ? "Uploading..." : "No files"}
         {contextMenu && (
           <FileContextMenu
             projectId={projectId}
@@ -118,6 +207,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
             target={contextMenu.target}
             onClose={() => setContextMenu(null)}
             onStartCreate={handleStartCreate}
+            onUploadFiles={handleUploadToPath}
           />
         )}
         {createState && createState.parentPath === "" && (
@@ -133,7 +223,17 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   }
 
   return (
-    <div className="text-sm h-full" onContextMenu={handleEmptyContextMenu}>
+    <div
+      className={cn(
+        "text-sm h-full",
+        dragOverRoot && "ring-2 ring-accent-primary/50 bg-accent-primary/10 rounded"
+      )}
+      onContextMenu={handleEmptyContextMenu}
+      onDragOver={handleRootDragOver}
+      onDragLeave={handleRootDragLeave}
+      onDrop={(e) => handleDrop(e, "")}
+    >
+      {fileInput}
       {createState && createState.parentPath === "" && (
         <CreateInput
           type={createState.type}
@@ -153,6 +253,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
           createState={createState}
           onStartCreate={handleStartCreate}
           onCreateComplete={() => setCreateState(null)}
+          onUploadFiles={handleUploadToPath}
+          onDropFiles={handleDrop}
         />
       ))}
       {contextMenu && (
@@ -162,6 +264,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
           target={contextMenu.target}
           onClose={() => setContextMenu(null)}
           onStartCreate={handleStartCreate}
+          onUploadFiles={handleUploadToPath}
         />
       )}
     </div>
@@ -186,6 +289,10 @@ interface FileTreeNodeProps {
   onStartCreate: (type: "file" | "folder", parentPath: string) => void;
   /** Callback when creation is complete or cancelled */
   onCreateComplete: () => void;
+  /** Callback to trigger file upload to a folder */
+  onUploadFiles: (targetPath: string) => void;
+  /** Callback when files are dropped on a folder */
+  onDropFiles: (e: React.DragEvent, targetPath: string) => void;
 }
 
 /**
@@ -201,8 +308,11 @@ function FileTreeNode({
   createState,
   onStartCreate,
   onCreateComplete,
+  onUploadFiles,
+  onDropFiles,
 }: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -336,6 +446,29 @@ function FileTreeNode({
     }
   };
 
+  const handleNodeDragOver = useCallback((e: React.DragEvent) => {
+    if (file.type !== "directory") return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types.includes("Files")) {
+      setDragOver(true);
+    }
+  }, [file.type]);
+
+  const handleNodeDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleNodeDrop = useCallback((e: React.DragEvent) => {
+    if (file.type !== "directory") return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    onDropFiles(e, file.path);
+  }, [file.type, file.path, onDropFiles]);
+
   const contextMenuTarget: ContextMenuTarget = file.type === "directory"
     ? { type: "folder", path: file.path, name: file.name }
     : { type: "file", path: file.path, name: file.name };
@@ -347,12 +480,16 @@ function FileTreeNode({
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
+        onDragOver={handleNodeDragOver}
+        onDragLeave={handleNodeDragLeave}
+        onDrop={handleNodeDrop}
         className={cn(
           "flex items-center gap-1 py-0.5 px-2 cursor-pointer select-none",
           "hover:bg-bg-elevated rounded",
           "text-text-primary",
           isTarget && "bg-accent-primary/20 ring-1 ring-accent-primary/50",
-          isActive && !isTarget && "bg-bg-elevated"
+          isActive && !isTarget && "bg-bg-elevated",
+          dragOver && "ring-2 ring-accent-primary/50 bg-accent-primary/10"
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -400,6 +537,7 @@ function FileTreeNode({
           onClose={() => setContextMenu(null)}
           onStartRename={handleRenameStart}
           onStartCreate={onStartCreate}
+          onUploadFiles={onUploadFiles}
         />
       )}
 
@@ -434,6 +572,8 @@ function FileTreeNode({
                 createState={createState}
                 onStartCreate={onStartCreate}
                 onCreateComplete={onCreateComplete}
+                onUploadFiles={onUploadFiles}
+                onDropFiles={onDropFiles}
               />
             ))
           ) : !isCreatingHere ? (
