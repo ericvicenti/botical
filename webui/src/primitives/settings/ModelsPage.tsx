@@ -482,13 +482,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-text-primary">
-                  Anthropic (OAuth)
-                </span>
-                <span className="text-xs text-text-muted">
-                  Claude Pro/Max — free via subscription
-                </span>
-                <span className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded-full font-medium">
-                  $0
+                  Anthropic Subscription
                 </span>
               </div>
             </div>
