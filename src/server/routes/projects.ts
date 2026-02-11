@@ -143,13 +143,16 @@ projects.post("/", async (c) => {
     );
   }
 
-  // Auto-generate ownerId for dev mode if not provided
-  const ownerId = result.data.ownerId || `usr_dev_${Date.now().toString(36)}`;
-
   const rootDb = DatabaseManager.getRootDb();
+  const auth = c.get("auth");
 
-  // Ensure user exists (create if needed for dev mode)
-  if (!result.data.ownerId) {
+  // Use authenticated user if available, then request body, then generate dev user
+  let ownerId = auth?.userId || result.data.ownerId;
+
+  // Auto-generate ownerId for dev mode if not provided
+  if (!ownerId) {
+    ownerId = `usr_dev_${Date.now().toString(36)}`;
+    // Ensure dev user exists
     const existingUser = rootDb
       .prepare("SELECT id FROM users WHERE id = ?")
       .get(ownerId);
