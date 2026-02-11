@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useSessions } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
@@ -6,7 +5,6 @@ import { cn } from "@/lib/utils/cn";
 import { Plus, MessageSquare, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Session } from "@/lib/api/types";
-import { NewTaskModal } from "./NewTaskModal";
 
 interface TasksPanelProps {
   projectId: string;
@@ -14,13 +12,13 @@ interface TasksPanelProps {
 
 export function TasksPanel({ projectId }: TasksPanelProps) {
   const { data: sessions, isLoading } = useSessions(projectId);
-  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const { openNewTaskModal } = useUI();
 
   const activeSessions = sessions?.filter((s) => s.status === "active") || [];
   const archivedSessions = sessions?.filter((s) => s.status === "archived") || [];
 
   const handleCreateTask = () => {
-    setShowNewTaskModal(true);
+    openNewTaskModal();
   };
 
   if (isLoading) {
@@ -45,14 +43,6 @@ export function TasksPanel({ projectId }: TasksPanelProps) {
           <Plus className="w-3.5 h-3.5" />
         </button>
       </div>
-
-      {/* New Task Modal */}
-      {showNewTaskModal && (
-        <NewTaskModal
-          projectId={projectId}
-          onClose={() => setShowNewTaskModal(false)}
-        />
-      )}
 
       {/* Task List */}
       <div className="flex-1 overflow-auto py-1">

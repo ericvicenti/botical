@@ -12,7 +12,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { X, Send, ChevronDown, Bot } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useCreateSession, useSendMessage, useSettings, getSettings, useAgents } from "@/lib/api/queries";
-import type { AgentConfig } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 
 interface NewTaskModalProps {
