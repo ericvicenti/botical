@@ -121,8 +121,7 @@ export function Sidebar() {
 
   // Handler for icon clicks when collapsed - expand and switch to panel
   const handleCollapsedIconClick = (panelId: SidebarPanelType) => {
-    setSidebarPanel(panelId);
-    toggleSidebar();
+    setSidebarPanel(panelId); // This also sets sidebarCollapsed: false
   };
 
   return (
@@ -159,7 +158,7 @@ export function Sidebar() {
             ))
           ) : (
             <button
-              onClick={() => sidebarCollapsed ? toggleSidebar() : setSidebarPanel("files")}
+              onClick={() => setSidebarPanel("files")}
               className={cn(
                 "w-12 h-12 flex items-center justify-center",
                 "hover:bg-bg-elevated transition-colors",
