@@ -113,12 +113,8 @@ messages.post("/", async (c) => {
   // Use auth middleware userId for credential lookup (matches how credentials are stored)
   const auth = c.get("auth") as { userId: string } | undefined;
   const credentialUserId = auth?.userId || userId;
-  console.log(`[Messages] Looking up credentials: authUserId=${credentialUserId}, bodyUserId=${userId}, providerId=${providerId}`);
   const apiKey = requestApiKey || ProviderCredentialsService.getApiKey(credentialUserId, providerId);
   if (!apiKey) {
-    // List what credentials exist for debugging
-    const allCreds = ProviderCredentialsService.list(credentialUserId);
-    console.log(`[Messages] No key found. Existing credentials for ${credentialUserId}:`, allCreds.map(c => `${c.provider}(default=${c.isDefault})`));
     throw new AuthenticationError(
       `No API key found for provider "${providerId}". Please add credentials first or provide an API key.`
     );

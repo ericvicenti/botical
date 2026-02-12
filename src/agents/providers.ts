@@ -354,11 +354,6 @@ export class ProviderRegistry {
             } catch { /* ignore parse errors */ }
           }
 
-          // Debug: log what we're actually sending
-          console.log("[OAuth] Request URL:", newUrl);
-          console.log("[OAuth] Headers:", Object.fromEntries(headers.entries()));
-          console.log("[OAuth] Has x-api-key:", headers.has("x-api-key"));
-
           const response = await globalThis.fetch(newUrl, { ...init, body, headers });
 
           // Transform streaming response: remove mcp_ prefix from tool names
