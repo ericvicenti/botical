@@ -90,7 +90,7 @@ credentials.get("/models", async (c) => {
       try {
         const tokens = JSON.parse(tokenJson);
         fetchers.push(
-          fetchAnthropicOAuthModels(tokens).then((m) => { models.push(...m); })
+          fetchAnthropicOAuthModels(tokens, auth.userId).then((m) => { models.push(...m); })
         );
       } catch { /* ignore bad JSON */ }
     }
@@ -163,9 +163,10 @@ credentials.post("/health", async (c) => {
     if (provider === "anthropic-oauth") {
       try {
         const tokens = JSON.parse(apiKey);
+        const current = await refreshAnthropicOAuthTokens(tokens, auth.userId);
         const resp = await fetch("https://api.anthropic.com/v1/models?beta=true&limit=1", {
           headers: {
-            "Authorization": `Bearer ${tokens.access}`,
+            "Authorization": `Bearer ${current.access}`,
             "anthropic-version": "2023-06-01",
             "anthropic-beta": "oauth-2025-04-20",
           },
@@ -357,11 +358,56 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelOption[]> {
   } catch { return []; }
 }
 
-async function fetchAnthropicOAuthModels(tokens: { access: string }): Promise<ModelOption[]> {
+async function refreshAnthropicOAuthTokens(
+  tokens: { access: string; refresh: string; expires: number },
+  userId: string
+): Promise<{ access: string; refresh: string; expires: number }> {
+  if (Date.now() < tokens.expires) return tokens;
+
   try {
+    const resp = await fetch("https://console.anthropic.com/v1/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: tokens.refresh,
+        client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json() as { access_token: string; refresh_token?: string; expires_in?: number };
+      const newTokens = {
+        access: data.access_token,
+        refresh: data.refresh_token || tokens.refresh,
+        expires: Date.now() + (data.expires_in || 3600) * 1000,
+      };
+
+      // Persist refreshed tokens back to the database
+      const existing = ProviderCredentialsService.list(userId)
+        .find(c => c.provider === "anthropic-oauth" && c.isDefault);
+      if (existing) {
+        ProviderCredentialsService.update(userId, existing.id, {
+          apiKey: JSON.stringify(newTokens),
+        });
+      }
+
+      return newTokens;
+    }
+  } catch { /* fall through with original tokens */ }
+
+  return tokens;
+}
+
+async function fetchAnthropicOAuthModels(tokens: { access: string; refresh: string; expires: number }, userId: string): Promise<ModelOption[]> {
+  try {
+    // Auto-refresh expired tokens
+    const current = await refreshAnthropicOAuthTokens(tokens, userId);
+
     const res = await fetch("https://api.anthropic.com/v1/models?beta=true", {
       headers: {
-        "Authorization": `Bearer ${tokens.access}`,
+        "Authorization": `Bearer ${current.access}`,
         "anthropic-version": "2023-06-01",
         "anthropic-beta": "oauth-2025-04-20",
       },
