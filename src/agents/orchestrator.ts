@@ -73,6 +73,18 @@ export interface OrchestratorRunOptions {
 }
 
 /**
+ * Extract text from a message part content field.
+ * Handles both { text: string } and raw string formats for resilience.
+ */
+function extractText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (content && typeof content === "object" && "text" in content) {
+    return String((content as { text: unknown }).text);
+  }
+  return "";
+}
+
+/**
  * Agent Orchestrator for running AI agents
  */
 export class AgentOrchestrator {
@@ -368,19 +380,23 @@ export class AgentOrchestrator {
         const textParts = parts.filter((p) => p.type === "text");
         if (textParts.length > 0) {
           const text = textParts
-            .map((p) => (p.content as { text: string }).text)
+            .map((p) => extractText(p.content))
+            .filter(Boolean)
             .join("\n");
-          messages.push({
-            role: "user",
-            content: text,
-          });
+          if (text) {
+            messages.push({
+              role: "user",
+              content: text,
+            });
+          }
         }
       } else if (msg.role === "assistant") {
         const parts = MessagePartService.listByMessage(db, msg.id);
         const textParts = parts.filter((p) => p.type === "text");
         if (textParts.length > 0) {
           const text = textParts
-            .map((p) => (p.content as { text: string }).text)
+            .map((p) => extractText(p.content))
+            .filter(Boolean)
             .join("");
           if (text) {
             messages.push({

@@ -314,7 +314,12 @@ export class SubAgentRunner {
       );
       const textParts = responseParts.filter((p) => p.type === "text");
       const responseText = textParts
-        .map((p) => (p.content as { text: string }).text)
+        .map((p) => {
+          const c = p.content;
+          if (typeof c === "string") return c;
+          if (c && typeof c === "object" && "text" in c) return String((c as { text: unknown }).text);
+          return "";
+        })
         .join("");
 
       // Note: Session stats are updated by StreamProcessor on finish event

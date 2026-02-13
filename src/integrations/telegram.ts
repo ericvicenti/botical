@@ -304,7 +304,12 @@ export class TelegramBot {
       const parts = MessagePartService.listByMessage(db, result.messageId);
       const textParts = parts.filter(p => p.type === "text");
       responseText = textParts
-        .map(p => (p.content as { text: string }).text)
+        .map(p => {
+          const c = p.content;
+          if (typeof c === "string") return c;
+          if (c && typeof c === "object" && "text" in (c as object)) return String((c as { text: unknown }).text);
+          return "";
+        })
         .join("");
 
       if (responseText) {

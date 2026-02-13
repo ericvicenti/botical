@@ -173,7 +173,7 @@ sessions.post("/", async (c) => {
       messageId: userMessage.id,
       sessionId: session.id,
       type: "text",
-      content: initialMessage,
+      content: { text: initialMessage },
     });
     SessionService.updateStats(db, session.id, {
       messageCount: 1,
