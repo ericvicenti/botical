@@ -7,11 +7,12 @@
 
 import { DatabaseManager } from "@/database/index.ts";
 import { ScheduleService, type Schedule, type ScheduleRunStatus } from "./schedules.ts";
-import { ActionRegistry } from "@/actions/index.ts";
+import { ActionRegistry, registerAllActions } from "@/actions/index.ts";
 import { executeWorkflow } from "@/workflows/executor.ts";
 import { UnifiedWorkflowService } from "./workflows-unified.ts";
 import { ProjectService } from "./projects.ts";
 import type { ActionContext } from "@/actions/types.ts";
+import { executeLeopardHeartbeat } from "./heartbeat-wrapper.ts";
 
 const POLL_INTERVAL_MS = 30_000; // Poll every 30 seconds
 const SYSTEM_USER_ID = "system:scheduler";
@@ -35,6 +36,10 @@ class SchedulerClass {
 
     this.isRunning = true;
     console.log("[Scheduler] Starting...");
+    
+    // Ensure actions are registered (defensive programming)
+    registerAllActions();
+    console.log(`[Scheduler] Registered ${ActionRegistry.getIds().length} actions`);
 
     // Run immediately on start
     this.poll().catch((err) => {
@@ -158,23 +163,34 @@ class SchedulerClass {
       if (schedule.actionType === "action") {
         const config = schedule.actionConfig as { actionId: string; actionParams?: Record<string, unknown> };
         
-        // Debug: Log available actions
-        const availableActions = ActionRegistry.getIds();
-        console.log(`[Scheduler] Available actions: ${availableActions.length} total`);
-        console.log(`[Scheduler] Looking for action: ${config.actionId}`);
-        console.log(`[Scheduler] Heartbeat actions: ${availableActions.filter(id => id.startsWith('heartbeat')).join(', ')}`);
-        
-        const result = await ActionRegistry.execute(
-          config.actionId,
-          config.actionParams || {},
-          actionContext
-        );
+        // Special handling for heartbeat.leopard action (workaround for ActionRegistry issues)
+        if (config.actionId === "heartbeat.leopard") {
+          console.log(`[Scheduler] Using direct heartbeat wrapper for ${config.actionId}`);
+          const params = config.actionParams as { projectId?: string; message?: string } | undefined;
+          const heartbeatResult = await executeLeopardHeartbeat(
+            params?.projectId,
+            params?.message
+          );
+          
+          if (!heartbeatResult.success) {
+            throw new Error(heartbeatResult.error || "Heartbeat execution failed");
+          }
+          
+          output = `Leopard heartbeat sent - created session ${heartbeatResult.sessionId}`;
+        } else {
+          // Use ActionRegistry for other actions
+          const result = await ActionRegistry.execute(
+            config.actionId,
+            config.actionParams || {},
+            actionContext
+          );
 
-        if (result.type === "error") {
-          throw new Error(result.message);
+          if (result.type === "error") {
+            throw new Error(result.message);
+          }
+
+          output = result.type === "success" ? result.output : `${result.type}: completed`;
         }
-
-        output = result.type === "success" ? result.output : `${result.type}: completed`;
       } else if (schedule.actionType === "workflow") {
         const config = schedule.actionConfig as { workflowId: string; workflowInput?: Record<string, unknown> };
 
