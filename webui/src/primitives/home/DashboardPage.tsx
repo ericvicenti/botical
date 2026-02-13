@@ -32,6 +32,12 @@ interface StatusData {
   activeSessions: StatusSession[];
   recentSessions: StatusSession[];
   recentMessages: StatusMessage[];
+  heartbeat: {
+    lastRun: number | null;
+    nextRun: number | null;
+    status: string;
+    lastError: string | null;
+  };
   services: {
     server: string;
     uptime: number;
@@ -116,6 +122,95 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Leopard Heartbeat */}
+      <section>
+        <div className="bg-bg-elevated rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {statusData ? (
+                  // Determine pulse color based on heartbeat status
+                  (() => {
+                    const { lastRun, status, lastError } = statusData.heartbeat;
+                    const now = Date.now();
+                    const threeHoursMs = 3 * 60 * 60 * 1000;
+                    
+                    let pulseColor = "bg-gray-500"; // default
+                    let statusText = "Unknown";
+                    
+                    if (status === "disabled") {
+                      pulseColor = "bg-gray-500";
+                      statusText = "Disabled";
+                    } else if (lastError) {
+                      pulseColor = "bg-red-500";
+                      statusText = "Error";
+                    } else if (lastRun && (now - lastRun) > threeHoursMs) {
+                      pulseColor = "bg-yellow-500";
+                      statusText = "Overdue";
+                    } else if (lastRun) {
+                      pulseColor = "bg-green-500";
+                      statusText = "Healthy";
+                    } else {
+                      pulseColor = "bg-blue-500";
+                      statusText = "Pending";
+                    }
+                    
+                    return (
+                      <>
+                        <span className={`inline-block w-3 h-3 rounded-full animate-pulse ${pulseColor}`} />
+                        <h2 className="text-lg font-semibold text-text-primary">
+                          Leopard Heartbeat
+                        </h2>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                          statusText === "Healthy" ? "bg-green-500/20 text-green-400" :
+                          statusText === "Error" ? "bg-red-500/20 text-red-400" :
+                          statusText === "Overdue" ? "bg-yellow-500/20 text-yellow-400" :
+                          statusText === "Pending" ? "bg-blue-500/20 text-blue-400" :
+                          "bg-gray-500/20 text-gray-400"
+                        }`}>
+                          {statusText}
+                        </span>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <span className="inline-block w-3 h-3 rounded-full bg-gray-500 animate-pulse" />
+                    <h2 className="text-lg font-semibold text-text-primary">Leopard Heartbeat</h2>
+                    <span className="px-2 py-1 text-xs font-semibold rounded bg-gray-500/20 text-gray-400">Loading...</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="text-sm text-text-muted text-right">
+              {statusData?.heartbeat ? (
+                <>
+                  <div>
+                    Last: {statusData.heartbeat.lastRun 
+                      ? timeAgo(statusData.heartbeat.lastRun)
+                      : "Never"
+                    }
+                  </div>
+                  <div>
+                    Next: {statusData.heartbeat.nextRun 
+                      ? new Date(statusData.heartbeat.nextRun).toLocaleString()
+                      : "Not scheduled"
+                    }
+                  </div>
+                </>
+              ) : (
+                <div>Loading...</div>
+              )}
+            </div>
+          </div>
+          {statusData?.heartbeat.lastError && (
+            <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400">
+              <strong>Error:</strong> {statusData.heartbeat.lastError}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Active Sessions */}
       <section>

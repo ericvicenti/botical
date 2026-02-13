@@ -11,6 +11,7 @@
 import { Hono } from "hono";
 import { DatabaseManager } from "@/database/index.ts";
 import { ProjectService } from "@/services/projects.ts";
+import { ScheduleService } from "@/services/schedules.ts";
 import { extractTextContent } from "@/services/message-content.ts";
 
 const status = new Hono();
@@ -215,12 +216,40 @@ status.get("/", async (c) => {
   recentSessions.sort((a, b) => b.lastActivity - a.lastActivity);
   recentMessages.sort((a, b) => b.createdAt - a.createdAt);
 
+  // Get heartbeat status
+  let heartbeat = {
+    lastRun: null as number | null,
+    nextRun: null as number | null,
+    status: "unknown" as string,
+    lastError: null as string | null,
+  };
+
+  try {
+    const rootDb = DatabaseManager.getProjectDb("prj_root");
+    const schedules = ScheduleService.list(rootDb, "prj_root", { limit: 100 });
+    const leopardHeartbeat = schedules.find(s => s.name === "Leopard Heartbeat");
+    
+    if (leopardHeartbeat) {
+      heartbeat = {
+        lastRun: leopardHeartbeat.lastRunAt,
+        nextRun: leopardHeartbeat.nextRunAt,
+        status: leopardHeartbeat.enabled 
+          ? (leopardHeartbeat.lastRunStatus || "pending")
+          : "disabled",
+        lastError: leopardHeartbeat.lastRunError,
+      };
+    }
+  } catch (err) {
+    // Ignore errors accessing heartbeat schedule
+  }
+
   return c.json({
     data: {
       timestamp: Date.now(),
       activeSessions: activeSessions.slice(0, 20),
       recentSessions: recentSessions.slice(0, 20),
       recentMessages: recentMessages.slice(0, 20),
+      heartbeat,
       services: {
         server: "running",
         uptime: process.uptime(),

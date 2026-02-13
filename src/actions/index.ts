@@ -24,6 +24,7 @@ import { workflowActions } from "./workflow.ts";
 import { projectActions } from "./project.ts";
 import { utilityActions } from "./utility.ts";
 import { webSearchActions } from "./websearch.ts";
+import { heartbeatActions } from "./heartbeat.ts";
 import { ActionRegistry } from "./registry.ts";
 
 /**
@@ -82,6 +83,11 @@ export function registerAllActions(): void {
 
   // Web search actions
   for (const action of webSearchActions) {
+    ActionRegistry.register(action);
+  }
+
+  // Heartbeat actions
+  for (const action of heartbeatActions) {
     ActionRegistry.register(action);
   }
 }
@@ -159,3 +165,8 @@ export {
   webSearch,
   webSearchActions,
 } from "./websearch.ts";
+
+export {
+  leopardHeartbeat,
+  heartbeatActions,
+} from "./heartbeat.ts";
