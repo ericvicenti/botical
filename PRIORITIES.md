@@ -8,10 +8,11 @@
 
 ### 🔥 TOP PRIORITY: Fantastic UX + Programmatic Access
 Botical must have:
-1. [ ] **Mobile-first UX** — humans are often on phones. UI must be responsive, fast, touch-friendly
-2. [ ] **Introspectable REST APIs** — clean, well-documented, consistent API surface
-3. [ ] **Great Skill .md files** — so external agents (like IonBobcat/OpenClaw) can interface with leopard
-4. [ ] **Leopard ↔ Tiger interop** — leopard (prod) must work seamlessly with tiger (dev) for development workflows
+1. [ ] **Identical primitives for humans AND agents** — same beautiful UI for both. Humans can see what's happening in any instance, agents can too. No second-class citizens.
+2. [ ] **Mobile-first UX** — humans are often on phones. UI must be responsive, fast, touch-friendly
+3. [ ] **Introspectable REST APIs** — clean, well-documented, consistent API surface
+4. [ ] **Great Skill .md files** — so external agents (like IonBobcat/OpenClaw) can interface with leopard
+5. [ ] **Leopard ↔ Tiger interop** — leopard (prod) must work seamlessly with tiger (dev) for development workflows
 
 ### Infrastructure
 5. [x] Make the self-improvement loop robust — leopard should recover from failures and keep going
