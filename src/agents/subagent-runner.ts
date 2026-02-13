@@ -20,6 +20,7 @@ import {
   type TaskResult,
 } from "@/tools/task.ts";
 import { CredentialResolver } from "./credential-resolver.ts";
+import { extractTextContent } from "@/services/message-content.ts";
 
 /**
  * Options for running a sub-agent
@@ -314,12 +315,7 @@ export class SubAgentRunner {
       );
       const textParts = responseParts.filter((p) => p.type === "text");
       const responseText = textParts
-        .map((p) => {
-          const c = p.content;
-          if (typeof c === "string") return c;
-          if (c && typeof c === "object" && "text" in c) return String((c as { text: unknown }).text);
-          return "";
-        })
+        .map((p) => extractTextContent(p.content))
         .join("");
 
       // Note: Session stats are updated by StreamProcessor on finish event

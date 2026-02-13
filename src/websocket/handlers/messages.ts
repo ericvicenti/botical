@@ -20,6 +20,7 @@ import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { EventBus } from "@/bus/index.ts";
 import type { WSData } from "../connections.ts";
 import type { ProviderId } from "@/agents/types.ts";
+import { extractTextContent } from "@/services/message-content.ts";
 
 // Map of active abort controllers by sessionId
 const activeStreams = new Map<string, AbortController>();
@@ -138,12 +139,7 @@ export const MessageHandlers = {
     }
 
     const content = textParts
-      .map((p) => {
-          const c = p.content;
-          if (typeof c === "string") return c;
-          if (c && typeof c === "object" && "text" in (c as object)) return String((c as { text: unknown }).text);
-          return "";
-        })
+      .map((p) => extractTextContent(p.content))
       .join("\n");
 
     // Delete subsequent messages (assistant responses after this user message)

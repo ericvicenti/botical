@@ -545,8 +545,9 @@ export class MessagePartService {
    */
   static appendText(db: Database, partId: string, text: string): MessagePart {
     const part = this.getByIdOrThrow(db, partId);
-    const content = part.content as { text: string };
-    const newContent = { text: (content.text || "") + text };
+    const { extractTextContent } = require("./message-content.ts");
+    const existingText = extractTextContent(part.content);
+    const newContent = { text: existingText + text };
 
     return this.updateContent(db, partId, newContent);
   }

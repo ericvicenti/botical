@@ -72,17 +72,7 @@ export interface OrchestratorRunOptions {
   onEvent?: (event: ProcessedEvent) => void | Promise<void>;
 }
 
-/**
- * Extract text from a message part content field.
- * Handles both { text: string } and raw string formats for resilience.
- */
-function extractText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (content && typeof content === "object" && "text" in content) {
-    return String((content as { text: unknown }).text);
-  }
-  return "";
-}
+import { extractTextContent } from "@/services/message-content.ts";
 
 /**
  * Agent Orchestrator for running AI agents
@@ -380,7 +370,7 @@ export class AgentOrchestrator {
         const textParts = parts.filter((p) => p.type === "text");
         if (textParts.length > 0) {
           const text = textParts
-            .map((p) => extractText(p.content))
+            .map((p) => extractTextContent(p.content))
             .filter(Boolean)
             .join("\n");
           if (text) {
@@ -395,7 +385,7 @@ export class AgentOrchestrator {
         const textParts = parts.filter((p) => p.type === "text");
         if (textParts.length > 0) {
           const text = textParts
-            .map((p) => extractText(p.content))
+            .map((p) => extractTextContent(p.content))
             .filter(Boolean)
             .join("");
           if (text) {

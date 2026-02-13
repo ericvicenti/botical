@@ -13,6 +13,7 @@ import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import type { ProviderId } from "@/agents/types.ts";
 import { Config } from "@/config/index.ts";
+import { extractTextContent } from "@/services/message-content.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 
@@ -304,12 +305,7 @@ export class TelegramBot {
       const parts = MessagePartService.listByMessage(db, result.messageId);
       const textParts = parts.filter(p => p.type === "text");
       responseText = textParts
-        .map(p => {
-          const c = p.content;
-          if (typeof c === "string") return c;
-          if (c && typeof c === "object" && "text" in (c as object)) return String((c as { text: unknown }).text);
-          return "";
-        })
+        .map(p => extractTextContent(p.content))
         .join("");
 
       if (responseText) {

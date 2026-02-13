@@ -54,6 +54,14 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [ ] **Self-triggering improvement cycles** — Internal scheduler triggers cycles, not external scripts
 - [ ] Read `BOBCAT-HANDOFF.md` for full knowledge transfer from IonBobcat
 
+#### Code Quality Rules (MANDATORY)
+- **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. Currently 63 `as` casts in src/ — eliminate them all over time.
+- **NO `any` type** — Use `unknown` with proper narrowing instead.
+- **Test every API endpoint end-to-end** — Create a session, send a message, verify the response. Not just unit tests.
+- **Manually test via API** before declaring anything fixed — `curl` the endpoint, check the response.
+- **Playwright e2e tests** for critical user flows — task creation, message sending, settings. Humans use phones; test the UI.
+- Use `extractTextContent()` from `src/services/message-content.ts` for ALL message text extraction.
+
 #### Implementation Tasks
 - [x] Audit existing Session/Action/Workflow implementations against these definitions
 - [x] Ensure Actions have typed input/output + success/error endstates
