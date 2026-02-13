@@ -166,6 +166,20 @@ export interface LogStep extends BaseStep {
 }
 
 /**
+ * Session step - spawn a sub-agent session
+ */
+export interface SessionStep extends BaseStep {
+  type: "session";
+  agent?: ArgBinding; // Agent type (default: "default")
+  systemPrompt?: ArgBinding; // System prompt for the session
+  message: ArgBinding; // Initial message to send to the session
+  providerId?: ArgBinding; // AI provider ID
+  modelId?: ArgBinding; // AI model ID
+  maxMessages?: ArgBinding; // Maximum number of messages (default: 10)
+  onError?: ErrorHandling;
+}
+
+/**
  * Union of all step types
  */
 export type WorkflowStep =
@@ -173,7 +187,8 @@ export type WorkflowStep =
   | NotifyStep
   | ResolveStep
   | RejectStep
-  | LogStep;
+  | LogStep
+  | SessionStep;
 
 // ============================================================================
 // Workflow Definition

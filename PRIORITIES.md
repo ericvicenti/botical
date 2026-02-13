@@ -47,6 +47,13 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - Use local models for: code review, test generation, drafting, research summarization
 - Save cloud API calls for complex reasoning tasks only
 
+#### Leopard Autonomy (handoff from IonBobcat)
+- [ ] **Telegram bot integration** — Leopard needs its own Telegram channel to communicate with Daniel directly
+- [ ] **Internal heartbeat** — Self-monitoring via Botical's scheduler (not relying on external OpenClaw kicks)
+- [ ] **Persistent memory** — Context that survives across sessions (like IonBobcat's MEMORY.md)
+- [ ] **Self-triggering improvement cycles** — Internal scheduler triggers cycles, not external scripts
+- [ ] Read `BOBCAT-HANDOFF.md` for full knowledge transfer from IonBobcat
+
 #### Implementation Tasks
 - [x] Audit existing Session/Action/Workflow implementations against these definitions
 - [x] Ensure Actions have typed input/output + success/error endstates

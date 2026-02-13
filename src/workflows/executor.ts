@@ -190,6 +190,29 @@ async function executeStep(
         return { output: { logged: true, message } };
       }
 
+      case "session": {
+        const message = String(resolveBinding(step.message, ctx) || "");
+        if (!message) {
+          throw new Error("Session step missing message");
+        }
+
+        const agent = String(resolveBinding(step.agent, ctx) || "default");
+        const systemPrompt = step.systemPrompt ? String(resolveBinding(step.systemPrompt, ctx) || "") : null;
+        const providerId = step.providerId ? String(resolveBinding(step.providerId, ctx) || "") : null;
+        const modelId = step.modelId ? String(resolveBinding(step.modelId, ctx) || "") : null;
+        const maxMessages = step.maxMessages ? Number(resolveBinding(step.maxMessages, ctx) || 10) : 10;
+
+        return await executeSessionStep({
+          message,
+          agent,
+          systemPrompt,
+          providerId,
+          modelId,
+          maxMessages,
+          ctx,
+        });
+      }
+
       case "resolve": {
         const output: Record<string, unknown> = {};
         if (step.output) {
@@ -212,7 +235,7 @@ async function executeStep(
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
     // Handle error based on step's onError config
-    if (step.type === "action" && step.onError) {
+    if ((step.type === "action" || step.type === "session") && step.onError) {
       switch (step.onError.strategy) {
         case "continue":
           return { output: { error: errorMessage, continued: true } };
@@ -366,6 +389,98 @@ function broadcastNotification(message: string, variant: string): void {
   const event = createEvent("workflow.notify", { message, variant });
   for (const connectionId of ConnectionManager.getAllIds()) {
     ConnectionManager.send(connectionId, event);
+  }
+}
+
+// ============================================================================
+// Session Step Execution
+// ============================================================================
+
+/**
+ * Execute a session step by creating a sub-agent session
+ */
+async function executeSessionStep(params: {
+  message: string;
+  agent: string;
+  systemPrompt: string | null;
+  providerId: string | null;
+  modelId: string | null;
+  maxMessages: number;
+  ctx: ExecutorContext;
+}): Promise<{ output?: unknown; error?: string }> {
+  const { message, agent, systemPrompt, providerId, modelId, maxMessages, ctx } = params;
+
+  try {
+    // Import services (dynamic import to avoid circular dependencies)
+    const { SessionService } = await import("@/services/sessions.ts");
+    const { MessageService } = await import("@/services/messages.ts");
+    const { MessagePartService } = await import("@/services/messages.ts");
+    const { AgentOrchestrator } = await import("@/agents/orchestrator.ts");
+
+    // Create a sub-session
+    const session = SessionService.create(ctx.db, {
+      title: `Workflow Session: ${ctx.workflow.name}`,
+      agent,
+      parentId: ctx.actionContext.sessionId || null,
+      providerId,
+      modelId,
+      systemPrompt,
+    });
+
+    // Create the initial user message
+    const userMessage = MessageService.create(ctx.db, {
+      sessionId: session.id,
+      role: "user",
+    });
+
+    MessagePartService.create(ctx.db, {
+      messageId: userMessage.id,
+      sessionId: session.id,
+      type: "text",
+      content: { text: message },
+    });
+
+    // Update session stats
+    SessionService.updateStats(ctx.db, session.id, { messageCount: 1 });
+
+    // Process the message with the agent
+    const orchestrator = new AgentOrchestrator(ctx.db);
+    await orchestrator.processMessage(session.id, userMessage.id, {
+      maxMessages,
+    });
+
+    // Get the final session state
+    const finalSession = SessionService.getByIdOrThrow(ctx.db, session.id);
+    
+    // Get all messages from the session
+    const { MessageService: MsgSvc } = await import("@/services/messages.ts");
+    const messages = MsgSvc.list(ctx.db, session.id);
+    
+    // Extract the assistant's response(s)
+    const assistantMessages = messages.filter(m => m.role === "assistant");
+    const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
+    
+    let responseText = "";
+    if (lastAssistantMessage) {
+      const { MessagePartService: PartSvc } = await import("@/services/messages.ts");
+      const parts = PartSvc.list(ctx.db, lastAssistantMessage.id);
+      const textParts = parts.filter(p => p.type === "text");
+      responseText = textParts.map(p => p.content.text).join("\n");
+    }
+
+    return {
+      output: {
+        sessionId: session.id,
+        messageCount: finalSession.messageCount,
+        totalCost: finalSession.totalCost,
+        response: responseText,
+        status: finalSession.status,
+      },
+    };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Session execution failed",
+    };
   }
 }
 
