@@ -33,6 +33,7 @@ import { ValidationError } from "@/utils/errors.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
+import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import type { SessionStatus, ProviderId } from "@/agents/types.ts";
 
 const sessions = new Hono();
@@ -184,23 +185,38 @@ sessions.post("/", async (c) => {
     const projectPath = project?.path || process.cwd();
 
     const modelId = session.modelId || null;
-    const providerId: ProviderId = modelId ? inferProviderId(modelId) : "anthropic";
-
     const auth = c.get("auth") as { userId: string } | undefined;
     const credentialUserId = auth?.userId || userId || "anonymous";
-    const apiKey = ProviderCredentialsService.getApiKey(credentialUserId, providerId);
+
+    // Resolve provider: explicit from model > session config > find any available credential
+    let providerId: ProviderId = modelId ? inferProviderId(modelId) : (session.providerId as ProviderId) || "anthropic";
+    let apiKey = ProviderCredentialsService.getApiKey(credentialUserId, providerId);
+
+    // If no key for default provider, try finding any configured provider
+    if (!apiKey) {
+      const FALLBACK_PROVIDERS: ProviderId[] = ["anthropic-oauth", "anthropic", "openai", "google", "ollama"];
+      for (const fallback of FALLBACK_PROVIDERS) {
+        const key = ProviderCredentialsService.getApiKey(credentialUserId, fallback);
+        if (key) {
+          providerId = fallback;
+          apiKey = key;
+          break;
+        }
+      }
+    }
 
     if (apiKey) {
       // Fire-and-forget: run orchestration in the background
+      const credentialResolver = new CredentialResolver(credentialUserId, providerId, apiKey);
       AgentOrchestrator.run({
         db,
         projectId,
         projectPath,
         sessionId: session.id,
         userId: userId || credentialUserId,
-        canExecuteCode: false,
+        canExecuteCode: true,
         content: initialMessage,
-        apiKey,
+        credentialResolver,
         providerId,
         modelId,
         agentName: session.agent,
@@ -208,7 +224,7 @@ sessions.post("/", async (c) => {
         console.error(`[sessions] Background orchestration failed for session ${session.id}:`, err);
       });
     } else {
-      console.warn(`[sessions] No API key for provider "${providerId}", agent won't respond for session ${session.id}`);
+      console.warn(`[sessions] No credentials found for any provider, agent won't respond for session ${session.id}`);
     }
   }
 

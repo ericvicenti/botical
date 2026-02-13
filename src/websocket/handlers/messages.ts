@@ -53,14 +53,32 @@ export const MessageHandlers = {
     // Get session to determine provider
     const session = SessionService.getByIdOrThrow(db, input.sessionId);
 
-    // Determine provider (default to anthropic)
-    const providerId: ProviderId =
+    // Determine provider: session config > find any available credential
+    let providerId: ProviderId =
       (session.providerId as ProviderId) ?? "anthropic";
 
-    // Create credential resolver (resolves fresh keys on demand)
-    const credentialResolver = new CredentialResolver(ctx.userId, providerId);
-    // Validate credentials exist upfront
-    credentialResolver.resolve();
+    // Create credential resolver — try configured provider first
+    let credentialResolver: CredentialResolver;
+    try {
+      credentialResolver = new CredentialResolver(ctx.userId, providerId);
+      credentialResolver.resolve();
+    } catch {
+      // No key for default provider — try finding any configured provider
+      const FALLBACK_PROVIDERS: ProviderId[] = ["anthropic-oauth", "anthropic", "openai", "google", "ollama"];
+      let found = false;
+      for (const fallback of FALLBACK_PROVIDERS) {
+        try {
+          credentialResolver = new CredentialResolver(ctx.userId, fallback);
+          credentialResolver.resolve();
+          providerId = fallback;
+          found = true;
+          break;
+        } catch { continue; }
+      }
+      if (!found) {
+        throw new Error(`No API key configured for any provider. Please add credentials.`);
+      }
+    }
 
     // Get project path
     const projectPath = getProjectPath(projectId);
