@@ -89,6 +89,8 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ## 🐛 Bug Reports
 
+- [ ] **Double-sent first message** (severity: high) — When creating a new task, the first user message appears twice. See: tiger session `sess_2go5omev9eu-c4d9fd5d`. Root cause likely: session creation stores the message AND then the frontend/websocket sends it again. Fix by SIMPLIFYING — one single path for sending messages, not two. https://tiger.verse.link/projects/prj_root/tasks/sess_2go5omev9eu-c4d9fd5d
+
 <!-- Add bugs here. Leopard will triage and fix them. -->
 <!-- Format: - [ ] Description (severity: high/medium/low) -->
 
