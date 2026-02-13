@@ -91,6 +91,10 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 - [ ] **Double-sent first message** (severity: high) — When creating a new task, the first user message appears twice. See: tiger session `sess_2go5omev9eu-c4d9fd5d`. Root cause likely: session creation stores the message AND then the frontend/websocket sends it again. Fix by SIMPLIFYING — one single path for sending messages, not two. https://tiger.verse.link/projects/prj_root/tasks/sess_2go5omev9eu-c4d9fd5d
 
+- [ ] **User message should interrupt tool-calling flow** (severity: high) — When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message. Currently the user message doesn't interrupt. The model should see the new user message and adjust its plan accordingly.
+
+- [ ] **Message queuing must be server-side** (severity: high) — When a user sends a message while the model is busy, the message should be queued on the SERVER, not the client. Currently the queuing behavior is client-side which means messages can be lost if the page is refreshed. Server should accept and store the message immediately, then deliver it to the model when the current turn completes (or interrupt if that's the desired behavior).
+
 <!-- Add bugs here. Leopard will triage and fix them. -->
 <!-- Format: - [ ] Description (severity: high/medium/low) -->
 
