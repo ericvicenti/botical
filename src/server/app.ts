@@ -22,7 +22,7 @@ import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { requireAuth } from "../auth/middleware.ts";
-import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules, oauthProxy } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules, oauthProxy, status, statusPage } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -106,6 +106,8 @@ export function createApp() {
   app.route("/api/extensions", extensionsRouter); // Extension proxy routes
   app.route("/api/projects", projectSchedules); // Project-scoped schedule routes
   app.route("/api/schedules", schedules); // Individual schedule routes
+  app.route("/api/status", status); // System status API (no auth required)
+  app.route("/status", statusPage); // Live status dashboard (no auth required)
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

@@ -20,3 +20,5 @@ export { templates } from "./templates.ts";
 export { extensionsRouter } from "./extensions.ts";
 export { projectSchedules, schedules } from "./schedules.ts";
 export { oauthProxy } from "./oauth-proxy.ts";
+export { status } from "./status.ts";
+export { statusPage } from "./status-page.ts";
