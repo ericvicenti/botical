@@ -1,6 +1,5 @@
 #!/bin/bash
 # Trigger a Leopard improvement cycle via the Botical API
-# This creates a session and sends a message to the leopard agent
 set -euo pipefail
 
 INSTANCE="${1:-prod}"
@@ -13,56 +12,54 @@ else
   DATA_DIR="$HOME/.botical-dev"
 fi
 
-# Get the root project ID
-ROOT_PROJECT=$(sqlite3 "$DATA_DIR/root.db" "SELECT id FROM projects WHERE owner_id = 'system' LIMIT 1" 2>/dev/null)
-if [ -z "$ROOT_PROJECT" ]; then
-  echo "❌ No root project found"
-  exit 1
-fi
+API_KEY="${LEOPARD_API_KEY:-botical_leopard_194fbb476a9f614465838ea1a13df29a}"
+# Use the Botical Tiger project (which has the dev repo as its workspace)
+PROJECT_ID="${LEOPARD_PROJECT_ID:-prj_2go5oq0sa9o-51985ca1}"
 
-# Check if there's an active improvement session
-ACTIVE_SESSION=$(sqlite3 "$DATA_DIR/projects/$ROOT_PROJECT/project.db" \
-  "SELECT id FROM sessions WHERE agent = 'leopard' AND status = 'active' ORDER BY created_at DESC LIMIT 1" 2>/dev/null || true)
+send_message() {
+  local session_id="$1"
+  local content="$2"
+  curl -s -X POST "$BASE_URL/api/messages" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $API_KEY" \
+    -d "{
+      \"projectId\": \"$PROJECT_ID\",
+      \"sessionId\": \"$session_id\",
+      \"content\": \"$content\",
+      \"userId\": \"system\",
+      \"providerId\": \"anthropic-oauth\",
+      \"canExecuteCode\": true
+    }" 2>&1
+}
+
+# Check for active session (created in last 2 hours)
+TWO_HOURS_AGO=$(( $(date +%s%3N) - 7200000 ))
+ACTIVE_SESSION=$(sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
+  "SELECT id FROM sessions WHERE agent = 'leopard' AND status = 'active' AND created_at > $TWO_HOURS_AGO ORDER BY created_at DESC LIMIT 1" 2>/dev/null || true)
 
 if [ -n "$ACTIVE_SESSION" ]; then
-  echo "📋 Found active leopard session: $ACTIVE_SESSION"
-  # Send follow-up message to continue working
-  curl -s -X POST "$BASE_URL/api/messages" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"projectId\": \"$ROOT_PROJECT\",
-      \"sessionId\": \"$ACTIVE_SESSION\",
-      \"content\": \"Continue your improvement cycle. Read PRIORITIES.md and CHANGELOG-AUTO.md, pick the next task, implement it, test it, deploy if tests pass.\",
-      \"userId\": \"system\"
-    }" | jq -r '.data.message.id // .error.message // "sent"'
+  echo "📋 Continuing session: $ACTIVE_SESSION"
+  RESP=$(send_message "$ACTIVE_SESSION" "Continue your improvement cycle. Read PRIORITIES.md and CHANGELOG-AUTO.md, pick the next task, implement it, test it, deploy if tests pass.")
 else
-  echo "🆕 Creating new leopard improvement session..."
-  # Create a new session
+  echo "🆕 Creating new session..."
   SESSION_RESP=$(curl -s -X POST "$BASE_URL/api/sessions" \
     -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $API_KEY" \
     -d "{
-      \"projectId\": \"$ROOT_PROJECT\",
+      \"projectId\": \"$PROJECT_ID\",
       \"title\": \"Improvement Cycle $(date +%Y-%m-%d-%H%M)\",
-      \"agent\": \"leopard\"
+      \"agent\": \"leopard\",
+      \"providerId\": \"anthropic-oauth\"
     }")
-  
+
   SESSION_ID=$(echo "$SESSION_RESP" | jq -r '.data.id // empty')
   if [ -z "$SESSION_ID" ]; then
-    echo "❌ Failed to create session: $SESSION_RESP"
+    echo "❌ Failed: $SESSION_RESP"
     exit 1
   fi
-  
-  echo "✅ Created session: $SESSION_ID"
-  
-  # Send the kickoff message
-  curl -s -X POST "$BASE_URL/api/messages" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"projectId\": \"$ROOT_PROJECT\",
-      \"sessionId\": \"$SESSION_ID\",
-      \"content\": \"Start a new improvement cycle. Read PRIORITIES.md for your current priorities. Read CHANGELOG-AUTO.md for recent work. Pick the highest priority unfinished item, implement it, test it, and deploy if tests pass.\",
-      \"userId\": \"system\"
-    }" | jq -r '.data.message.id // .error.message // "sent"'
+  echo "✅ Session: $SESSION_ID"
+  RESP=$(send_message "$SESSION_ID" "Start a new improvement cycle. Read PRIORITIES.md for your current priorities. Read CHANGELOG-AUTO.md for recent work. Pick the highest priority unfinished item, implement it, test it, and deploy if tests pass.")
 fi
 
-echo "🐆 Leopard improvement cycle triggered on $INSTANCE"
+echo "$RESP" | jq -r '.data.message.id // .error.message // .' 2>/dev/null || echo "$RESP"
+echo "🐆 Done ($INSTANCE)"
