@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProjectsListPage } from "@/primitives/home";
+import { DashboardPage } from "@/primitives/home";
 
 export const Route = createFileRoute("/")({
   component: HomePageRoute,
 });
 
 function HomePageRoute() {
-  return <ProjectsListPage params={{}} />;
+  return <DashboardPage />;
 }
