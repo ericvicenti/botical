@@ -16,6 +16,7 @@ interface StatusSession {
   lastActivity: number;
   status: string;
   lastMessage?: string;
+  hasError?: boolean;
 }
 
 interface StatusMessage {
@@ -29,6 +30,7 @@ interface StatusMessage {
 interface StatusData {
   timestamp: number;
   activeSessions: StatusSession[];
+  recentSessions: StatusSession[];
   recentMessages: StatusMessage[];
   services: {
     server: string;
@@ -182,6 +184,65 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Recent Sessions */}
+      {statusData && statusData.recentSessions.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-text-primary mb-3">
+            Recent Sessions
+            <span className="text-sm font-normal text-text-muted ml-2">
+              (last 24h)
+            </span>
+          </h2>
+          <div className="space-y-2">
+            {statusData.recentSessions.map((session) => (
+              <button
+                key={`recent-${session.projectId}-${session.id}`}
+                onClick={() => handleSessionClick(session)}
+                className={cn(
+                  "block w-full text-left p-4 bg-bg-elevated rounded-lg border",
+                  session.hasError
+                    ? "border-red-500/30"
+                    : "border-border",
+                  "hover:border-accent-primary/50 hover:bg-bg-elevated/80 transition-colors"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-text-primary truncate">
+                        {session.title || session.id}
+                      </h3>
+                      {session.agent && (
+                        <span className="shrink-0 px-2 py-0.5 text-xs font-semibold rounded bg-amber-500/20 text-amber-400">
+                          {session.agent}
+                        </span>
+                      )}
+                      {session.hasError && (
+                        <span className="shrink-0 px-2 py-0.5 text-xs font-semibold rounded bg-red-500/20 text-red-400">
+                          error
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-text-muted">
+                      <span>{session.projectName}</span>
+                      <span>·</span>
+                      <span>{session.messageCount} msgs</span>
+                      <span>·</span>
+                      <span>{timeAgo(session.lastActivity)}</span>
+                    </div>
+                    {session.lastMessage && (
+                      <p className="text-sm text-text-secondary mt-2 line-clamp-2">
+                        {session.lastMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Activity */}
       <section>

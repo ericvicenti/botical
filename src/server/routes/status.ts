@@ -23,7 +23,7 @@ status.get("/", async (c) => {
   const rootDb = DatabaseManager.getRootDb();
   const projects = ProjectService.list(rootDb, {});
 
-  const activeSessions: Array<{
+  type SessionInfo = {
     id: string;
     title: string;
     agent: string | null;
@@ -33,7 +33,11 @@ status.get("/", async (c) => {
     lastActivity: number;
     status: string;
     lastMessage?: string;
-  }> = [];
+    hasError?: boolean;
+  };
+
+  const activeSessions: SessionInfo[] = [];
+  const recentSessions: SessionInfo[] = [];
 
   const recentMessages: Array<{
     sessionId: string;
@@ -47,12 +51,16 @@ status.get("/", async (c) => {
     try {
       const db = DatabaseManager.getProjectDb(project.id);
 
-      // Active sessions
+      // Active sessions — only those with an in-flight assistant message
+      // (completed_at IS NULL means the model is generating or a tool is running)
       const sessions = db.prepare(`
-        SELECT id, title, agent, status, message_count, updated_at, created_at
-        FROM sessions
-        WHERE status = 'active'
-        ORDER BY updated_at DESC
+        SELECT DISTINCT s.id, s.title, s.agent, s.status, s.message_count, s.updated_at, s.created_at
+        FROM sessions s
+        INNER JOIN messages m ON m.session_id = s.id
+        WHERE s.status = 'active'
+          AND m.role = 'assistant'
+          AND m.completed_at IS NULL
+        ORDER BY s.updated_at DESC
         LIMIT 20
       `).all() as Array<{
         id: string;
@@ -103,6 +111,64 @@ status.get("/", async (c) => {
         });
       }
 
+      // Recent sessions (active in last 24h, not currently running)
+      const activeIds = new Set(sessions.map(s => s.id));
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      const recentRows = db.prepare(`
+        SELECT s.id, s.title, s.agent, s.status, s.message_count, s.updated_at, s.created_at,
+          (SELECT m.error_type FROM messages m WHERE m.session_id = s.id AND m.error_type IS NOT NULL ORDER BY m.created_at DESC LIMIT 1) as last_error
+        FROM sessions s
+        WHERE s.updated_at > ?
+        ORDER BY s.updated_at DESC
+        LIMIT 20
+      `).all(cutoff) as Array<{
+        id: string;
+        title: string;
+        agent: string | null;
+        status: string;
+        message_count: number;
+        updated_at: number;
+        created_at: number;
+        last_error: string | null;
+      }>;
+
+      for (const s of recentRows) {
+        if (activeIds.has(s.id)) continue;
+
+        const lastPart = db.prepare(`
+          SELECT mp.content, m.role
+          FROM message_parts mp
+          JOIN messages m ON mp.message_id = m.id
+          WHERE m.session_id = ? AND mp.type = 'text'
+          ORDER BY mp.created_at DESC
+          LIMIT 1
+        `).get(s.id) as { content: string; role: string } | undefined;
+
+        let lastMessage: string | undefined;
+        if (lastPart) {
+          try {
+            const parsed = typeof lastPart.content === "string" ? JSON.parse(lastPart.content) : lastPart.content;
+            lastMessage = extractTextContent(parsed);
+          } catch {
+            lastMessage = extractTextContent(lastPart.content);
+          }
+          if (lastMessage && lastMessage.length > 200) lastMessage = lastMessage.substring(0, 200) + "...";
+        }
+
+        recentSessions.push({
+          id: s.id,
+          title: s.title,
+          agent: s.agent,
+          projectId: project.id,
+          projectName: project.name,
+          messageCount: s.message_count,
+          lastActivity: s.updated_at || s.created_at,
+          status: s.status,
+          lastMessage,
+          hasError: !!s.last_error,
+        });
+      }
+
       // Recent messages (last 10 across all sessions)
       const msgs = db.prepare(`
         SELECT m.session_id, m.role, m.agent, mp.content, mp.created_at
@@ -146,12 +212,14 @@ status.get("/", async (c) => {
 
   // Sort by most recent
   activeSessions.sort((a, b) => b.lastActivity - a.lastActivity);
+  recentSessions.sort((a, b) => b.lastActivity - a.lastActivity);
   recentMessages.sort((a, b) => b.createdAt - a.createdAt);
 
   return c.json({
     data: {
       timestamp: Date.now(),
       activeSessions: activeSessions.slice(0, 20),
+      recentSessions: recentSessions.slice(0, 20),
       recentMessages: recentMessages.slice(0, 20),
       services: {
         server: "running",
