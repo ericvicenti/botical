@@ -12,7 +12,7 @@ export function ProjectSelector() {
   const [isOpenProjectModalOpen, setIsOpenProjectModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: projects, isLoading } = useProjects();
-  const { selectedProjectId, setSelectedProject } = useUI();
+  const { selectedProjectId, setSelectedProject, closeSidebarOnMobile } = useUI();
   const { openTab, openPreviewTab } = useTabs();
   const navigate = useNavigate();
 
@@ -41,12 +41,14 @@ export function ProjectSelector() {
     });
     navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
     setIsOpen(false);
+    closeSidebarOnMobile();
   };
 
   const handleCreateProject = () => {
     openTab({ type: "create-project" });
     navigate({ to: "/create-project" });
     setIsOpen(false);
+    closeSidebarOnMobile();
   };
 
   const handleOpenProject = () => {
@@ -68,6 +70,7 @@ export function ProjectSelector() {
     openPreviewTab({ type: "projects" });
     navigate({ to: "/" });
     setIsOpen(false);
+    closeSidebarOnMobile();
   };
 
   const handleGoToProjectHome = () => {
