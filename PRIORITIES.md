@@ -54,6 +54,11 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [ ] **Self-triggering improvement cycles** — Internal scheduler triggers cycles, not external scripts
 - [ ] Read `BOBCAT-HANDOFF.md` for full knowledge transfer from IonBobcat
 
+#### UX: Provider/Model Error Recovery
+- [ ] When an agent specifies an invalid provider/model and the user hits the error, show a clear error message with a one-click fix: "Agent X uses provider Y which has no credentials. [Reassign all agents using Y to use Z instead]"
+- [ ] Settings page should show which agents use which providers, with bulk-reassign capability
+- [ ] Validate agent provider/model on save — warn if no credentials exist for that provider
+
 #### Code Quality Rules (MANDATORY)
 - **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. Currently 63 `as` casts in src/ — eliminate them all over time.
 - **NO `any` type** — Use `unknown` with proper narrowing instead.

@@ -49,6 +49,40 @@ function inferProviderId(modelId: string): ProviderId {
 }
 
 /**
+ * Resolve provider and API key for a user.
+ * Tries: model inference > explicit provider > fallback through all providers.
+ * Returns null if no credentials found anywhere.
+ */
+const PROVIDER_FALLBACK_ORDER: ProviderId[] = ["anthropic-oauth", "anthropic", "openai", "google", "ollama"];
+
+function resolveProvider(
+  userId: string,
+  modelId: string | null,
+  sessionProviderId: ProviderId | null,
+): { providerId: ProviderId; apiKey: string } | null {
+  // 1. Try provider inferred from model
+  if (modelId) {
+    const inferred = inferProviderId(modelId);
+    const key = ProviderCredentialsService.getApiKey(userId, inferred);
+    if (key) return { providerId: inferred, apiKey: key };
+  }
+
+  // 2. Try explicit session/agent provider
+  if (sessionProviderId) {
+    const key = ProviderCredentialsService.getApiKey(userId, sessionProviderId);
+    if (key) return { providerId: sessionProviderId, apiKey: key };
+  }
+
+  // 3. Fallback: try all providers in priority order
+  for (const fallback of PROVIDER_FALLBACK_ORDER) {
+    const key = ProviderCredentialsService.getApiKey(userId, fallback);
+    if (key) return { providerId: fallback, apiKey: key };
+  }
+
+  return null;
+}
+
+/**
  * Query parameters for listing sessions
  */
 const ListQuerySchema = z.object({
@@ -145,6 +179,9 @@ sessions.post("/", async (c) => {
       const { AgentYamlService } = await import("@/config/agents.ts");
       const agent = AgentYamlService.getByName(project.path, createData.agent);
       if (agent) {
+        if (agent.providerId && !createData.providerId) {
+          createData.providerId = agent.providerId;
+        }
         if (agent.modelId && !createData.modelId) {
           createData.modelId = agent.modelId;
         }
@@ -188,24 +225,11 @@ sessions.post("/", async (c) => {
     const auth = c.get("auth") as { userId: string } | undefined;
     const credentialUserId = auth?.userId || userId || "anonymous";
 
-    // Resolve provider: explicit from model > session config > find any available credential
-    let providerId: ProviderId = modelId ? inferProviderId(modelId) : (session.providerId as ProviderId) || "anthropic";
-    let apiKey = ProviderCredentialsService.getApiKey(credentialUserId, providerId);
+    // Resolve provider: model inference > session/agent config > find any available
+    const resolvedProvider = resolveProvider(credentialUserId, modelId, session.providerId as ProviderId | null);
 
-    // If no key for default provider, try finding any configured provider
-    if (!apiKey) {
-      const FALLBACK_PROVIDERS: ProviderId[] = ["anthropic-oauth", "anthropic", "openai", "google", "ollama"];
-      for (const fallback of FALLBACK_PROVIDERS) {
-        const key = ProviderCredentialsService.getApiKey(credentialUserId, fallback);
-        if (key) {
-          providerId = fallback;
-          apiKey = key;
-          break;
-        }
-      }
-    }
-
-    if (apiKey) {
+    if (resolvedProvider) {
+      const { providerId, apiKey } = resolvedProvider;
       // Fire-and-forget: run orchestration in the background
       const credentialResolver = new CredentialResolver(credentialUserId, providerId, apiKey);
       AgentOrchestrator.run({
