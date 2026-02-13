@@ -40,6 +40,13 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [ ] Apply learnings to Botical's primitives and architecture
 - Key references: `~/research/systems-overview.md`, `~/research/obra-superpowers-analysis.md`, `~/research/letta-memory-blocks-analysis.md`
 
+#### Local GPU Resources (sentinel)
+- **RTX 4090** GPU + 124GB RAM + 24 cores
+- **Ollama** installed with models: devstral:24b, qwen3-coder:30b, llama3.1:8b
+- Botical already has Ollama provider support — USE IT for fast local inference
+- Use local models for: code review, test generation, drafting, research summarization
+- Save cloud API calls for complex reasoning tasks only
+
 #### Implementation Tasks
 - [x] Audit existing Session/Action/Workflow implementations against these definitions
 - [x] Ensure Actions have typed input/output + success/error endstates
