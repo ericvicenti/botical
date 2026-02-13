@@ -19,6 +19,7 @@ import {
   type TaskParams,
   type TaskResult,
 } from "@/tools/task.ts";
+import { CredentialResolver } from "./credential-resolver.ts";
 
 /**
  * Options for running a sub-agent
@@ -38,8 +39,8 @@ export interface SubAgentRunOptions {
   canExecuteCode: boolean;
   /** Task parameters from the task tool */
   taskParams: TaskParams;
-  /** API key for the AI provider */
-  apiKey: string;
+  /** Credential resolver for fresh API keys */
+  credentialResolver: CredentialResolver;
   /** Parent's provider ID (used as fallback) */
   parentProviderId: ProviderId;
   /** Parent's model ID (used as fallback) */
@@ -77,7 +78,7 @@ export class SubAgentRunner {
       userId,
       canExecuteCode,
       taskParams,
-      apiKey,
+      credentialResolver,
       parentProviderId,
       parentModelId,
       abortSignal,
@@ -123,6 +124,10 @@ export class SubAgentRunner {
       parentProviderId) as ProviderId;
     const modelId =
       params.model?.modelId ?? agentConfig.modelId ?? parentModelId ?? null;
+
+    // Resolve fresh credentials for the sub-agent's provider
+    const subAgentResolver = credentialResolver.forProvider(providerId);
+    const apiKey = subAgentResolver.resolve();
 
     // Handle background execution
     if (params.runInBackground) {

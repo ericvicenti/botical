@@ -31,6 +31,7 @@ import { SessionService } from "@/services/sessions.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
+import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
 
@@ -109,12 +110,19 @@ messages.post("/", async (c) => {
   const providerId: ProviderId = requestProviderId
     || (modelId ? inferProviderId(modelId) : "anthropic");
 
-  // Get API key - prefer request body, fallback to stored credentials
-  // Use auth middleware userId for credential lookup (matches how credentials are stored)
+  // Create credential resolver — resolves fresh keys on demand, handles OAuth refresh
   const auth = c.get("auth") as { userId: string } | undefined;
   const credentialUserId = auth?.userId || userId;
-  const apiKey = requestApiKey || ProviderCredentialsService.getApiKey(credentialUserId, providerId);
-  if (!apiKey) {
+  const credentialResolver = new CredentialResolver(
+    credentialUserId,
+    providerId,
+    requestApiKey || undefined  // static key from request body takes priority
+  );
+
+  // Validate credentials exist upfront
+  try {
+    credentialResolver.resolve();
+  } catch {
     throw new AuthenticationError(
       `No API key found for provider "${providerId}". Please add credentials first or provide an API key.`
     );
@@ -139,7 +147,7 @@ messages.post("/", async (c) => {
       canExecuteCode,
       enabledTools,
       content,
-      apiKey,
+      credentialResolver,
       providerId: providerId as ProviderId,
       modelId,
       agentName: agentName ?? session.agent,

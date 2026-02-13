@@ -16,6 +16,7 @@ import { SessionService } from "@/services/sessions.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
+import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { EventBus } from "@/bus/index.ts";
 import type { WSData } from "../connections.ts";
 import type { ProviderId } from "@/agents/types.ts";
@@ -55,13 +56,10 @@ export const MessageHandlers = {
     const providerId: ProviderId =
       (session.providerId as ProviderId) ?? "anthropic";
 
-    // Get API key for the provider
-    const apiKey = ProviderCredentialsService.getApiKey(ctx.userId, providerId);
-    if (!apiKey) {
-      throw new Error(
-        `No API key configured for provider: ${providerId}. Please add credentials.`
-      );
-    }
+    // Create credential resolver (resolves fresh keys on demand)
+    const credentialResolver = new CredentialResolver(ctx.userId, providerId);
+    // Validate credentials exist upfront
+    credentialResolver.resolve();
 
     // Get project path
     const projectPath = getProjectPath(projectId);
@@ -80,7 +78,7 @@ export const MessageHandlers = {
         userId: ctx.userId,
         canExecuteCode: true, // TODO: Get from user auth context
         content: input.content,
-        apiKey,
+        credentialResolver,
         providerId,
         modelId: session.modelId,
         abortSignal: abortController.signal,

@@ -13,6 +13,7 @@ import { runMigrations } from "@/database/migrations.ts";
 import { PROJECT_MIGRATIONS } from "@/database/project-migrations.ts";
 import { registerCoreTools } from "@/tools/index.ts";
 import * as LLMModule from "@/agents/llm.ts";
+import { CredentialResolver } from "@/agents/credential-resolver.ts";
 
 // Register tools once before all tests
 registerCoreTools();
@@ -76,7 +77,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "explore",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
         parentModelId: "claude-sonnet-4-20250514",
       });
@@ -110,7 +111,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -137,7 +138,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -166,7 +167,7 @@ describe("SubAgent Runner", () => {
           model: "haiku",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
         parentModelId: "claude-sonnet-4-20250514",
       });
@@ -195,7 +196,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
         parentModelId: "claude-sonnet-4-20250514",
       });
@@ -223,7 +224,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "nonexistent-agent",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -254,7 +255,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -281,7 +282,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -319,7 +320,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -348,7 +349,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: false,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -379,7 +380,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: true,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -410,7 +411,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: true,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 
@@ -455,7 +456,7 @@ describe("SubAgent Runner", () => {
           subagent_type: "default",
           run_in_background: true,
         },
-        apiKey: "test-key",
+        credentialResolver: new CredentialResolver("test-user", "anthropic", "test-key"),
         parentProviderId: "anthropic",
       });
 

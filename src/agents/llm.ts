@@ -36,6 +36,8 @@ export interface LLMCallOptions {
   abortSignal?: AbortSignal;
   /** Callback for each streaming event */
   onStreamEvent?: (event: StreamEvent) => void | Promise<void>;
+  /** Callback when OAuth tokens are refreshed (for persistence) */
+  onTokenRefresh?: (newCredentials: string) => void;
 }
 
 /**
@@ -101,10 +103,11 @@ export class LLM {
       topP,
       abortSignal,
       onStreamEvent,
+      onTokenRefresh,
     } = options;
 
     // Create the model instance
-    const model = ProviderRegistry.createModel(providerId, modelId ?? null, apiKey);
+    const model = ProviderRegistry.createModel(providerId, modelId ?? null, apiKey, onTokenRefresh);
 
     // Track results across steps
     let fullText = "";

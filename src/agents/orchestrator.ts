@@ -27,6 +27,8 @@ import { SubAgentRunner } from "./subagent-runner.ts";
 import type { TaskParams } from "@/tools/task.ts";
 import { EventBus } from "@/bus/index.ts";
 import { SkillService } from "@/services/skills.ts";
+import { CredentialResolver } from "./credential-resolver.ts";
+import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 
 /**
  * Options for running an agent
@@ -46,8 +48,10 @@ export interface OrchestratorRunOptions {
   canExecuteCode: boolean;
   /** User message content */
   content: string;
-  /** API key for the AI provider */
-  apiKey: string;
+  /** API key for the AI provider (deprecated: prefer credentialResolver) */
+  apiKey?: string;
+  /** Credential resolver for fresh API keys (preferred over apiKey) */
+  credentialResolver?: CredentialResolver;
   /** Provider ID */
   providerId: ProviderId;
   /** Model ID (uses provider default if not specified) */
@@ -85,7 +89,8 @@ export class AgentOrchestrator {
       canExecuteCode,
       enabledTools,
       content,
-      apiKey,
+      apiKey: rawApiKey,
+      credentialResolver: inputResolver,
       providerId,
       modelId,
       agentName,
@@ -95,6 +100,11 @@ export class AgentOrchestrator {
       abortSignal,
       onEvent,
     } = options;
+
+    // Build credential resolver (prefer explicit resolver, fall back to static key)
+    const credentialResolver = inputResolver ??
+      new CredentialResolver(userId, providerId, rawApiKey);
+    const apiKey = credentialResolver.resolve();
 
     // Verify session exists
     const session = SessionService.getByIdOrThrow(db, sessionId);
@@ -184,7 +194,7 @@ export class AgentOrchestrator {
       parentSessionId: sessionId,
       userId,
       canExecuteCode,
-      apiKey,
+      credentialResolver,
       providerId,
       modelId: effectiveModelId,
       abortSignal,
@@ -268,6 +278,21 @@ export class AgentOrchestrator {
         onStreamEvent: async (event) => {
           await processor.process(event);
         },
+        onTokenRefresh: providerId === "anthropic-oauth"
+          ? (newCreds) => {
+              // Persist refreshed OAuth tokens back to the database
+              try {
+                const creds = ProviderCredentialsService.list(userId);
+                const oauthCred = creds.find(c => c.provider === "anthropic-oauth" && c.isDefault);
+                if (oauthCred) {
+                  ProviderCredentialsService.update(userId, oauthCred.id, { apiKey: newCreds });
+                  console.log("[Orchestrator] Persisted refreshed OAuth tokens");
+                }
+              } catch (err) {
+                console.error("[Orchestrator] Failed to persist refreshed tokens:", err);
+              }
+            }
+          : undefined,
       });
 
       return {
@@ -297,7 +322,7 @@ export class AgentOrchestrator {
     parentSessionId: string;
     userId: string;
     canExecuteCode: boolean;
-    apiKey: string;
+    credentialResolver: CredentialResolver;
     providerId: ProviderId;
     modelId: string | null;
     abortSignal?: AbortSignal;
@@ -312,7 +337,7 @@ export class AgentOrchestrator {
         userId: context.userId,
         canExecuteCode: context.canExecuteCode,
         taskParams,
-        apiKey: context.apiKey,
+        credentialResolver: context.credentialResolver,
         parentProviderId: context.providerId,
         parentModelId: context.modelId,
         abortSignal: context.abortSignal,

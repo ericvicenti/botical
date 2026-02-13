@@ -243,7 +243,8 @@ export class ProviderRegistry {
   static createModel(
     providerId: ProviderId,
     modelId: string | null,
-    credentials: string
+    credentials: string,
+    onTokenRefresh?: (newCredentials: string) => void
   ): LanguageModel {
     const provider = PROVIDERS[providerId];
     if (!provider) {
@@ -289,6 +290,8 @@ export class ProviderRegistry {
               tokens.access = data.access_token;
               tokens.refresh = data.refresh_token || tokens.refresh;
               tokens.expires = Date.now() + (data.expires_in || 3600) * 1000;
+              // Persist refreshed tokens
+              onTokenRefresh?.(JSON.stringify(tokens));
             }
           }
 
