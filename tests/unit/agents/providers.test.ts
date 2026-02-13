@@ -43,10 +43,12 @@ describe("Provider Registry", () => {
     it("returns all providers", () => {
       const providers = ProviderRegistry.getProviders();
 
-      expect(providers.length).toBe(3);
+      expect(providers.length).toBe(5);
       expect(providers.map((p) => p.id)).toContain("anthropic");
+      expect(providers.map((p) => p.id)).toContain("anthropic-oauth");
       expect(providers.map((p) => p.id)).toContain("openai");
       expect(providers.map((p) => p.id)).toContain("google");
+      expect(providers.map((p) => p.id)).toContain("ollama");
     });
   });
 

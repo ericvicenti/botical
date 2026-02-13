@@ -304,4 +304,57 @@ describe("Session Service", () => {
       expect(SessionService.count(db, "archived")).toBe(1);
     });
   });
+
+  describe("systemPrompt", () => {
+    it("creates a session with systemPrompt", () => {
+      const session = SessionService.create(db, {
+        agent: "default",
+        title: "With Prompt",
+        systemPrompt: "You are a pirate",
+      });
+
+      expect(session.systemPrompt).toBe("You are a pirate");
+    });
+
+    it("defaults systemPrompt to null", () => {
+      const session = SessionService.create(db, { agent: "default" });
+      expect(session.systemPrompt).toBeNull();
+    });
+
+    it("persists systemPrompt via getById", () => {
+      const session = SessionService.create(db, {
+        agent: "default",
+        systemPrompt: "Be concise",
+      });
+
+      const retrieved = SessionService.getById(db, session.id);
+      expect(retrieved!.systemPrompt).toBe("Be concise");
+    });
+
+    it("updates systemPrompt", () => {
+      const session = SessionService.create(db, {
+        agent: "default",
+        systemPrompt: "Original",
+      });
+
+      const updated = SessionService.update(db, session.id, {
+        systemPrompt: "Updated prompt",
+      });
+
+      expect(updated.systemPrompt).toBe("Updated prompt");
+    });
+
+    it("clears systemPrompt with null", () => {
+      const session = SessionService.create(db, {
+        agent: "default",
+        systemPrompt: "Something",
+      });
+
+      const updated = SessionService.update(db, session.id, {
+        systemPrompt: null,
+      });
+
+      expect(updated.systemPrompt).toBeNull();
+    });
+  });
 });
