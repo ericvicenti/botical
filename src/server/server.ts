@@ -7,6 +7,7 @@ import { registerCoreTools } from "../tools/index.ts";
 import { registerAllActions } from "../actions/index.ts";
 import { ServiceRunner } from "../services/service-runner.ts";
 import { Scheduler } from "../services/scheduler.ts";
+import { startTelegramBot, stopTelegramBot } from "../integrations/telegram.ts";
 import { ExtensionRegistry, startExtensionServer, stopAllExtensionServers } from "../extensions/index.ts";
 import { ProjectService } from "../services/projects.ts";
 import { ProjectConfigService } from "../config/project.ts";
@@ -69,6 +70,9 @@ export async function createServer(
   // Start the scheduler for recurring tasks
   Scheduler.start();
 
+  // Start Telegram bot if configured
+  startTelegramBot();
+
   // Start extension servers only for extensions enabled in at least one project
   (async () => {
     // Get all enabled extensions across all projects
@@ -106,6 +110,8 @@ export async function createServer(
     close: async () => {
       // Stop the scheduler
       Scheduler.stop();
+      // Stop Telegram bot
+      stopTelegramBot();
       // Stop all running services
       await ServiceRunner.stopAllServices();
       // Stop all extension servers
