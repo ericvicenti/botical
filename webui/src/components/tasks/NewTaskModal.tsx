@@ -11,7 +11,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { X, Send, ChevronDown, Bot } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { useCreateSession, useSettings, getSettings, useAgents } from "@/lib/api/queries";
+import { useCreateSession, useAgents } from "@/lib/api/queries";
+import { useAuth } from "@/contexts/auth";
 import { useTabs } from "@/contexts/tabs";
 
 interface NewTaskModalProps {
@@ -22,8 +23,8 @@ interface NewTaskModalProps {
 export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   const navigate = useNavigate();
   const { openTab } = useTabs();
+  const { user } = useAuth();
   const { data: agents } = useAgents(projectId);
-  const { data: settings } = useSettings();
   const createSession = useCreateSession();
 
   const [message, setMessage] = useState("");
@@ -69,16 +70,17 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
     try {
       const taskTitle = title.trim() || generateTitle(message);
 
-      // Create session — backend resolves agent's modelId onto the session
+      // Create session with initial message — backend kicks off agent
+      // orchestration in the background immediately
       const session = await createSession.mutateAsync({
         projectId,
         title: taskTitle,
         agent: selectedAgentName || "default",
+        message: message.trim(),
+        userId: user?.userId,
       });
 
-      const currentSettings = settings || getSettings();
-
-      // Navigate with the initial message to be sent by TaskChat
+      // Navigate to task page (agent is already working)
       openTab({
         type: "task",
         sessionId: session.id,
@@ -88,7 +90,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
       navigate({ 
         to: "/projects/$projectId/tasks/$sessionId", 
         params: { projectId, sessionId: session.id },
-        search: { initialMessage: message.trim() }
       });
       onClose();
     } catch (err) {

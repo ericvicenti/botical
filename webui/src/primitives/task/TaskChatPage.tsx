@@ -6,7 +6,6 @@ interface TaskChatPageProps {
     sessionId: string;
     projectId?: string;
     title?: string;
-    initialMessage?: string;
   };
 }
 

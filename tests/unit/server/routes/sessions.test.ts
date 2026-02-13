@@ -149,6 +149,59 @@ describe("Sessions API Routes", () => {
       expect(body.data.title).toBe("New Session");
     });
 
+    it("creates session with initial message", async () => {
+      const response = await app.request("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: testProjectId,
+          title: "Task with message",
+          agent: "default",
+          message: "Hello, please help me",
+          userId: "usr_test",
+        }),
+      });
+
+      expect(response.status).toBe(201);
+
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
+      expect(body.data.id).toMatch(/^sess_/);
+      expect(body.data.title).toBe("Task with message");
+
+      // Verify the user message was created in the session
+      const db = DatabaseManager.getProjectDb(testProjectId);
+      const messages = db.prepare(
+        "SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC"
+      ).all(body.data.id) as Array<{ role: string; session_id: string }>;
+
+      // Should have at least the user message
+      expect(messages.length).toBeGreaterThanOrEqual(1);
+      expect(messages[0]!.role).toBe("user");
+    });
+
+    it("creates session without message (no initial message)", async () => {
+      const response = await app.request("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: testProjectId,
+          title: "Empty session",
+        }),
+      });
+
+      expect(response.status).toBe(201);
+
+      const body = (await response.json()) as ItemResponse<SessionResponse>;
+
+      // Verify no messages were created
+      const db = DatabaseManager.getProjectDb(testProjectId);
+      const messages = db.prepare(
+        "SELECT * FROM messages WHERE session_id = ?"
+      ).all(body.data.id) as Array<{ role: string }>;
+
+      expect(messages.length).toBe(0);
+    });
+
     it("requires projectId", async () => {
       const response = await app.request("/api/sessions", {
         method: "POST",

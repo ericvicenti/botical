@@ -163,17 +163,31 @@ sessions.post("/", async (c) => {
   const initialMessage = typeof body.message === "string" ? body.message.trim() : null;
   const userId = typeof body.userId === "string" ? body.userId : null;
 
-  if (initialMessage && userId) {
-    const project = ProjectService.getByIdOrThrow(rootDb, projectId);
-    const projectPath = project.path || process.cwd();
+  if (initialMessage) {
+    // Always store the user message, regardless of API key availability
+    const userMessage = MessageService.create(db, {
+      sessionId: session.id,
+      role: "user",
+    });
+    MessagePartService.create(db, {
+      messageId: userMessage.id,
+      sessionId: session.id,
+      type: "text",
+      content: initialMessage,
+    });
+    SessionService.updateStats(db, session.id, {
+      messageCount: 1,
+    });
 
-    // Resolve model/provider from session config (already set from agent above)
+    // Kick off agent orchestration in the background if we have credentials
+    const project = ProjectService.getById(rootDb, projectId);
+    const projectPath = project?.path || process.cwd();
+
     const modelId = session.modelId || null;
     const providerId: ProviderId = modelId ? inferProviderId(modelId) : "anthropic";
 
-    // Resolve API key from stored credentials
     const auth = c.get("auth") as { userId: string } | undefined;
-    const credentialUserId = auth?.userId || userId;
+    const credentialUserId = auth?.userId || userId || "anonymous";
     const apiKey = ProviderCredentialsService.getApiKey(credentialUserId, providerId);
 
     if (apiKey) {
@@ -183,7 +197,7 @@ sessions.post("/", async (c) => {
         projectId,
         projectPath,
         sessionId: session.id,
-        userId,
+        userId: userId || credentialUserId,
         canExecuteCode: false,
         content: initialMessage,
         apiKey,
@@ -194,7 +208,7 @@ sessions.post("/", async (c) => {
         console.error(`[sessions] Background orchestration failed for session ${session.id}:`, err);
       });
     } else {
-      console.warn(`[sessions] No API key for provider "${providerId}", skipping initial message for session ${session.id}`);
+      console.warn(`[sessions] No API key for provider "${providerId}", agent won't respond for session ${session.id}`);
     }
   }
 
