@@ -6,13 +6,40 @@
 
 ## 🎯 Current Goals (highest priority first)
 
-### 🔥 TOP PRIORITY: Fantastic UX + Programmatic Access
-Botical must have:
-1. [ ] **Identical primitives for humans AND agents** — same beautiful UI for both. Humans can see what's happening in any instance, agents can too. No second-class citizens.
-2. [ ] **Mobile-first UX** — humans are often on phones. UI must be responsive, fast, touch-friendly
-3. [ ] **Introspectable REST APIs** — clean, well-documented, consistent API surface
-4. [ ] **Great Skill .md files** — so external agents (like IonBobcat/OpenClaw) can interface with leopard
-5. [ ] **Leopard ↔ Tiger interop** — leopard (prod) must work seamlessly with tiger (dev) for development workflows
+### 🔥 TOP PRIORITY: Core Primitives + UX + Programmatic Access
+
+#### The Three Primitives
+Botical has three core primitives. Both humans and agents use the same ones:
+
+**1. Session** — A single threaded conversation with a model
+- Has messages, tools, context
+- The fundamental unit of interaction
+
+**2. Action** — A well-typed one-off command meant to be quickly completed
+- Has typed input/output schemas
+- Ends in success or error state
+- Examples: git commit, file search, deploy, run tests
+
+**3. Workflow** — A high-level function that composes sessions and actions
+- May involve parallelism (multiple sessions/actions running concurrently)
+- May have blocking steps requiring external input (human approval, etc.)
+- Has a mechanism to report/notify the user of progress
+- Ends in success or error state
+- Example: "improvement cycle" = read priorities → plan → code → test → deploy → report
+
+#### Design Principles
+- [ ] **Identical primitives for humans AND agents** — same beautiful UI for both. Humans can see what's happening in any instance, agents can too. No second-class citizens.
+- [ ] **Mobile-first UX** — humans are often on phones. UI must be responsive, fast, touch-friendly
+- [ ] **Introspectable REST APIs** — clean, well-documented, consistent API surface for all three primitives
+- [ ] **Great Skill .md files** — so external agents (like IonBobcat/OpenClaw) can interface with leopard
+- [ ] **Leopard ↔ Tiger interop** — leopard (prod) must work seamlessly with tiger (dev) for development workflows
+
+#### Implementation Tasks
+- [ ] Audit existing Session/Action/Workflow implementations against these definitions
+- [ ] Ensure Actions have typed input/output + success/error endstates
+- [ ] Ensure Workflows can compose sessions + actions, support parallelism, blocking steps, progress notifications
+- [ ] Ensure all three primitives have REST API endpoints + WebSocket events
+- [ ] Build beautiful, responsive UI for observing all three primitives
 
 ### Infrastructure
 5. [x] Make the self-improvement loop robust — leopard should recover from failures and keep going
