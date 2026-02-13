@@ -108,7 +108,7 @@ function TaskItem({
       projectId,
       title: session.title,
     });
-    navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
+    navigate({ to: "/projects/$projectId/tasks/$sessionId", params: { projectId, sessionId: session.id } });
     closeSidebarOnMobile();
   };
 

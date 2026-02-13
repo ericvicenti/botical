@@ -176,7 +176,7 @@ export function backendActionToCommand(action: BackendAction): Command {
           if (pageId === "file") {
             ctx.navigate({ to: `/projects/${ctx.selectedProjectId}/files/${encodeURIComponent(params.path as string || "")}` });
           } else if (pageId === "task") {
-            ctx.navigate({ to: `/tasks/${params.sessionId}` });
+            ctx.navigate({ to: `/projects/${ctx.selectedProjectId}/tasks/${params.sessionId}` });
           } else if (pageId === "settings") {
             ctx.navigate({ to: "/settings" });
           } else if (pageId === "project") {

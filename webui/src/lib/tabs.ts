@@ -160,7 +160,7 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
     case "process":
       return { to: "/processes/$processId", params: { processId: tab.data.processId } };
     case "task":
-      return { to: "/tasks/$sessionId", params: { sessionId: tab.data.sessionId } };
+      return { to: "/projects/$projectId/tasks/$sessionId", params: { projectId: tab.data.projectId, sessionId: tab.data.sessionId } };
     case "settings":
       return { to: `/settings/${tab.data.page}` };
     case "create-project":

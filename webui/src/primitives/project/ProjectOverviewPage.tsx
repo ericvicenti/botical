@@ -34,7 +34,7 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
       projectId,
       title: session.title,
     });
-    navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
+    navigate({ to: "/projects/$projectId/tasks/$sessionId", params: { projectId, sessionId: session.id } });
   };
 
   const handleProcessClick = (process: { id: string; command: string }) => {

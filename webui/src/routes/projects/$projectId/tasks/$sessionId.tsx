@@ -6,13 +6,13 @@ const taskSearchSchema = z.object({
   initialMessage: z.string().optional(),
 });
 
-export const Route = createFileRoute("/tasks/$sessionId")({
+export const Route = createFileRoute("/projects/$projectId/tasks/$sessionId")({
   component: TaskViewRoute,
   validateSearch: taskSearchSchema,
 });
 
 function TaskViewRoute() {
-  const { sessionId } = Route.useParams();
+  const { projectId, sessionId } = Route.useParams();
   const { initialMessage } = Route.useSearch();
-  return <TaskChatPage params={{ sessionId, initialMessage }} />;
+  return <TaskChatPage params={{ sessionId, projectId, initialMessage }} />;
 }

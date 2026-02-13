@@ -22,14 +22,16 @@ export const taskChatPage = definePage({
     title: z.string().optional(),
   }),
 
-  route: "/tasks/$sessionId",
+  route: "/projects/$projectId/tasks/$sessionId",
 
   parseParams: (routeParams) => ({
     sessionId: routeParams.sessionId,
+    projectId: routeParams.projectId,
   }),
 
   getRouteParams: (params) => ({
     sessionId: params.sessionId,
+    projectId: params.projectId || "",
   }),
 
   component: TaskChatPage,

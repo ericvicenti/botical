@@ -87,8 +87,8 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
         title: taskTitle,
       });
       navigate({ 
-        to: "/tasks/$sessionId", 
-        params: { sessionId: session.id },
+        to: "/projects/$projectId/tasks/$sessionId", 
+        params: { projectId, sessionId: session.id },
         search: { initialMessage: message.trim() }
       });
       onClose();

@@ -36,7 +36,7 @@ export function useAgentActions() {
           break;
         case "task":
           if (payload.params.sessionId) {
-            navigate({ to: `/tasks/${payload.params.sessionId}` });
+            navigate({ to: `/projects/${payload.params.projectId || selectedProjectId}/tasks/${payload.params.sessionId}` });
           }
           break;
         case "settings":

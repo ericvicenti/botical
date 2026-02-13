@@ -15,7 +15,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows/$workflowId'
 import { Route as WorkflowRunsExecutionIdRouteImport } from './routes/workflow-runs/$executionId'
-import { Route as TasksSessionIdRouteImport } from './routes/tasks/$sessionId'
 import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
 import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
@@ -33,6 +32,7 @@ import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$p
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
 import { Route as ProjectsProjectIdCommitRouteImport } from './routes/projects/$projectId/commit'
 import { Route as DockerContainersContainerIdIndexRouteImport } from './routes/docker/containers/$containerId/index'
+import { Route as ProjectsProjectIdTasksSessionIdRouteImport } from './routes/projects/$projectId/tasks/$sessionId'
 import { Route as ProjectsProjectIdCommitsHashRouteImport } from './routes/projects/$projectId/commits.$hash'
 import { Route as ProjectsProjectIdAgentsAgentNameRouteImport } from './routes/projects/$projectId/agents/$agentName'
 import { Route as DockerContainersContainerIdLogsRouteImport } from './routes/docker/containers/$containerId/logs'
@@ -65,11 +65,6 @@ const WorkflowsWorkflowIdRoute = WorkflowsWorkflowIdRouteImport.update({
 const WorkflowRunsExecutionIdRoute = WorkflowRunsExecutionIdRouteImport.update({
   id: '/workflow-runs/$executionId',
   path: '/workflow-runs/$executionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TasksSessionIdRoute = TasksSessionIdRouteImport.update({
-  id: '/tasks/$sessionId',
-  path: '/tasks/$sessionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsThemeRoute = SettingsThemeRouteImport.update({
@@ -159,6 +154,12 @@ const DockerContainersContainerIdIndexRoute =
     path: '/docker/containers/$containerId/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ProjectsProjectIdTasksSessionIdRoute =
+  ProjectsProjectIdTasksSessionIdRouteImport.update({
+    id: '/tasks/$sessionId',
+    path: '/tasks/$sessionId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const ProjectsProjectIdCommitsHashRoute =
   ProjectsProjectIdCommitsHashRouteImport.update({
     id: '/commits/$hash',
@@ -195,7 +196,6 @@ export interface FileRoutesByFullPath {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
@@ -205,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
   '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -222,7 +223,6 @@ export interface FileRoutesByTo {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings': typeof SettingsIndexRoute
@@ -232,6 +232,7 @@ export interface FileRoutesByTo {
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
   '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
 }
 export interface FileRoutesById {
@@ -252,7 +253,6 @@ export interface FileRoutesById {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/tasks/$sessionId': typeof TasksSessionIdRoute
   '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
@@ -262,6 +262,7 @@ export interface FileRoutesById {
   '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
   '/docker/containers/$containerId/': typeof DockerContainersContainerIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -283,7 +284,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/tasks/$sessionId'
     | '/workflow-runs/$executionId'
     | '/workflows/$workflowId'
     | '/settings/'
@@ -293,6 +293,7 @@ export interface FileRouteTypes {
     | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/tasks/$sessionId'
     | '/docker/containers/$containerId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -310,7 +311,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/tasks/$sessionId'
     | '/workflow-runs/$executionId'
     | '/workflows/$workflowId'
     | '/settings'
@@ -320,6 +320,7 @@ export interface FileRouteTypes {
     | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/tasks/$sessionId'
     | '/docker/containers/$containerId'
   id:
     | '__root__'
@@ -339,7 +340,6 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/tasks/$sessionId'
     | '/workflow-runs/$executionId'
     | '/workflows/$workflowId'
     | '/settings/'
@@ -349,6 +349,7 @@ export interface FileRouteTypes {
     | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/tasks/$sessionId'
     | '/docker/containers/$containerId/'
   fileRoutesById: FileRoutesById
 }
@@ -362,7 +363,6 @@ export interface RootRouteChildren {
   FoldersSplatRoute: typeof FoldersSplatRoute
   ProcessesProcessIdRoute: typeof ProcessesProcessIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
-  TasksSessionIdRoute: typeof TasksSessionIdRoute
   WorkflowRunsExecutionIdRoute: typeof WorkflowRunsExecutionIdRoute
   WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
   DockerContainersContainerIdLogsRoute: typeof DockerContainersContainerIdLogsRoute
@@ -411,13 +411,6 @@ declare module '@tanstack/react-router' {
       path: '/workflow-runs/$executionId'
       fullPath: '/workflow-runs/$executionId'
       preLoaderRoute: typeof WorkflowRunsExecutionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks/$sessionId': {
-      id: '/tasks/$sessionId'
-      path: '/tasks/$sessionId'
-      fullPath: '/tasks/$sessionId'
-      preLoaderRoute: typeof TasksSessionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/theme': {
@@ -539,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DockerContainersContainerIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId/tasks/$sessionId': {
+      id: '/projects/$projectId/tasks/$sessionId'
+      path: '/tasks/$sessionId'
+      fullPath: '/projects/$projectId/tasks/$sessionId'
+      preLoaderRoute: typeof ProjectsProjectIdTasksSessionIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/projects/$projectId/commits/$hash': {
       id: '/projects/$projectId/commits/$hash'
       path: '/commits/$hash'
@@ -595,6 +595,7 @@ interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
   ProjectsProjectIdAgentsAgentNameRoute: typeof ProjectsProjectIdAgentsAgentNameRoute
   ProjectsProjectIdCommitsHashRoute: typeof ProjectsProjectIdCommitsHashRoute
+  ProjectsProjectIdTasksSessionIdRoute: typeof ProjectsProjectIdTasksSessionIdRoute
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
@@ -603,6 +604,7 @@ const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
   ProjectsProjectIdAgentsAgentNameRoute: ProjectsProjectIdAgentsAgentNameRoute,
   ProjectsProjectIdCommitsHashRoute: ProjectsProjectIdCommitsHashRoute,
+  ProjectsProjectIdTasksSessionIdRoute: ProjectsProjectIdTasksSessionIdRoute,
 }
 
 const ProjectsProjectIdRouteWithChildren =
@@ -618,7 +620,6 @@ const rootRouteChildren: RootRouteChildren = {
   FoldersSplatRoute: FoldersSplatRoute,
   ProcessesProcessIdRoute: ProcessesProcessIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
-  TasksSessionIdRoute: TasksSessionIdRoute,
   WorkflowRunsExecutionIdRoute: WorkflowRunsExecutionIdRoute,
   WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,
   DockerContainersContainerIdLogsRoute: DockerContainersContainerIdLogsRoute,
