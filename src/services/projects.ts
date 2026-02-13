@@ -426,10 +426,11 @@ export class ProjectService {
     const projects = rows.map(rowToProject);
 
     // Include the root project at the beginning if user has access
+    // (but only if it wasn't already returned by the query)
     if (!options.type || options.type === "local") {
       const userId = options.requestingUserId || options.memberId || options.ownerId;
       const showRoot = !userId || this.hasRootAccess(rootDb, userId);
-      if (showRoot) {
+      if (showRoot && !projects.some(p => p.id === ROOT_PROJECT_ID)) {
         projects.unshift(getRootProject());
       }
     }
