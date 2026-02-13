@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NewContainerModal } from "@/extensions/docker";
 
-export const Route = createFileRoute("/docker/new")({
+export const Route = createFileRoute("/projects/$projectId/docker/new")({
   component: NewContainerRoute,
 });
 

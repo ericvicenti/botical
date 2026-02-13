@@ -13,8 +13,6 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CreateProjectRouteImport } from './routes/create-project'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows/$workflowId'
-import { Route as WorkflowRunsExecutionIdRouteImport } from './routes/workflow-runs/$executionId'
 import { Route as SettingsThemeRouteImport } from './routes/settings/theme'
 import { Route as SettingsShortcutsRouteImport } from './routes/settings/shortcuts'
 import { Route as SettingsModelsRouteImport } from './routes/settings/models'
@@ -23,19 +21,21 @@ import { Route as SettingsApiKeysRouteImport } from './routes/settings/api-keys'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
-import { Route as ProcessesProcessIdRouteImport } from './routes/processes/$processId'
-import { Route as FoldersSplatRouteImport } from './routes/folders/$'
-import { Route as FilesSplatRouteImport } from './routes/files/$'
-import { Route as DockerNewRouteImport } from './routes/docker/new'
-import { Route as DockerImagesRouteImport } from './routes/docker/images'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
 import { Route as ProjectsProjectIdCommitRouteImport } from './routes/projects/$projectId/commit'
-import { Route as DockerContainersContainerIdIndexRouteImport } from './routes/docker/containers/$containerId/index'
+import { Route as ProjectsProjectIdWorkflowsWorkflowIdRouteImport } from './routes/projects/$projectId/workflows/$workflowId'
+import { Route as ProjectsProjectIdWorkflowRunsExecutionIdRouteImport } from './routes/projects/$projectId/workflow-runs/$executionId'
 import { Route as ProjectsProjectIdTasksSessionIdRouteImport } from './routes/projects/$projectId/tasks/$sessionId'
+import { Route as ProjectsProjectIdProcessesProcessIdRouteImport } from './routes/projects/$projectId/processes/$processId'
+import { Route as ProjectsProjectIdFoldersSplatRouteImport } from './routes/projects/$projectId/folders/$'
+import { Route as ProjectsProjectIdFilesSplatRouteImport } from './routes/projects/$projectId/files/$'
+import { Route as ProjectsProjectIdDockerNewRouteImport } from './routes/projects/$projectId/docker/new'
+import { Route as ProjectsProjectIdDockerImagesRouteImport } from './routes/projects/$projectId/docker/images'
 import { Route as ProjectsProjectIdCommitsHashRouteImport } from './routes/projects/$projectId/commits.$hash'
 import { Route as ProjectsProjectIdAgentsAgentNameRouteImport } from './routes/projects/$projectId/agents/$agentName'
-import { Route as DockerContainersContainerIdLogsRouteImport } from './routes/docker/containers/$containerId/logs'
+import { Route as ProjectsProjectIdDockerContainersContainerIdIndexRouteImport } from './routes/projects/$projectId/docker/containers/$containerId/index'
+import { Route as ProjectsProjectIdDockerContainersContainerIdLogsRouteImport } from './routes/projects/$projectId/docker/containers/$containerId/logs'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -56,16 +56,6 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRoute,
-} as any)
-const WorkflowsWorkflowIdRoute = WorkflowsWorkflowIdRouteImport.update({
-  id: '/workflows/$workflowId',
-  path: '/workflows/$workflowId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkflowRunsExecutionIdRoute = WorkflowRunsExecutionIdRouteImport.update({
-  id: '/workflow-runs/$executionId',
-  path: '/workflow-runs/$executionId',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsThemeRoute = SettingsThemeRouteImport.update({
   id: '/theme',
@@ -107,31 +97,6 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProcessesProcessIdRoute = ProcessesProcessIdRouteImport.update({
-  id: '/processes/$processId',
-  path: '/processes/$processId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FoldersSplatRoute = FoldersSplatRouteImport.update({
-  id: '/folders/$',
-  path: '/folders/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FilesSplatRoute = FilesSplatRouteImport.update({
-  id: '/files/$',
-  path: '/files/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DockerNewRoute = DockerNewRouteImport.update({
-  id: '/docker/new',
-  path: '/docker/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DockerImagesRoute = DockerImagesRouteImport.update({
-  id: '/docker/images',
-  path: '/docker/images',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -148,16 +113,52 @@ const ProjectsProjectIdCommitRoute = ProjectsProjectIdCommitRouteImport.update({
   path: '/commit',
   getParentRoute: () => ProjectsProjectIdRoute,
 } as any)
-const DockerContainersContainerIdIndexRoute =
-  DockerContainersContainerIdIndexRouteImport.update({
-    id: '/docker/containers/$containerId/',
-    path: '/docker/containers/$containerId/',
-    getParentRoute: () => rootRouteImport,
+const ProjectsProjectIdWorkflowsWorkflowIdRoute =
+  ProjectsProjectIdWorkflowsWorkflowIdRouteImport.update({
+    id: '/workflows/$workflowId',
+    path: '/workflows/$workflowId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdWorkflowRunsExecutionIdRoute =
+  ProjectsProjectIdWorkflowRunsExecutionIdRouteImport.update({
+    id: '/workflow-runs/$executionId',
+    path: '/workflow-runs/$executionId',
+    getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
 const ProjectsProjectIdTasksSessionIdRoute =
   ProjectsProjectIdTasksSessionIdRouteImport.update({
     id: '/tasks/$sessionId',
     path: '/tasks/$sessionId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdProcessesProcessIdRoute =
+  ProjectsProjectIdProcessesProcessIdRouteImport.update({
+    id: '/processes/$processId',
+    path: '/processes/$processId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdFoldersSplatRoute =
+  ProjectsProjectIdFoldersSplatRouteImport.update({
+    id: '/folders/$',
+    path: '/folders/$',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdFilesSplatRoute =
+  ProjectsProjectIdFilesSplatRouteImport.update({
+    id: '/files/$',
+    path: '/files/$',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdDockerNewRoute =
+  ProjectsProjectIdDockerNewRouteImport.update({
+    id: '/docker/new',
+    path: '/docker/new',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdDockerImagesRoute =
+  ProjectsProjectIdDockerImagesRouteImport.update({
+    id: '/docker/images',
+    path: '/docker/images',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
 const ProjectsProjectIdCommitsHashRoute =
@@ -172,22 +173,23 @@ const ProjectsProjectIdAgentsAgentNameRoute =
     path: '/agents/$agentName',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
-const DockerContainersContainerIdLogsRoute =
-  DockerContainersContainerIdLogsRouteImport.update({
+const ProjectsProjectIdDockerContainersContainerIdIndexRoute =
+  ProjectsProjectIdDockerContainersContainerIdIndexRouteImport.update({
+    id: '/docker/containers/$containerId/',
+    path: '/docker/containers/$containerId/',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdDockerContainersContainerIdLogsRoute =
+  ProjectsProjectIdDockerContainersContainerIdLogsRouteImport.update({
     id: '/docker/containers/$containerId/logs',
     path: '/docker/containers/$containerId/logs',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/docker/images': typeof DockerImagesRoute
-  '/docker/new': typeof DockerNewRoute
-  '/files/$': typeof FilesSplatRoute
-  '/folders/$': typeof FoldersSplatRoute
-  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -196,26 +198,26 @@ export interface FileRoutesByFullPath {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
-  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
-  '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/docker/images': typeof ProjectsProjectIdDockerImagesRoute
+  '/projects/$projectId/docker/new': typeof ProjectsProjectIdDockerNewRoute
+  '/projects/$projectId/files/$': typeof ProjectsProjectIdFilesSplatRoute
+  '/projects/$projectId/folders/$': typeof ProjectsProjectIdFoldersSplatRoute
+  '/projects/$projectId/processes/$processId': typeof ProjectsProjectIdProcessesProcessIdRoute
   '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
-  '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
+  '/projects/$projectId/workflow-runs/$executionId': typeof ProjectsProjectIdWorkflowRunsExecutionIdRoute
+  '/projects/$projectId/workflows/$workflowId': typeof ProjectsProjectIdWorkflowsWorkflowIdRoute
+  '/projects/$projectId/docker/containers/$containerId/logs': typeof ProjectsProjectIdDockerContainersContainerIdLogsRoute
+  '/projects/$projectId/docker/containers/$containerId': typeof ProjectsProjectIdDockerContainersContainerIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
-  '/docker/images': typeof DockerImagesRoute
-  '/docker/new': typeof DockerNewRoute
-  '/files/$': typeof FilesSplatRoute
-  '/folders/$': typeof FoldersSplatRoute
-  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/settings/about': typeof SettingsAboutRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
@@ -223,28 +225,28 @@ export interface FileRoutesByTo {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
-  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
-  '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/docker/images': typeof ProjectsProjectIdDockerImagesRoute
+  '/projects/$projectId/docker/new': typeof ProjectsProjectIdDockerNewRoute
+  '/projects/$projectId/files/$': typeof ProjectsProjectIdFilesSplatRoute
+  '/projects/$projectId/folders/$': typeof ProjectsProjectIdFoldersSplatRoute
+  '/projects/$projectId/processes/$processId': typeof ProjectsProjectIdProcessesProcessIdRoute
   '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
-  '/docker/containers/$containerId': typeof DockerContainersContainerIdIndexRoute
+  '/projects/$projectId/workflow-runs/$executionId': typeof ProjectsProjectIdWorkflowRunsExecutionIdRoute
+  '/projects/$projectId/workflows/$workflowId': typeof ProjectsProjectIdWorkflowsWorkflowIdRoute
+  '/projects/$projectId/docker/containers/$containerId/logs': typeof ProjectsProjectIdDockerContainersContainerIdLogsRoute
+  '/projects/$projectId/docker/containers/$containerId': typeof ProjectsProjectIdDockerContainersContainerIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create-project': typeof CreateProjectRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/docker/images': typeof DockerImagesRoute
-  '/docker/new': typeof DockerNewRoute
-  '/files/$': typeof FilesSplatRoute
-  '/folders/$': typeof FoldersSplatRoute
-  '/processes/$processId': typeof ProcessesProcessIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/about': typeof SettingsAboutRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -253,17 +255,22 @@ export interface FileRoutesById {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/shortcuts': typeof SettingsShortcutsRoute
   '/settings/theme': typeof SettingsThemeRoute
-  '/workflow-runs/$executionId': typeof WorkflowRunsExecutionIdRoute
-  '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
-  '/docker/containers/$containerId/logs': typeof DockerContainersContainerIdLogsRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
   '/projects/$projectId/commits/$hash': typeof ProjectsProjectIdCommitsHashRoute
+  '/projects/$projectId/docker/images': typeof ProjectsProjectIdDockerImagesRoute
+  '/projects/$projectId/docker/new': typeof ProjectsProjectIdDockerNewRoute
+  '/projects/$projectId/files/$': typeof ProjectsProjectIdFilesSplatRoute
+  '/projects/$projectId/folders/$': typeof ProjectsProjectIdFoldersSplatRoute
+  '/projects/$projectId/processes/$processId': typeof ProjectsProjectIdProcessesProcessIdRoute
   '/projects/$projectId/tasks/$sessionId': typeof ProjectsProjectIdTasksSessionIdRoute
-  '/docker/containers/$containerId/': typeof DockerContainersContainerIdIndexRoute
+  '/projects/$projectId/workflow-runs/$executionId': typeof ProjectsProjectIdWorkflowRunsExecutionIdRoute
+  '/projects/$projectId/workflows/$workflowId': typeof ProjectsProjectIdWorkflowsWorkflowIdRoute
+  '/projects/$projectId/docker/containers/$containerId/logs': typeof ProjectsProjectIdDockerContainersContainerIdLogsRoute
+  '/projects/$projectId/docker/containers/$containerId/': typeof ProjectsProjectIdDockerContainersContainerIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -271,11 +278,6 @@ export interface FileRouteTypes {
     | '/'
     | '/create-project'
     | '/settings'
-    | '/docker/images'
-    | '/docker/new'
-    | '/files/$'
-    | '/folders/$'
-    | '/processes/$processId'
     | '/projects/$projectId'
     | '/settings/about'
     | '/settings/account'
@@ -284,26 +286,26 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/workflow-runs/$executionId'
-    | '/workflows/$workflowId'
     | '/settings/'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
-    | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/docker/images'
+    | '/projects/$projectId/docker/new'
+    | '/projects/$projectId/files/$'
+    | '/projects/$projectId/folders/$'
+    | '/projects/$projectId/processes/$processId'
     | '/projects/$projectId/tasks/$sessionId'
-    | '/docker/containers/$containerId'
+    | '/projects/$projectId/workflow-runs/$executionId'
+    | '/projects/$projectId/workflows/$workflowId'
+    | '/projects/$projectId/docker/containers/$containerId/logs'
+    | '/projects/$projectId/docker/containers/$containerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/create-project'
-    | '/docker/images'
-    | '/docker/new'
-    | '/files/$'
-    | '/folders/$'
-    | '/processes/$processId'
     | '/settings/about'
     | '/settings/account'
     | '/settings/api-keys'
@@ -311,27 +313,27 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/workflow-runs/$executionId'
-    | '/workflows/$workflowId'
     | '/settings'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
-    | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/docker/images'
+    | '/projects/$projectId/docker/new'
+    | '/projects/$projectId/files/$'
+    | '/projects/$projectId/folders/$'
+    | '/projects/$projectId/processes/$processId'
     | '/projects/$projectId/tasks/$sessionId'
-    | '/docker/containers/$containerId'
+    | '/projects/$projectId/workflow-runs/$executionId'
+    | '/projects/$projectId/workflows/$workflowId'
+    | '/projects/$projectId/docker/containers/$containerId/logs'
+    | '/projects/$projectId/docker/containers/$containerId'
   id:
     | '__root__'
     | '/'
     | '/create-project'
     | '/settings'
-    | '/docker/images'
-    | '/docker/new'
-    | '/files/$'
-    | '/folders/$'
-    | '/processes/$processId'
     | '/projects/$projectId'
     | '/settings/about'
     | '/settings/account'
@@ -340,33 +342,29 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/shortcuts'
     | '/settings/theme'
-    | '/workflow-runs/$executionId'
-    | '/workflows/$workflowId'
     | '/settings/'
     | '/projects/$projectId/commit'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
-    | '/docker/containers/$containerId/logs'
     | '/projects/$projectId/agents/$agentName'
     | '/projects/$projectId/commits/$hash'
+    | '/projects/$projectId/docker/images'
+    | '/projects/$projectId/docker/new'
+    | '/projects/$projectId/files/$'
+    | '/projects/$projectId/folders/$'
+    | '/projects/$projectId/processes/$processId'
     | '/projects/$projectId/tasks/$sessionId'
-    | '/docker/containers/$containerId/'
+    | '/projects/$projectId/workflow-runs/$executionId'
+    | '/projects/$projectId/workflows/$workflowId'
+    | '/projects/$projectId/docker/containers/$containerId/logs'
+    | '/projects/$projectId/docker/containers/$containerId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateProjectRoute: typeof CreateProjectRoute
   SettingsRoute: typeof SettingsRouteWithChildren
-  DockerImagesRoute: typeof DockerImagesRoute
-  DockerNewRoute: typeof DockerNewRoute
-  FilesSplatRoute: typeof FilesSplatRoute
-  FoldersSplatRoute: typeof FoldersSplatRoute
-  ProcessesProcessIdRoute: typeof ProcessesProcessIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
-  WorkflowRunsExecutionIdRoute: typeof WorkflowRunsExecutionIdRoute
-  WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
-  DockerContainersContainerIdLogsRoute: typeof DockerContainersContainerIdLogsRoute
-  DockerContainersContainerIdIndexRoute: typeof DockerContainersContainerIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -398,20 +396,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
-    }
-    '/workflows/$workflowId': {
-      id: '/workflows/$workflowId'
-      path: '/workflows/$workflowId'
-      fullPath: '/workflows/$workflowId'
-      preLoaderRoute: typeof WorkflowsWorkflowIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/workflow-runs/$executionId': {
-      id: '/workflow-runs/$executionId'
-      path: '/workflow-runs/$executionId'
-      fullPath: '/workflow-runs/$executionId'
-      preLoaderRoute: typeof WorkflowRunsExecutionIdRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/settings/theme': {
       id: '/settings/theme'
@@ -469,41 +453,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/processes/$processId': {
-      id: '/processes/$processId'
-      path: '/processes/$processId'
-      fullPath: '/processes/$processId'
-      preLoaderRoute: typeof ProcessesProcessIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/folders/$': {
-      id: '/folders/$'
-      path: '/folders/$'
-      fullPath: '/folders/$'
-      preLoaderRoute: typeof FoldersSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/files/$': {
-      id: '/files/$'
-      path: '/files/$'
-      fullPath: '/files/$'
-      preLoaderRoute: typeof FilesSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docker/new': {
-      id: '/docker/new'
-      path: '/docker/new'
-      fullPath: '/docker/new'
-      preLoaderRoute: typeof DockerNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docker/images': {
-      id: '/docker/images'
-      path: '/docker/images'
-      fullPath: '/docker/images'
-      preLoaderRoute: typeof DockerImagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/projects/$projectId/': {
       id: '/projects/$projectId/'
       path: '/'
@@ -525,18 +474,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdCommitRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
-    '/docker/containers/$containerId/': {
-      id: '/docker/containers/$containerId/'
-      path: '/docker/containers/$containerId'
-      fullPath: '/docker/containers/$containerId'
-      preLoaderRoute: typeof DockerContainersContainerIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/projects/$projectId/workflows/$workflowId': {
+      id: '/projects/$projectId/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/projects/$projectId/workflows/$workflowId'
+      preLoaderRoute: typeof ProjectsProjectIdWorkflowsWorkflowIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/workflow-runs/$executionId': {
+      id: '/projects/$projectId/workflow-runs/$executionId'
+      path: '/workflow-runs/$executionId'
+      fullPath: '/projects/$projectId/workflow-runs/$executionId'
+      preLoaderRoute: typeof ProjectsProjectIdWorkflowRunsExecutionIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
     }
     '/projects/$projectId/tasks/$sessionId': {
       id: '/projects/$projectId/tasks/$sessionId'
       path: '/tasks/$sessionId'
       fullPath: '/projects/$projectId/tasks/$sessionId'
       preLoaderRoute: typeof ProjectsProjectIdTasksSessionIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/processes/$processId': {
+      id: '/projects/$projectId/processes/$processId'
+      path: '/processes/$processId'
+      fullPath: '/projects/$projectId/processes/$processId'
+      preLoaderRoute: typeof ProjectsProjectIdProcessesProcessIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/folders/$': {
+      id: '/projects/$projectId/folders/$'
+      path: '/folders/$'
+      fullPath: '/projects/$projectId/folders/$'
+      preLoaderRoute: typeof ProjectsProjectIdFoldersSplatRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/files/$': {
+      id: '/projects/$projectId/files/$'
+      path: '/files/$'
+      fullPath: '/projects/$projectId/files/$'
+      preLoaderRoute: typeof ProjectsProjectIdFilesSplatRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/docker/new': {
+      id: '/projects/$projectId/docker/new'
+      path: '/docker/new'
+      fullPath: '/projects/$projectId/docker/new'
+      preLoaderRoute: typeof ProjectsProjectIdDockerNewRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/docker/images': {
+      id: '/projects/$projectId/docker/images'
+      path: '/docker/images'
+      fullPath: '/projects/$projectId/docker/images'
+      preLoaderRoute: typeof ProjectsProjectIdDockerImagesRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
     '/projects/$projectId/commits/$hash': {
@@ -553,12 +544,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdAgentsAgentNameRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
-    '/docker/containers/$containerId/logs': {
-      id: '/docker/containers/$containerId/logs'
+    '/projects/$projectId/docker/containers/$containerId/': {
+      id: '/projects/$projectId/docker/containers/$containerId/'
+      path: '/docker/containers/$containerId'
+      fullPath: '/projects/$projectId/docker/containers/$containerId'
+      preLoaderRoute: typeof ProjectsProjectIdDockerContainersContainerIdIndexRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/docker/containers/$containerId/logs': {
+      id: '/projects/$projectId/docker/containers/$containerId/logs'
       path: '/docker/containers/$containerId/logs'
-      fullPath: '/docker/containers/$containerId/logs'
-      preLoaderRoute: typeof DockerContainersContainerIdLogsRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/projects/$projectId/docker/containers/$containerId/logs'
+      preLoaderRoute: typeof ProjectsProjectIdDockerContainersContainerIdLogsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
     }
   }
 }
@@ -595,7 +593,16 @@ interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
   ProjectsProjectIdAgentsAgentNameRoute: typeof ProjectsProjectIdAgentsAgentNameRoute
   ProjectsProjectIdCommitsHashRoute: typeof ProjectsProjectIdCommitsHashRoute
+  ProjectsProjectIdDockerImagesRoute: typeof ProjectsProjectIdDockerImagesRoute
+  ProjectsProjectIdDockerNewRoute: typeof ProjectsProjectIdDockerNewRoute
+  ProjectsProjectIdFilesSplatRoute: typeof ProjectsProjectIdFilesSplatRoute
+  ProjectsProjectIdFoldersSplatRoute: typeof ProjectsProjectIdFoldersSplatRoute
+  ProjectsProjectIdProcessesProcessIdRoute: typeof ProjectsProjectIdProcessesProcessIdRoute
   ProjectsProjectIdTasksSessionIdRoute: typeof ProjectsProjectIdTasksSessionIdRoute
+  ProjectsProjectIdWorkflowRunsExecutionIdRoute: typeof ProjectsProjectIdWorkflowRunsExecutionIdRoute
+  ProjectsProjectIdWorkflowsWorkflowIdRoute: typeof ProjectsProjectIdWorkflowsWorkflowIdRoute
+  ProjectsProjectIdDockerContainersContainerIdLogsRoute: typeof ProjectsProjectIdDockerContainersContainerIdLogsRoute
+  ProjectsProjectIdDockerContainersContainerIdIndexRoute: typeof ProjectsProjectIdDockerContainersContainerIdIndexRoute
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
@@ -604,7 +611,21 @@ const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
   ProjectsProjectIdAgentsAgentNameRoute: ProjectsProjectIdAgentsAgentNameRoute,
   ProjectsProjectIdCommitsHashRoute: ProjectsProjectIdCommitsHashRoute,
+  ProjectsProjectIdDockerImagesRoute: ProjectsProjectIdDockerImagesRoute,
+  ProjectsProjectIdDockerNewRoute: ProjectsProjectIdDockerNewRoute,
+  ProjectsProjectIdFilesSplatRoute: ProjectsProjectIdFilesSplatRoute,
+  ProjectsProjectIdFoldersSplatRoute: ProjectsProjectIdFoldersSplatRoute,
+  ProjectsProjectIdProcessesProcessIdRoute:
+    ProjectsProjectIdProcessesProcessIdRoute,
   ProjectsProjectIdTasksSessionIdRoute: ProjectsProjectIdTasksSessionIdRoute,
+  ProjectsProjectIdWorkflowRunsExecutionIdRoute:
+    ProjectsProjectIdWorkflowRunsExecutionIdRoute,
+  ProjectsProjectIdWorkflowsWorkflowIdRoute:
+    ProjectsProjectIdWorkflowsWorkflowIdRoute,
+  ProjectsProjectIdDockerContainersContainerIdLogsRoute:
+    ProjectsProjectIdDockerContainersContainerIdLogsRoute,
+  ProjectsProjectIdDockerContainersContainerIdIndexRoute:
+    ProjectsProjectIdDockerContainersContainerIdIndexRoute,
 }
 
 const ProjectsProjectIdRouteWithChildren =
@@ -614,16 +635,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateProjectRoute: CreateProjectRoute,
   SettingsRoute: SettingsRouteWithChildren,
-  DockerImagesRoute: DockerImagesRoute,
-  DockerNewRoute: DockerNewRoute,
-  FilesSplatRoute: FilesSplatRoute,
-  FoldersSplatRoute: FoldersSplatRoute,
-  ProcessesProcessIdRoute: ProcessesProcessIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
-  WorkflowRunsExecutionIdRoute: WorkflowRunsExecutionIdRoute,
-  WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,
-  DockerContainersContainerIdLogsRoute: DockerContainersContainerIdLogsRoute,
-  DockerContainersContainerIdIndexRoute: DockerContainersContainerIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

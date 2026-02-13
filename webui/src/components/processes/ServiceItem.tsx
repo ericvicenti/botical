@@ -53,7 +53,7 @@ export function ServiceItem({ service }: ServiceItemProps) {
       projectId: service.projectId,
       label: service.name,
     });
-    navigate({ to: "/processes/$processId", params: { processId } });
+    navigate({ to: "/projects/$projectId/processes/$processId", params: { projectId: service.projectId, processId } });
   };
 
   const handleStart = (e: React.MouseEvent) => {

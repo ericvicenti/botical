@@ -23,7 +23,7 @@ export function ProcessItem({ process }: ProcessItemProps) {
       projectId: process.projectId,
       label: process.label || process.command.slice(0, 30),
     });
-    navigate({ to: "/processes/$processId", params: { processId: process.id } });
+    navigate({ to: "/projects/$projectId/processes/$processId", params: { projectId, processId: process.id } });
   };
 
   const handleKill = (e: React.MouseEvent) => {

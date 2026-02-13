@@ -121,7 +121,7 @@ export function ToolCall({
       projectId,
       path,
     });
-    navigate({ to: "/files/$", params: { _splat: `${projectId}/${path}` } });
+    navigate({ to: "/projects/$projectId/files/$", params: { projectId, _splat: path } });
   };
 
   // Simplified status icons - just icon, no background/text

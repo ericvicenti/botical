@@ -154,11 +154,11 @@ export function getTabRoute(tab: Tab): { to: string; params?: Record<string, str
     case "mission":
       return { to: "/projects/$projectId", params: { projectId: tab.data.projectId } };
     case "file":
-      return { to: `/files/${tab.data.projectId}/${tab.data.path}` };
+      return { to: `/projects/${tab.data.projectId}/files/${tab.data.path}` };
     case "folder":
-      return { to: `/folders/${tab.data.projectId}/${tab.data.path}` };
+      return { to: `/projects/${tab.data.projectId}/folders/${tab.data.path}` };
     case "process":
-      return { to: "/processes/$processId", params: { processId: tab.data.processId } };
+      return { to: "/projects/$projectId/processes/$processId", params: { projectId: tab.data.projectId, processId: tab.data.processId } };
     case "task":
       return { to: "/projects/$projectId/tasks/$sessionId", params: { projectId: tab.data.projectId, sessionId: tab.data.sessionId } };
     case "settings":

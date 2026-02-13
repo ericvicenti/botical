@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ContainerLogsPage } from "@/extensions/docker";
 
-export const Route = createFileRoute("/docker/containers/$containerId/logs")({
+export const Route = createFileRoute("/projects/$projectId/docker/containers/$containerId/logs")({
   component: ContainerLogsRoute,
 });
 

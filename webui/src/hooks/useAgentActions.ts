@@ -49,7 +49,7 @@ export function useAgentActions() {
           break;
         case "workflow":
           if (payload.params.workflowId) {
-            navigate({ to: `/workflows/${payload.params.workflowId}` });
+            navigate({ to: `/projects/${selectedProjectId}/workflows/${payload.params.workflowId}` });
           }
           break;
         default:

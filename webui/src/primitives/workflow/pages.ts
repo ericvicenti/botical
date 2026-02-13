@@ -22,7 +22,7 @@ export const workflowEditorPage = definePage({
     label: z.string().optional(),
   }),
 
-  route: "/workflows/$workflowId",
+  route: "/projects/$projectId/workflows/$workflowId",
 
   parseParams: (routeParams) => ({
     workflowId: routeParams.workflowId,
@@ -54,7 +54,7 @@ export const workflowExecutionPage = definePage({
     label: z.string().optional(),
   }),
 
-  route: "/workflow-runs/$executionId",
+  route: "/projects/$projectId/workflow-runs/$executionId",
 
   parseParams: (routeParams) => ({
     executionId: routeParams.executionId,

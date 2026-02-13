@@ -41,7 +41,7 @@ export function SpawnProcessForm({ projectId }: SpawnProcessFormProps) {
         projectId,
         label: label.trim() || command.slice(0, 30),
       });
-      navigate({ to: "/processes/$processId", params: { processId: process.id } });
+      navigate({ to: "/projects/$projectId/processes/$processId", params: { projectId, processId: process.id } });
 
       // Clear form
       setCommand("");

@@ -50,7 +50,7 @@ export const dockerContainerPage = definePage({
     containerName: z.string().optional(),
   }),
 
-  route: "/docker/containers/$containerId",
+  route: "/projects/$projectId/docker/containers/$containerId",
   parseParams: (routeParams) => ({
     containerId: routeParams.containerId,
   }),
@@ -79,7 +79,7 @@ export const dockerLogsPage = definePage({
     containerName: z.string().optional(),
   }),
 
-  route: "/docker/containers/$containerId/logs",
+  route: "/projects/$projectId/docker/containers/$containerId/logs",
   parseParams: (routeParams) => ({
     containerId: routeParams.containerId,
   }),
@@ -105,7 +105,7 @@ export const dockerImagesPage = definePage({
 
   params: z.object({}),
 
-  route: "/docker/images",
+  route: "/projects/$projectId/docker/images",
   parseParams: () => ({}),
   getRouteParams: () => ({}),
 
@@ -127,7 +127,7 @@ export const dockerNewContainerPage = definePage({
 
   params: z.object({}),
 
-  route: "/docker/new",
+  route: "/projects/$projectId/docker/new",
   parseParams: () => ({}),
   getRouteParams: () => ({}),
 

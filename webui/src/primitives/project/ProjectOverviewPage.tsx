@@ -44,7 +44,7 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
       projectId,
       label: process.command,
     });
-    navigate({ to: "/processes/$processId", params: { processId: process.id } });
+    navigate({ to: "/projects/$projectId/processes/$processId", params: { projectId, processId: process.id } });
   };
 
   const handleFileClick = (file: { path: string; type: string }) => {

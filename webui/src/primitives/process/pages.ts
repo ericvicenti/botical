@@ -22,7 +22,7 @@ export const processTerminalPage = definePage({
     label: z.string().optional(),
   }),
 
-  route: "/processes/$processId",
+  route: "/projects/$projectId/processes/$processId",
 
   parseParams: (routeParams) => ({
     processId: routeParams.processId,

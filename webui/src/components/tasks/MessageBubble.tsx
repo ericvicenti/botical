@@ -374,7 +374,7 @@ function FilePart({ content, projectId }: { content: { path: string }; projectId
       projectId,
       path: content.path,
     });
-    navigate({ to: "/files/$", params: { _splat: `${projectId}/${content.path}` } });
+    navigate({ to: "/projects/$projectId/files/$", params: { projectId, _splat: content.path } });
   };
 
   return (

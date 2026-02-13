@@ -41,7 +41,7 @@ export const fileViewPage = definePage({
 
   // Note: This route pattern won't be matched by the registry for splat routes
   // The route file handles splat parsing and passes params directly
-  route: "/files/$projectId/$path",
+  route: "/projects/$projectId/files/$path",
 
   parseParams: (routeParams) => ({
     projectId: routeParams.projectId || "",
@@ -100,7 +100,7 @@ export const folderViewPage = definePage({
   }),
 
   // Note: This route pattern won't be matched by the registry for splat routes
-  route: "/folders/$projectId/$path",
+  route: "/projects/$projectId/folders/$path",
 
   parseParams: (routeParams) => ({
     projectId: routeParams.projectId || "",
