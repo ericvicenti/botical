@@ -41,6 +41,12 @@ class EmailServiceClass {
     return this.config;
   }
 
+  // For testing: reset cached config
+  resetConfig(): void {
+    this.config = null;
+    this.transporter = null;
+  }
+
   private getTransporter(): nodemailer.Transporter {
     if (!this.transporter) {
       const config = this.getConfig();
@@ -58,6 +64,11 @@ class EmailServiceClass {
   }
 
   isDevMode(): boolean {
+    // Force dev mode during tests
+    if (process.env.NODE_ENV === "test" || process.env.BUN_ENV === "test") {
+      return true;
+    }
+    
     const config = this.getConfig();
     return !config.resendApiKey && !config.smtpHost;
   }

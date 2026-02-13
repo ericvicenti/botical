@@ -27,8 +27,17 @@ describe("Email Service", () => {
 
   describe("getAppUrl", () => {
     it("returns default URL when APP_URL not set", () => {
+      const originalAppUrl = process.env.APP_URL;
       delete process.env.APP_URL;
+      EmailService.resetConfig(); // Reset cached config
+      
       expect(EmailService.getAppUrl()).toBe("http://localhost:6001");
+      
+      // Restore original value
+      if (originalAppUrl) {
+        process.env.APP_URL = originalAppUrl;
+      }
+      EmailService.resetConfig(); // Reset again to pick up restored value
     });
   });
 
