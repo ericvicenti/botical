@@ -69,6 +69,8 @@ export function createApp() {
 
   // Mount routes
   app.route("/health", health);
+  app.route("/status", statusPage); // Live status dashboard (no auth)
+  app.route("/status/data", status); // Status API (no auth, outside /api/* auth)
   app.route("/auth", auth);
   app.route("/api/credentials", credentials);
   app.route("/oauth", oauthProxy);
@@ -106,8 +108,7 @@ export function createApp() {
   app.route("/api/extensions", extensionsRouter); // Extension proxy routes
   app.route("/api/projects", projectSchedules); // Project-scoped schedule routes
   app.route("/api/schedules", schedules); // Individual schedule routes
-  app.route("/api/status", status); // System status API (no auth required)
-  app.route("/status", statusPage); // Live status dashboard (no auth required)
+  // Status routes registered above (before auth middleware)
 
   // WebSocket endpoint
   // See: docs/implementation-plan/05-realtime-communication.md

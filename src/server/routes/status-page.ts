@@ -78,7 +78,7 @@ statusPage.get("/", (c) => {
 
     async function refresh() {
       try {
-        const r = await fetch(BASE + '/api/status');
+        const r = await fetch(BASE + '/status/data');
         const { data } = await r.json();
 
         document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleString();
