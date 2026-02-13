@@ -79,23 +79,19 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
 
       const currentSettings = settings || getSettings();
 
-      // Navigate and close immediately, send message in background
+      // Navigate with the initial message to be sent by TaskChat
       openTab({
         type: "task",
         sessionId: session.id,
         projectId,
         title: taskTitle,
       });
-      navigate({ to: "/tasks/$sessionId", params: { sessionId: session.id } });
-      onClose();
-
-      // Fire and forget — backend resolves model/provider from stored credentials
-      sendMessage.mutate({
-        projectId,
-        sessionId: session.id,
-        content: message.trim(),
-        userId: currentSettings.userId,
+      navigate({ 
+        to: "/tasks/$sessionId", 
+        params: { sessionId: session.id },
+        search: { initialMessage: message.trim() }
       });
+      onClose();
     } catch (err) {
       console.error("Failed to create task:", err);
       alert(`Failed to create task: ${err instanceof Error ? err.message : "Unknown error"}`);

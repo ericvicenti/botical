@@ -153,17 +153,32 @@ sessions.post("/", async (c) => {
  */
 sessions.get("/:id", async (c) => {
   const sessionId = c.req.param("id");
-  const projectId = c.req.query("projectId");
+  let projectId = c.req.query("projectId");
 
+  // If no projectId, search across all projects
   if (!projectId) {
-    throw new ValidationError("projectId query parameter is required");
+    const rootDb = DatabaseManager.getRootDb();
+    const projects = rootDb.prepare("SELECT id FROM projects").all() as { id: string }[];
+    for (const project of projects) {
+      try {
+        const db = DatabaseManager.getProjectDb(project.id);
+        const session = db.prepare("SELECT id FROM sessions WHERE id = ?").get(sessionId);
+        if (session) {
+          projectId = project.id;
+          break;
+        }
+      } catch { /* skip projects with no DB */ }
+    }
+    if (!projectId) {
+      throw new ValidationError("Session not found in any project");
+    }
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
   const session = SessionService.getByIdOrThrow(db, sessionId);
 
   return c.json({
-    data: session,
+    data: { ...session, projectId },
   });
 });
 
@@ -260,10 +275,25 @@ sessions.patch("/:id/system-prompt", async (c) => {
  */
 sessions.get("/:id/messages", async (c) => {
   const sessionId = c.req.param("id");
-  const projectId = c.req.query("projectId");
+  let projectId = c.req.query("projectId");
 
+  // If no projectId, search across all projects
   if (!projectId) {
-    throw new ValidationError("projectId query parameter is required");
+    const rootDb = DatabaseManager.getRootDb();
+    const projects = rootDb.prepare("SELECT id FROM projects").all() as { id: string }[];
+    for (const project of projects) {
+      try {
+        const db = DatabaseManager.getProjectDb(project.id);
+        const session = db.prepare("SELECT id FROM sessions WHERE id = ?").get(sessionId);
+        if (session) {
+          projectId = project.id;
+          break;
+        }
+      } catch { /* skip */ }
+    }
+    if (!projectId) {
+      throw new ValidationError("Session not found in any project");
+    }
   }
 
   const rawQuery = {
