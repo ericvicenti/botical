@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useUI, type SidebarPanel as SidebarPanelType } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Upload, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles, Bot } from "lucide-react";
+import { Files, GitBranch, Play, Plus, FolderTree, MessageSquare, Settings, MoreHorizontal, FilePlus, FolderPlus, Upload, Radio, Workflow, Server, Puzzle, Box, Search, Clock, Sparkles, Bot, ChevronLeft } from "lucide-react";
 import { ProjectSelector } from "./ProjectSelector";
 import { FileTree, type FileTreeRef } from "@/components/files/FileTree";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
@@ -130,8 +130,21 @@ export function Sidebar() {
       className="bg-bg-secondary border-r border-border flex flex-col relative transition-[width] duration-200 ease-out h-full sidebar-mobile"
       style={{ '--sidebar-width': `${effectiveWidth}px` } as React.CSSProperties}
     >
-      {/* Project selector - only show when expanded and project selected */}
-      {selectedProjectId && !sidebarCollapsed && <ProjectSelector />}
+      {/* Project selector + mobile close button */}
+      {!sidebarCollapsed && (
+        <div className="flex items-center">
+          <div className="flex-1 min-w-0">
+            {selectedProjectId && <ProjectSelector />}
+          </div>
+          <button
+            onClick={toggleSidebar}
+            className="sm:hidden shrink-0 w-9 h-9 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            title="Close sidebar"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         {/* Icon rail - always visible */}
