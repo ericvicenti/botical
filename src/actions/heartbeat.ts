@@ -84,26 +84,46 @@ export const leopardHeartbeat = defineAction({
         }
       }
 
-      // Send message (this triggers the orchestrator via the messages handler)
-      const msgResp = await fetch(`${baseUrl}/api/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify({
-          projectId: pid,
-          sessionId,
-          content: heartbeatMessage,
-          userId: "system",
-          providerId: "anthropic-oauth",
-          canExecuteCode: true,
-        }),
-      });
+      // Send message fire-and-forget — don't wait for the LLM to finish.
+      // The POST /api/messages blocks until the full LLM response completes,
+      // which can take 10+ minutes with tool calls. We just need to confirm
+      // the message was accepted, not wait for the response.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s to accept
 
-      if (!msgResp.ok) {
-        const errData = await msgResp.text();
-        return error(`Failed to send message: ${errData}`);
+      try {
+        const msgResp = await fetch(`${baseUrl}/api/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            projectId: pid,
+            sessionId,
+            content: heartbeatMessage,
+            userId: "system",
+            providerId: "anthropic-oauth",
+            canExecuteCode: true,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!msgResp.ok) {
+          const errData = await msgResp.text();
+          return error(`Failed to send message: ${errData}`);
+        }
+      } catch (e) {
+        clearTimeout(timeout);
+        // AbortError means the request was accepted but LLM is still running — that's fine
+        if (e instanceof Error && e.name === "AbortError") {
+          return success(
+            "Leopard Heartbeat Triggered",
+            `Message sent to session ${sessionId} (LLM processing in background)`
+          );
+        }
+        throw e;
       }
 
       return success(
