@@ -71,6 +71,14 @@ test.describe("Skills Panel", () => {
   ];
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({

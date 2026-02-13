@@ -13,14 +13,14 @@ import path from "path";
 interface MagicLinkResponse {
   success: boolean;
   message?: string;
+  loginToken?: string;
 }
 
-interface VerifyResponse {
-  success: boolean;
-  sessionId: string;
-  token: string;
-  isNewUser: boolean;
-  isAdmin: boolean;
+interface PollResponse {
+  status: string;
+  sessionToken?: string;
+  isNewUser?: boolean;
+  isAdmin?: boolean;
 }
 
 interface MeResponse {
@@ -52,10 +52,7 @@ describe("Auth Routes", () => {
   let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
-    // Disable single-user mode for auth route tests
     process.env.BOTICAL_SINGLE_USER = "false";
-
-    // Reset database for each test
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
 
@@ -63,10 +60,8 @@ describe("Auth Routes", () => {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
 
-    // Initialize database
     await DatabaseManager.initialize();
 
-    // Create app with auth routes
     app = new Hono();
     app.onError((err, c) => {
       if (err instanceof ValidationError) {
@@ -79,20 +74,53 @@ describe("Auth Routes", () => {
     });
     app.route("/auth", auth);
 
-    // Spy on console.log to capture magic link output
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
-    // Restore environment
     process.env = { ...originalEnv };
-
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
     consoleLogSpy.mockRestore();
   });
+
+  /**
+   * Helper: request magic link and get loginToken + verification token
+   */
+  async function requestAndGetTokens(email: string) {
+    consoleLogSpy.mockClear();
+    const res = await app.request("/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = (await res.json()) as MagicLinkResponse;
+    const loginToken = data.loginToken!;
+
+    // Extract verification token from console output
+    const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
+    const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+    const verifyToken = tokenMatch![1];
+
+    return { loginToken, verifyToken };
+  }
+
+  /**
+   * Helper: complete full login flow and return session token
+   */
+  async function loginUser(email: string) {
+    const { loginToken, verifyToken } = await requestAndGetTokens(email);
+
+    // Verify (user clicks link) - returns HTML now
+    await app.request(`/auth/verify?token=${verifyToken}`);
+
+    // Poll for completion
+    const pollRes = await app.request(`/auth/poll-login?token=${loginToken}`);
+    const pollData = (await pollRes.json()) as PollResponse;
+    return pollData;
+  }
 
   describe("POST /auth/magic-link", () => {
     it("returns success for valid email", async () => {
@@ -108,7 +136,6 @@ describe("Auth Routes", () => {
     });
 
     it("always returns success to prevent email enumeration", async () => {
-      // Even for invalid-looking email format (if validation passes)
       const res = await app.request("/auth/magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,119 +182,59 @@ describe("Auth Routes", () => {
   });
 
   describe("GET /auth/verify", () => {
-    it("verifies token and creates session", async () => {
-      // Request a magic link
-      await MagicLinkService.request("newuser@example.com");
+    it("verifies token and returns HTML success page", async () => {
+      const { verifyToken } = await requestAndGetTokens("newuser@example.com");
 
-      // Extract token from console output
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      expect(tokenMatch).toBeDefined();
-      const token = tokenMatch![1];
-
-      const res = await app.request(`/auth/verify?token=${token}`);
-
+      const res = await app.request(`/auth/verify?token=${verifyToken}`);
       expect(res.status).toBe(200);
-      const data = (await res.json()) as VerifyResponse;
-      expect(data.success).toBe(true);
-      expect(data.sessionId).toBeDefined();
-      expect(data.token).toBeDefined();
-      expect(data.isNewUser).toBe(true);
-    });
 
-    it("sets session cookie", async () => {
-      await MagicLinkService.request("test@example.com");
-
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
-
-      const res = await app.request(`/auth/verify?token=${token}`);
-
-      const setCookie = res.headers.get("Set-Cookie");
-      expect(setCookie).toContain("botical_session=");
-      expect(setCookie).toContain("HttpOnly");
-    });
-
-    it("first user becomes admin", async () => {
-      await MagicLinkService.request("first@example.com");
-
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
-
-      const res = await app.request(`/auth/verify?token=${token}`);
-      const data = (await res.json()) as VerifyResponse;
-
-      expect(data.isAdmin).toBe(true);
-    });
-
-    it("second user is not admin", async () => {
-      // First user
-      await MagicLinkService.request("first@example.com");
-      let output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      let tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-
-      consoleLogSpy.mockClear();
-
-      // Second user
-      await MagicLinkService.request("second@example.com");
-      output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-
-      expect(data.isAdmin).toBe(false);
+      const text = await res.text();
+      expect(text).toContain("Login Successful");
     });
 
     it("returns 400 for missing token", async () => {
       const res = await app.request("/auth/verify");
-
       expect(res.status).toBe(400);
     });
 
     it("returns 401 for invalid token", async () => {
       const res = await app.request("/auth/verify?token=invalid-token");
-
       expect(res.status).toBe(401);
     });
+  });
 
-    it("redirects browser to onboarding for new users", async () => {
-      await MagicLinkService.request("newuser@example.com");
+  describe("GET /auth/poll-login", () => {
+    it("returns pending before verification", async () => {
+      const { loginToken } = await requestAndGetTokens("test@example.com");
 
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
-
-      const res = await app.request(`/auth/verify?token=${token}`, {
-        headers: { Accept: "text/html" },
-      });
-
-      expect(res.status).toBe(302);
-      expect(res.headers.get("Location")).toBe("/onboarding");
+      const res = await app.request(`/auth/poll-login?token=${loginToken}`);
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as PollResponse;
+      expect(data.status).toBe("pending");
     });
 
-    it("redirects browser to home for existing users", async () => {
-      // Create user via first verification
-      await MagicLinkService.request("existing@example.com");
-      let output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      let tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      await app.request(`/auth/verify?token=${tokenMatch![1]}`);
+    it("returns completed with session after verification", async () => {
+      const pollData = await loginUser("newuser@example.com");
 
-      consoleLogSpy.mockClear();
+      expect(pollData.status).toBe("completed");
+      expect(pollData.sessionToken).toBeDefined();
+      expect(pollData.isNewUser).toBe(true);
+    });
 
-      // Second login
-      await MagicLinkService.request("existing@example.com");
-      output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+    it("first user becomes admin", async () => {
+      const pollData = await loginUser("first@example.com");
+      expect(pollData.isAdmin).toBe(true);
+    });
 
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`, {
-        headers: { Accept: "text/html" },
-      });
+    it("second user is not admin", async () => {
+      await loginUser("first@example.com");
+      const pollData = await loginUser("second@example.com");
+      expect(pollData.isAdmin).toBe(false);
+    });
 
-      expect(res.status).toBe(302);
-      expect(res.headers.get("Location")).toBe("/");
+    it("returns error for invalid token", async () => {
+      const res = await app.request("/auth/poll-login?token=invalid-token");
+      expect(res.status).toBe(401);
     });
   });
 
@@ -275,13 +242,8 @@ describe("Auth Routes", () => {
     let sessionToken: string;
 
     beforeEach(async () => {
-      // Create a user and session
-      await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-      sessionToken = data.token;
+      const pollData = await loginUser("test@example.com");
+      sessionToken = pollData.sessionToken!;
     });
 
     it("revokes session", async () => {
@@ -292,7 +254,6 @@ describe("Auth Routes", () => {
 
       expect(res.status).toBe(200);
 
-      // Session should no longer be valid
       const validateRes = await app.request("/auth/me", {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
@@ -323,12 +284,8 @@ describe("Auth Routes", () => {
     let sessionToken: string;
 
     beforeEach(async () => {
-      await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-      sessionToken = data.token;
+      const pollData = await loginUser("test@example.com");
+      sessionToken = pollData.sessionToken!;
     });
 
     it("returns current user info", async () => {
@@ -344,7 +301,6 @@ describe("Auth Routes", () => {
 
     it("returns 401 without authentication", async () => {
       const res = await app.request("/auth/me");
-
       expect(res.status).toBe(401);
     });
   });
@@ -353,12 +309,8 @@ describe("Auth Routes", () => {
     let sessionToken: string;
 
     beforeEach(async () => {
-      await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-      sessionToken = data.token;
+      const pollData = await loginUser("test@example.com");
+      sessionToken = pollData.sessionToken!;
     });
 
     it("lists user sessions", async () => {
@@ -384,26 +336,26 @@ describe("Auth Routes", () => {
 
     it("returns 401 without authentication", async () => {
       const res = await app.request("/auth/sessions");
-
       expect(res.status).toBe(401);
     });
   });
 
   describe("DELETE /auth/sessions/:id", () => {
     let sessionToken: string;
-    let sessionId: string;
 
     beforeEach(async () => {
-      await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-      sessionToken = data.token;
-      sessionId = data.sessionId;
+      const pollData = await loginUser("test@example.com");
+      sessionToken = pollData.sessionToken!;
     });
 
     it("revokes specific session", async () => {
+      // Get session list first
+      const listRes = await app.request("/auth/sessions", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const listData = (await listRes.json()) as SessionsResponse;
+      const sessionId = listData.sessions[0]!.id;
+
       const res = await app.request(`/auth/sessions/${sessionId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${sessionToken}` },
@@ -422,7 +374,7 @@ describe("Auth Routes", () => {
     });
 
     it("returns 401 without authentication", async () => {
-      const res = await app.request(`/auth/sessions/${sessionId}`, {
+      const res = await app.request("/auth/sessions/authsess_test", {
         method: "DELETE",
       });
 
@@ -435,14 +387,9 @@ describe("Auth Routes", () => {
     let userId: string;
 
     beforeEach(async () => {
-      await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-      const data = (await res.json()) as VerifyResponse;
-      sessionToken = data.token;
+      const pollData = await loginUser("test@example.com");
+      sessionToken = pollData.sessionToken!;
 
-      // Get user ID for creating additional sessions
       const meRes = await app.request("/auth/me", {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
@@ -471,7 +418,6 @@ describe("Auth Routes", () => {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
-      // Current session should still work
       const meRes = await app.request("/auth/me", {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });

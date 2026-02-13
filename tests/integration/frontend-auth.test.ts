@@ -13,7 +13,6 @@ import { handleError } from "@/server/middleware/index.ts";
 import fs from "fs";
 import path from "path";
 
-// Type definitions for test responses
 interface AuthModeResponse {
   mode: "single-user" | "multi-user";
   user?: {
@@ -31,12 +30,16 @@ interface ProjectsErrorResponse {
   };
 }
 
-interface VerifyResponse {
+interface MagicLinkResponse {
   success: boolean;
-  sessionId: string;
-  token: string;
-  isNewUser: boolean;
-  isAdmin: boolean;
+  loginToken?: string;
+}
+
+interface PollResponse {
+  status: string;
+  sessionToken?: string;
+  isNewUser?: boolean;
+  isAdmin?: boolean;
 }
 
 describe("Frontend Auth Integration", () => {
@@ -46,7 +49,6 @@ describe("Frontend Auth Integration", () => {
   let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
-    // Reset database for each test
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
 
@@ -54,17 +56,12 @@ describe("Frontend Auth Integration", () => {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
 
-    // Initialize database
     await DatabaseManager.initialize();
-
-    // Spy on console.log to capture magic link output
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
-    // Restore environment
     process.env = { ...originalEnv };
-
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -72,12 +69,35 @@ describe("Frontend Auth Integration", () => {
     consoleLogSpy.mockRestore();
   });
 
+  /**
+   * Helper: full login flow using polling
+   */
+  async function loginUser(email: string): Promise<PollResponse> {
+    consoleLogSpy.mockClear();
+    const magicRes = await app.request("/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const magicData = (await magicRes.json()) as MagicLinkResponse;
+    const loginToken = magicData.loginToken!;
+
+    const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
+    const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+    const verifyToken = tokenMatch![1];
+
+    // Verify (user clicks link)
+    await app.request(`/auth/verify?token=${verifyToken}`);
+
+    // Poll for session
+    const pollRes = await app.request(`/auth/poll-login?token=${loginToken}`);
+    return (await pollRes.json()) as PollResponse;
+  }
+
   describe("Multi-User Mode", () => {
     beforeEach(() => {
-      // Enable multi-user mode
       process.env.BOTICAL_SINGLE_USER = "false";
 
-      // Create app with auth routes and protected API routes
       app = new Hono();
       app.onError((err, c) => {
         return handleError(err, c);
@@ -93,13 +113,8 @@ describe("Frontend Auth Integration", () => {
         })
       );
 
-      // Mount auth routes (no auth required)
       app.route("/auth", auth);
-
-      // Global auth middleware for all API routes
       app.use("/api/*", requireAuth());
-
-      // API routes (protected)
       app.route("/api/projects", projects);
     });
 
@@ -114,7 +129,6 @@ describe("Frontend Auth Integration", () => {
       });
 
       it("is accessible without authentication", async () => {
-        // Should work without any auth headers
         const res = await app.request("/auth/mode");
         expect(res.status).toBe(200);
       });
@@ -131,7 +145,6 @@ describe("Frontend Auth Integration", () => {
       });
 
       it("blocks all /api/* routes without auth", async () => {
-        // Test various API endpoints
         const endpoints = [
           "/api/projects",
           "/api/sessions",
@@ -152,83 +165,31 @@ describe("Frontend Auth Integration", () => {
 
     describe("Authentication Workflow", () => {
       it("completes full magic link workflow", async () => {
-        // Step 1: Request magic link
-        const magicLinkRes = await app.request("/auth/magic-link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: "frontend-test@example.com" }),
-        });
+        const pollData = await loginUser("frontend-test@example.com");
 
-        expect(magicLinkRes.status).toBe(200);
+        expect(pollData.status).toBe("completed");
+        expect(pollData.sessionToken).toBeDefined();
 
-        // Step 2: Extract token from console output
-        const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-        const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-        expect(tokenMatch).toBeDefined();
-        const token = tokenMatch![1];
-
-        // Step 3: Verify magic link and get session
-        const verifyRes = await app.request(`/auth/verify?token=${token}`);
-        expect(verifyRes.status).toBe(200);
-
-        const verifyData = (await verifyRes.json()) as VerifyResponse;
-        expect(verifyData.success).toBe(true);
-        expect(verifyData.sessionId).toBeDefined();
-        expect(verifyData.token).toBeDefined();
-
-        // Step 4: Use session token to access protected API
+        // Use session token to access protected API
         const projectsRes = await app.request("/api/projects", {
-          headers: { Authorization: `Bearer ${verifyData.token}` },
+          headers: { Authorization: `Bearer ${pollData.sessionToken}` },
         });
 
         expect(projectsRes.status).toBe(200);
       });
 
       it("first user becomes admin", async () => {
-        // Request magic link for first user
-        await app.request("/auth/magic-link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: "admin@example.com" }),
-        });
-
-        // Extract and verify token
-        const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-        const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-        const token = tokenMatch![1];
-
-        const verifyRes = await app.request(`/auth/verify?token=${token}`);
-        const data = (await verifyRes.json()) as VerifyResponse;
-
-        expect(data.isAdmin).toBe(true);
-        expect(data.isNewUser).toBe(true);
+        const pollData = await loginUser("admin@example.com");
+        expect(pollData.isAdmin).toBe(true);
+        expect(pollData.isNewUser).toBe(true);
       });
 
       it("subsequent users are not admin", async () => {
-        // First create an admin user
-        await MagicLinkService.request("admin@example.com");
-        let output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-        let tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-        await app.request(`/auth/verify?token=${tokenMatch![1]}`);
+        await loginUser("admin@example.com");
+        const pollData = await loginUser("user@example.com");
 
-        consoleLogSpy.mockClear();
-
-        // Now test a second user
-        await app.request("/auth/magic-link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: "user@example.com" }),
-        });
-
-        output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-        tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-        const token = tokenMatch![1];
-
-        const verifyRes = await app.request(`/auth/verify?token=${token}`);
-        const data = (await verifyRes.json()) as VerifyResponse;
-
-        expect(data.isAdmin).toBe(false);
-        expect(data.isNewUser).toBe(true);
+        expect(pollData.isAdmin).toBe(false);
+        expect(pollData.isNewUser).toBe(true);
       });
     });
 
@@ -236,13 +197,8 @@ describe("Frontend Auth Integration", () => {
       let sessionToken: string;
 
       beforeEach(async () => {
-        // Create authenticated session for tests
-        await MagicLinkService.request("session-test@example.com");
-        const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-        const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-        const res = await app.request(`/auth/verify?token=${tokenMatch![1]}`);
-        const data = (await res.json()) as VerifyResponse;
-        sessionToken = data.token;
+        const pollData = await loginUser("session-test@example.com");
+        sessionToken = pollData.sessionToken!;
       });
 
       it("allows API access with valid session", async () => {
@@ -254,7 +210,6 @@ describe("Frontend Auth Integration", () => {
       });
 
       it("blocks API access after logout", async () => {
-        // Logout
         const logoutRes = await app.request("/auth/logout", {
           method: "POST",
           headers: { Authorization: `Bearer ${sessionToken}` },
@@ -262,7 +217,6 @@ describe("Frontend Auth Integration", () => {
 
         expect(logoutRes.status).toBe(200);
 
-        // Try to access API with revoked token
         const projectsRes = await app.request("/api/projects", {
           headers: { Authorization: `Bearer ${sessionToken}` },
         });
@@ -286,28 +240,23 @@ describe("Frontend Auth Integration", () => {
 
     describe("Token Expiry", () => {
       it("rejects expired magic link tokens", async () => {
-        // Mock the token creation time to be in the past
         const db = DatabaseManager.getRootDb();
         
         await MagicLinkService.request("expired-test@example.com");
         
-        // Get the token from the database and manually set it as expired
         const tokenRecord = db
           .prepare("SELECT id, email FROM email_verification_tokens WHERE email = ?")
           .get("expired-test@example.com") as { id: string; email: string } | undefined;
 
         expect(tokenRecord).toBeDefined();
 
-        // Update the expiry time to be in the past
         db.prepare("UPDATE email_verification_tokens SET expires_at = ? WHERE id = ?")
           .run(Date.now() - 1000, tokenRecord!.id);
 
-        // Extract token from console output
         const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
         const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
         const token = tokenMatch![1];
 
-        // Try to verify expired token
         const verifyRes = await app.request(`/auth/verify?token=${token}`);
         expect(verifyRes.status).toBe(401);
       });
@@ -349,10 +298,8 @@ describe("Frontend Auth Integration", () => {
 
   describe("Single-User Mode", () => {
     beforeEach(() => {
-      // Enable single-user mode
       process.env.BOTICAL_SINGLE_USER = "true";
 
-      // Create app with auth routes and protected API routes
       app = new Hono();
       app.onError((err, c) => {
         return handleError(err, c);
@@ -368,13 +315,8 @@ describe("Frontend Auth Integration", () => {
         })
       );
 
-      // Mount auth routes
       app.route("/auth", auth);
-
-      // Global auth middleware for all API routes (auto-auth in single-user mode)
       app.use("/api/*", requireAuth());
-
-      // API routes
       app.route("/api/projects", projects);
     });
 
@@ -395,13 +337,11 @@ describe("Frontend Auth Integration", () => {
 
     describe("Auto-Authentication", () => {
       it("allows API access without explicit authentication", async () => {
-        // In single-user mode, API routes should work without auth headers
         const res = await app.request("/api/projects");
         expect(res.status).toBe(200);
       });
 
       it("ignores auth headers in single-user mode", async () => {
-        // Even with invalid auth headers, should still work
         const res = await app.request("/api/projects", {
           headers: { Authorization: "Bearer invalid-token" },
         });

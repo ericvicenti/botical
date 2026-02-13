@@ -83,6 +83,14 @@ test.describe("Search Extension", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     await page.addInitScript(() => {
       localStorage.setItem("botical:ui", JSON.stringify({
         selectedProjectId: null,
@@ -146,7 +154,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Search extension should be listed
       await expect(page.getByTestId("extension-card-search")).toBeVisible();
@@ -167,7 +175,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Toggle should be visible
       const toggle = page.getByTestId("extension-toggle-search");
@@ -205,7 +213,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click toggle to enable
       const toggle = page.getByTestId("extension-toggle-search");
@@ -234,7 +242,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Search panel button should be visible
       const searchButton = page.getByRole("button", { name: "Search" });
@@ -254,7 +262,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Search panel button should NOT be visible
       const searchButton = page.getByRole("button", { name: "Search" });
@@ -299,7 +307,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click Search panel button
       await page.getByRole("button", { name: "Search" }).click();
@@ -311,6 +319,14 @@ test.describe("Search Extension", () => {
 
   test.describe("Search Functionality", () => {
     test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
       // Set up search-enabled project
       await page.route("**/api/projects/*/extensions", async (route) => {
         await route.fulfill({
@@ -357,7 +373,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click Search panel button
       await page.getByRole("button", { name: "Search" }).click();
@@ -387,7 +403,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project and open search panel
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
       await page.getByRole("button", { name: "Search" }).click();
 
       // Perform search
@@ -440,7 +456,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click Search panel button
       await page.getByRole("button", { name: "Search" }).click();
@@ -507,7 +523,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click Search panel button
       await page.getByRole("button", { name: "Search" }).click();
@@ -565,7 +581,7 @@ test.describe("Search Extension", () => {
       await page.goto("/");
 
       // Select project
-      await page.getByRole("button", { name: "Test Project", exact: true }).click();
+      await page.getByRole("button", { name: /Test Project/ }).first().click();
 
       // Click Search panel button
       await page.getByRole("button", { name: "Search" }).click();

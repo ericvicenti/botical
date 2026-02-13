@@ -2,6 +2,14 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Tab System", () => {
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Clear localStorage before each test
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());

@@ -187,9 +187,10 @@ export class MagicLinkService {
     // Create session token for the login
     const { session, token: sessionToken } = SessionService.create(userId, metadata);
 
-    // Store session token in the email verification record for polling
-    db.prepare("UPDATE email_verification_tokens SET session_token = ?, completed_at = ? WHERE id = ?").run(
+    // Store session token, user_id, and completion time for polling
+    db.prepare("UPDATE email_verification_tokens SET session_token = ?, user_id = ?, completed_at = ? WHERE id = ?").run(
       sessionToken,
+      userId,
       Date.now(),
       tokenRecord.id
     );

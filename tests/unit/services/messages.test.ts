@@ -111,9 +111,10 @@ describe("Message Service", () => {
       });
 
       const messages = MessageService.listBySession(db, "sess_test");
-      // Messages should be sorted by ID (ascending)
+      // Messages should be sorted by created_at with role tiebreaker (user before assistant)
       expect(messages.length).toBe(2);
-      expect(messages[0]!.id < messages[1]!.id).toBe(true);
+      expect(messages[0]!.role).toBe("user");
+      expect(messages[1]!.role).toBe("assistant");
     });
 
     it("filters by role", () => {

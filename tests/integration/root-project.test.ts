@@ -67,11 +67,14 @@ async function createAuthSession(
   email: string,
   consoleLogSpy: ReturnType<typeof spyOn>
 ): Promise<string> {
-  await app.request("/auth/magic-link", {
+  consoleLogSpy.mockClear();
+  const magicRes = await app.request("/auth/magic-link", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
+  const magicData = (await magicRes.json()) as { loginToken: string };
+  const loginToken = magicData.loginToken;
 
   const output = consoleLogSpy.mock.calls
     .map((c: unknown[]) => c.join(" "))
@@ -79,11 +82,13 @@ async function createAuthSession(
   const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
   if (!tokenMatch) throw new Error("No magic link token found in console output");
 
-  consoleLogSpy.mockClear();
+  // Verify (user clicks link) - returns HTML now
+  await app.request(`/auth/verify?token=${tokenMatch[1]}`);
 
-  const res = await app.request(`/auth/verify?token=${tokenMatch[1]}`);
-  const data = (await res.json()) as VerifyResponse;
-  return data.token;
+  // Poll for session
+  const pollRes = await app.request(`/auth/poll-login?token=${loginToken}`);
+  const pollData = (await pollRes.json()) as { status: string; sessionToken: string };
+  return pollData.sessionToken;
 }
 
 describe("Root Project", () => {

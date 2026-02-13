@@ -38,6 +38,14 @@ test.describe("Tasks", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -80,7 +88,7 @@ test.describe("Tasks", () => {
     await page.goto("/");
 
     // Click on the project to select it (first one in sidebar)
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Tasks panel should be available in sidebar
     const tasksButton = page.getByRole("button", { name: "Tasks" });
@@ -91,7 +99,7 @@ test.describe("Tasks", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click tasks icon in sidebar
     const tasksButton = page.getByRole("button", { name: "Tasks" });
@@ -106,7 +114,7 @@ test.describe("Tasks", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Go to tasks panel
     await page.getByRole("button", { name: "Tasks" }).click();
@@ -143,7 +151,7 @@ test.describe("Tasks", () => {
     await createButton.click();
 
     // Should navigate to task view
-    await expect(page).toHaveURL(/\/tasks\/session-1/);
+    await expect(page).toHaveURL(/\/projects\/project-1\/tasks\/session-1/);
 
     // Task chat heading should be visible
     await expect(page.getByRole("heading", { name: "Test Task" })).toBeVisible();
@@ -178,7 +186,7 @@ test.describe("Tasks", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Go to tasks panel
     await page.getByRole("button", { name: "Tasks" }).click();
@@ -187,7 +195,7 @@ test.describe("Tasks", () => {
     await page.getByTestId("task-item-session-1").click();
 
     // Should navigate to task view
-    await expect(page).toHaveURL(/\/tasks\/session-1/);
+    await expect(page).toHaveURL(/\/projects\/project-1\/tasks\/session-1/);
 
     // Task chat should be visible
     await expect(page.getByRole("heading", { name: "Test Task" })).toBeVisible();
@@ -216,7 +224,7 @@ test.describe("Tasks", () => {
       localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Should show empty state
     await expect(page.getByText("Start a conversation")).toBeVisible();
@@ -247,7 +255,7 @@ test.describe("Tasks", () => {
       localStorage.setItem("botical:settings", JSON.stringify({ defaultProvider: "anthropic", userId: "test-user" }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Should show API key warning
     await expect(page.getByText(/No API key configured/)).toBeVisible();
@@ -277,7 +285,7 @@ test.describe("Tasks", () => {
       localStorage.setItem("botical:settings", JSON.stringify({ defaultProvider: "anthropic", userId: "test-user" }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Input should be disabled
     const textarea = page.getByPlaceholder(/Configure API key/);

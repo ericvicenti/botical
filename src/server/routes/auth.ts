@@ -25,7 +25,7 @@ import {
 } from "../../auth/index.ts";
 import { DatabaseManager } from "../../database/manager.ts";
 import { Config } from "../../config/index.ts";
-import { ValidationError } from "../../utils/errors.ts";
+import { ValidationError, AuthenticationError } from "../../utils/errors.ts";
 import type { UserRow } from "../../auth/index.ts";
 
 const auth = new Hono();

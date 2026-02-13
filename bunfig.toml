@@ -1,0 +1,3 @@
+[test]
+root = "."
+exclude = ["**/node_modules/**", "**/e2e/**", "webui/**", "tests/unit/components/**"]

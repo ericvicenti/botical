@@ -30,6 +30,14 @@ test.describe("Workflows", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up API mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -66,7 +74,7 @@ test.describe("Workflows", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Workflows button should be visible in sidebar
     const workflowsButton = page.getByRole("button", { name: "Workflows" });
@@ -77,7 +85,7 @@ test.describe("Workflows", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click workflows button
     await page.getByRole("button", { name: "Workflows" }).click();
@@ -120,7 +128,7 @@ test.describe("Workflows", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Go to workflows panel
     await page.getByRole("button", { name: "Workflows" }).click();
@@ -130,7 +138,7 @@ test.describe("Workflows", () => {
     await createButton.click();
 
     // Should navigate to workflow editor
-    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+    await expect(page).toHaveURL(new RegExp(`/projects/project-1/workflows/${mockWorkflow.id}`));
 
     // Workflow editor should be visible
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
@@ -168,7 +176,7 @@ test.describe("Workflows", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Go to workflows panel
     await page.getByRole("button", { name: "Workflows" }).click();
@@ -177,7 +185,7 @@ test.describe("Workflows", () => {
     await page.getByTestId(`workflow-item-${mockWorkflow.id}`).click();
 
     // Should navigate to workflow editor
-    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+    await expect(page).toHaveURL(new RegExp(`/projects/project-1/workflows/${mockWorkflow.id}`));
 
     // Workflow editor should show the workflow
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
@@ -202,7 +210,7 @@ test.describe("Workflows", () => {
     }, mockProject.id);
 
     // Navigate directly to a non-existent workflow
-    await page.goto("/workflows/wf_nonexistent");
+    await page.goto("/projects/project-1/workflows/wf_nonexistent");
 
     // Should show error state
     await expect(page.getByTestId("workflow-error")).toBeVisible();
@@ -265,7 +273,7 @@ test.describe("Workflows", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Go to workflows panel
     await page.getByRole("button", { name: "Workflows" }).click();
@@ -280,7 +288,7 @@ test.describe("Workflows", () => {
     await page.getByTestId("new-workflow-button").click();
 
     // Should navigate to workflow editor
-    await expect(page).toHaveURL(new RegExp(`/workflows/${mockWorkflow.id}`));
+    await expect(page).toHaveURL(new RegExp(`/projects/project-1/workflows/${mockWorkflow.id}`));
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
 
     // Wait a bit for the invalidation to trigger a refetch
@@ -357,7 +365,7 @@ test.describe("Workflows", () => {
       localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
-    await page.goto(`/workflows/${mockWorkflow.id}`);
+    await page.goto(`/projects/project-1/workflows/${mockWorkflow.id}`);
 
     // Wait for editor to load
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
@@ -406,7 +414,7 @@ test.describe("Workflows", () => {
       localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
-    await page.goto(`/workflows/${mockWorkflow.id}`);
+    await page.goto(`/projects/project-1/workflows/${mockWorkflow.id}`);
 
     // Wait for editor to load
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
@@ -547,7 +555,7 @@ test.describe("Workflows", () => {
       localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
-    await page.goto(`/workflows/${workflowWithWait.id}`);
+    await page.goto(`/projects/project-1/workflows/${workflowWithWait.id}`);
 
     // Wait for editor to load
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
@@ -560,7 +568,7 @@ test.describe("Workflows", () => {
     await runButton.click();
 
     // Should navigate to execution page
-    await expect(page).toHaveURL(new RegExp(`/workflow-runs/${mockExecution.id}`));
+    await expect(page).toHaveURL(new RegExp(`/projects/project-1/workflow-runs/${mockExecution.id}`));
   });
 
   // TODO: Skip - tests UI features (add-step-button, step-type-action) that don't exist yet
@@ -614,7 +622,7 @@ test.describe("Workflows", () => {
       localStorage.setItem("botical:ui", JSON.stringify({ selectedProjectId: projectId }));
     }, mockProject.id);
 
-    await page.goto(`/workflows/${mockWorkflow.id}`);
+    await page.goto(`/projects/project-1/workflows/${mockWorkflow.id}`);
 
     // Wait for editor to load
     await expect(page.getByTestId("workflow-editor")).toBeVisible();

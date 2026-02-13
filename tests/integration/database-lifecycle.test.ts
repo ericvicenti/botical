@@ -66,7 +66,7 @@ describe("Database Lifecycle Integration", () => {
       expect(tableNames).toContain("sessions");
       expect(tableNames).toContain("messages");
       expect(tableNames).toContain("message_parts");
-      expect(tableNames).toContain("agents");
+      // agents table was dropped in migration 10 (now uses YAML files)
       expect(tableNames).toContain("tools");
       expect(tableNames).toContain("files");
       expect(tableNames).toContain("file_versions");

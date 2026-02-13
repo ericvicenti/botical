@@ -78,13 +78,15 @@ export function useCreateSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { projectId: string; title: string; agent?: string }) =>
+    mutationFn: (data: { projectId: string; title: string; agent?: string; message?: string; userId?: string }) =>
       apiClient<Session>(`/api/sessions`, {
         method: "POST",
         body: JSON.stringify({
           projectId: data.projectId,
           title: data.title,
           agent: data.agent || "default",
+          ...(data.message && { message: data.message }),
+          ...(data.userId && { userId: data.userId }),
         }),
       }),
     onSuccess: (_, { projectId }) => {

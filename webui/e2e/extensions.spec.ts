@@ -38,6 +38,14 @@ test.describe("Extensions", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     await page.addInitScript(() => {
       localStorage.setItem("botical:ui", JSON.stringify({
         selectedProjectId: null,
@@ -100,7 +108,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Extensions panel should be visible
     await expect(page.getByTestId("extensions-panel")).toBeVisible();
@@ -120,7 +128,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Docker extension should be listed
     await expect(page.getByTestId("extension-card-docker")).toBeVisible();
@@ -141,7 +149,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Toggle label should be visible
     const toggle = page.getByTestId("extension-toggle-docker");
@@ -179,7 +187,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click toggle to enable Docker
     const toggle = page.getByTestId("extension-toggle-docker");
@@ -206,7 +214,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Docker panel button should be visible in sidebar
     const dockerButton = page.getByRole("button", { name: "Docker" });
@@ -226,7 +234,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Docker panel button should NOT be visible
     const dockerButton = page.getByRole("button", { name: "Docker" });
@@ -260,7 +268,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Docker panel button should initially be visible
     const dockerButton = page.getByRole("button", { name: "Docker" });
@@ -290,7 +298,7 @@ test.describe("Extensions", () => {
     await page.goto("/");
 
     // Select project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // The checkbox inside the toggle should be checked
     const toggle = page.getByTestId("extension-toggle-docker");

@@ -2,6 +2,14 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Command Palette", () => {
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Mock API responses
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -149,7 +157,7 @@ test.describe("Command Palette", () => {
 
   test("should show git commands when project is selected", async ({ page }) => {
     // Click on the project in the main content
-    const projectCard = page.getByRole("button", { name: "Test Project /test/path" });
+    const projectCard = page.getByRole("button", { name: /Test Project/ }).first();
     await expect(projectCard).toBeVisible();
     await projectCard.click();
 

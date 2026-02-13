@@ -121,8 +121,9 @@ describe("Files Tree API Routes", () => {
 
       const body = await response.json() as { data: string[] };
       expect(body.data).toContain("visible.ts");
-      expect(body.data).not.toContain(".env");
-      expect(body.data).not.toContain(".hidden/secret.ts");
+      // Dotfiles are now intentionally visible (commit f757000)
+      expect(body.data).toContain(".env");
+      expect(body.data).toContain(".hidden/secret.ts");
     });
 
     it("excludes node_modules directory", async () => {

@@ -97,6 +97,14 @@ test.describe("Messaging", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up basic mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -134,7 +142,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Input should be enabled
     const textarea = page.getByPlaceholder(/Type a message/);
@@ -166,7 +174,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // User message should be visible
     await expect(page.getByText("Hello, agent!")).toBeVisible();
@@ -225,7 +233,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Type a message
     const textarea = page.getByPlaceholder(/Type a message/);
@@ -274,7 +282,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Type and press Enter
     const textarea = page.getByPlaceholder(/Type a message/);
@@ -321,7 +329,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Type and press Shift+Enter
     const textarea = page.getByPlaceholder(/Type a message/);
@@ -401,7 +409,7 @@ test.describe("Messaging", () => {
       }));
     }, mockProject.id);
 
-    await page.goto("/tasks/session-1");
+    await page.goto("/projects/project-1/tasks/session-1");
 
     // Tool call should be visible - the tool name appears in the header
     await expect(page.getByRole("button", { name: /read_file/ })).toBeVisible();

@@ -27,6 +27,14 @@ test.describe("Query Primitive Infrastructure", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up API mocks for the tests
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -231,7 +239,7 @@ test.describe("Query Primitive Infrastructure", () => {
       await page.getByTestId("new-workflow-button").click();
 
       // Wait for navigation to editor
-      await expect(page).toHaveURL(new RegExp(`/workflows/${newWorkflow.id}`));
+      await expect(page).toHaveURL(new RegExp(`/projects/project-e2e-test/workflows/${newWorkflow.id}`));
 
       // Wait a bit for cache invalidation
       await page.waitForTimeout(500);

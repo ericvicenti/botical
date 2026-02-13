@@ -31,9 +31,21 @@ import {
 import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { ValidationError } from "@/utils/errors.ts";
 import { ProjectService } from "@/services/projects.ts";
-import type { SessionStatus } from "@/agents/types.ts";
+import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
+import { AgentOrchestrator } from "@/agents/orchestrator.ts";
+import type { SessionStatus, ProviderId } from "@/agents/types.ts";
 
 const sessions = new Hono();
+
+/**
+ * Infer provider from model ID string
+ */
+function inferProviderId(modelId: string): ProviderId {
+  if (modelId.startsWith("gpt-") || modelId.startsWith("o1") || modelId.startsWith("o3") || modelId.startsWith("o4") || modelId.startsWith("chatgpt")) return "openai";
+  if (modelId.startsWith("gemini")) return "google";
+  if (modelId.startsWith("llama") || modelId.startsWith("qwen") || modelId.startsWith("mistral")) return "ollama";
+  return "anthropic";
+}
 
 /**
  * Query parameters for listing sessions
@@ -96,7 +108,12 @@ sessions.get("/", async (c) => {
 
 /**
  * POST /api/sessions
- * Create a new session
+ * Create a new session, optionally sending the first message immediately.
+ *
+ * When `message` and `userId` are provided the agent orchestration is
+ * kicked off in the background so the caller gets the session back
+ * instantly and the UI can subscribe to streaming events before the
+ * first token arrives.
  */
 sessions.post("/", async (c) => {
   const body = await c.req.json();
@@ -108,6 +125,7 @@ sessions.post("/", async (c) => {
   }
 
   const db = DatabaseManager.getProjectDb(projectId);
+  const rootDb = DatabaseManager.getRootDb();
 
   // Validate the rest of the input
   const result = SessionCreateSchema.safeParse(body);
@@ -121,7 +139,6 @@ sessions.post("/", async (c) => {
   // If an agent is specified, resolve its model and prompt
   const createData = { ...result.data };
   if (createData.agent && createData.agent !== "default") {
-    const rootDb = DatabaseManager.getRootDb();
     const project = ProjectService.getByIdOrThrow(rootDb, projectId);
     if (project.path) {
       const { AgentYamlService } = await import("@/config/agents.ts");
@@ -138,6 +155,48 @@ sessions.post("/", async (c) => {
   }
 
   const session = SessionService.create(db, createData);
+
+  // --- Initial message handling ---
+  // If the caller provided a message, kick off agent orchestration in the
+  // background. The session is returned immediately so the frontend can
+  // navigate and subscribe to WebSocket events before streaming starts.
+  const initialMessage = typeof body.message === "string" ? body.message.trim() : null;
+  const userId = typeof body.userId === "string" ? body.userId : null;
+
+  if (initialMessage && userId) {
+    const project = ProjectService.getByIdOrThrow(rootDb, projectId);
+    const projectPath = project.path || process.cwd();
+
+    // Resolve model/provider from session config (already set from agent above)
+    const modelId = session.modelId || null;
+    const providerId: ProviderId = modelId ? inferProviderId(modelId) : "anthropic";
+
+    // Resolve API key from stored credentials
+    const auth = c.get("auth") as { userId: string } | undefined;
+    const credentialUserId = auth?.userId || userId;
+    const apiKey = ProviderCredentialsService.getApiKey(credentialUserId, providerId);
+
+    if (apiKey) {
+      // Fire-and-forget: run orchestration in the background
+      AgentOrchestrator.run({
+        db,
+        projectId,
+        projectPath,
+        sessionId: session.id,
+        userId,
+        canExecuteCode: false,
+        content: initialMessage,
+        apiKey,
+        providerId,
+        modelId,
+        agentName: session.agent,
+      }).catch((err) => {
+        console.error(`[sessions] Background orchestration failed for session ${session.id}:`, err);
+      });
+    } else {
+      console.warn(`[sessions] No API key for provider "${providerId}", skipping initial message for session ${session.id}`);
+    }
+  }
 
   return c.json(
     {

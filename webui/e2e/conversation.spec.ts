@@ -48,6 +48,14 @@ test.describe("Conversation", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up basic project/session mocks
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -182,7 +190,7 @@ test.describe("Conversation", () => {
       );
     }, mockProject.id);
 
-    await page.goto("/tasks/session-conv-test");
+    await page.goto("/projects/project-conv-test/tasks/session-conv-test");
 
     // Wait for the task chat to load
     await expect(page.getByRole("heading", { name: "Conversation Test" })).toBeVisible();
@@ -247,7 +255,7 @@ test.describe("Conversation", () => {
       );
     }, mockProject.id);
 
-    await page.goto("/tasks/session-conv-test");
+    await page.goto("/projects/project-conv-test/tasks/session-conv-test");
 
     // Type and send a message
     const textarea = page.getByPlaceholder(/Type a message/);
@@ -340,7 +348,7 @@ test.describe("Conversation", () => {
     }, mockProject.id);
 
     // Load the conversation
-    await page.goto("/tasks/session-conv-test");
+    await page.goto("/projects/project-conv-test/tasks/session-conv-test");
 
     // Both messages should be visible
     await expect(page.getByText("Previous user message")).toBeVisible();
@@ -405,7 +413,7 @@ test.describe("Conversation", () => {
       );
     }, mockProject.id);
 
-    await page.goto("/tasks/session-conv-test");
+    await page.goto("/projects/project-conv-test/tasks/session-conv-test");
 
     const textarea = page.getByPlaceholder(/Type a message/);
     await textarea.fill("Test message to clear");

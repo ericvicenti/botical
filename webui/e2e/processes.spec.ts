@@ -38,6 +38,14 @@ test.describe("Process Spawning", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Set up API mocks for projects
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -90,7 +98,7 @@ test.describe("Process Spawning", () => {
 
   test("should spawn a process from the Run panel", async ({ page }) => {
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click Run panel button in sidebar
     const runButton = page.getByRole("button", { name: "Run" });
@@ -140,7 +148,7 @@ test.describe("Process Spawning", () => {
     });
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click Run panel button in sidebar
     await page.getByRole("button", { name: "Run" }).click();
@@ -203,7 +211,7 @@ test.describe("Process Spawning", () => {
     });
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Click Run panel button in sidebar
     await page.getByRole("button", { name: "Run" }).click();

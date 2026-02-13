@@ -1,12 +1,14 @@
 /**
  * Agents API Route Tests
+ *
+ * Custom agents now use YAML files via AgentYamlService/UnifiedAgentService.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
-import { AgentService } from "@/services/agents.ts";
+import { AgentYamlService } from "@/config/agents.ts";
 import { ProjectService } from "@/services/projects.ts";
 import type {
   ItemResponse,
@@ -22,6 +24,28 @@ interface AgentListResponse {
     total: number;
     builtinCount: number;
     customCount: number;
+  };
+}
+
+function makeCustomAgent(name: string, opts: Record<string, any> = {}) {
+  return {
+    id: `agent_yaml_${name}`,
+    name,
+    description: opts.description ?? null,
+    mode: opts.mode ?? "subagent",
+    hidden: opts.hidden ?? false,
+    providerId: opts.providerId ?? null,
+    modelId: opts.modelId ?? null,
+    temperature: opts.temperature ?? null,
+    topP: opts.topP ?? null,
+    maxSteps: opts.maxSteps ?? null,
+    prompt: opts.prompt ?? null,
+    tools: opts.tools ?? [],
+    options: opts.options ?? {},
+    color: opts.color ?? null,
+    isBuiltin: false,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
   };
 }
 
@@ -49,25 +73,20 @@ describe("Agents API Routes", () => {
   });
 
   beforeEach(async () => {
-    // Reset and configure for test directory
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
 
-    // Clean up any existing test data
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
 
     await DatabaseManager.initialize();
 
-    // Create test project in root database with path for YAML support
     const rootDb = DatabaseManager.getRootDb();
-    // Create a test user first
     rootDb.query(`
       INSERT OR IGNORE INTO users (id, email, username, created_at, updated_at)
       VALUES ('usr_test', 'test@example.com', 'testuser', ?, ?)
     `).run(Date.now(), Date.now());
-    // Create the project with a path - capture the returned project to get the actual ID
     testProjectPath = path.join(testDataDir, "test-project");
     const project = ProjectService.create(rootDb, {
       name: "Test Agent Project",
@@ -76,7 +95,6 @@ describe("Agents API Routes", () => {
       path: testProjectPath,
     });
     testProjectId = project.id;
-    // Create the .botical directory for YAML agents
     const boticalDir = path.join(testProjectPath, ".botical", "agents");
     fs.mkdirSync(boticalDir, { recursive: true });
   });
@@ -93,19 +111,16 @@ describe("Agents API Routes", () => {
       expect(body.data.length).toBeGreaterThan(0);
       expect(body.meta.builtinCount).toBeGreaterThan(0);
 
-      // Check that default agent exists
       const defaultAgent = body.data.find((a) => a.name === "default");
       expect(defaultAgent).toBeDefined();
       expect(defaultAgent!.isBuiltin).toBe(true);
     });
 
     it("returns both built-in and custom agents with projectId", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "custom-agent",
+      AgentYamlService.save(testProjectPath, makeCustomAgent("custom-agent", {
         description: "A custom agent",
         mode: "subagent",
-      });
+      }));
 
       const response = await app.request(
         `/api/agents?projectId=${testProjectId}`
@@ -127,18 +142,13 @@ describe("Agents API Routes", () => {
       expect(response.status).toBe(200);
 
       const body = (await response.json()) as AgentListResponse;
-      // All returned agents should be usable as primary
       for (const agent of body.data) {
         expect(agent.mode === "primary" || agent.mode === "all").toBe(true);
       }
     });
 
     it("filters to built-in only", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "custom-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("custom-agent"));
 
       const response = await app.request(
         `/api/agents?projectId=${testProjectId}&builtinOnly=true`
@@ -151,11 +161,7 @@ describe("Agents API Routes", () => {
     });
 
     it("filters to custom only", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "custom-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("custom-agent"));
 
       const response = await app.request(
         `/api/agents?projectId=${testProjectId}&customOnly=true`
@@ -252,11 +258,7 @@ describe("Agents API Routes", () => {
     });
 
     it("returns custom agent by name", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "my-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("my-agent"));
 
       const response = await app.request(
         `/api/agents/my-agent?projectId=${testProjectId}`
@@ -281,11 +283,7 @@ describe("Agents API Routes", () => {
 
   describe("PUT /api/agents/:name", () => {
     it("updates custom agent", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "update-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("update-agent"));
 
       const response = await app.request("/api/agents/update-agent", {
         method: "PUT",
@@ -320,11 +318,7 @@ describe("Agents API Routes", () => {
     });
 
     it("rejects renaming to reserved name", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "rename-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("rename-agent"));
 
       const response = await app.request("/api/agents/rename-agent", {
         method: "PUT",
@@ -344,11 +338,7 @@ describe("Agents API Routes", () => {
 
   describe("DELETE /api/agents/:name", () => {
     it("deletes custom agent", async () => {
-      const db = DatabaseManager.getProjectDb(testProjectId);
-      AgentService.create(db, {
-        name: "delete-agent",
-        mode: "subagent",
-      });
+      AgentYamlService.save(testProjectPath, makeCustomAgent("delete-agent"));
 
       const response = await app.request(
         `/api/agents/delete-agent?projectId=${testProjectId}`,
@@ -363,7 +353,7 @@ describe("Agents API Routes", () => {
       expect(body.data.deleted).toBe(true);
 
       // Verify agent is deleted
-      const agent = AgentService.getByName(db, "delete-agent");
+      const agent = AgentYamlService.getByName(testProjectPath, "delete-agent");
       expect(agent).toBeNull();
     });
 

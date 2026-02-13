@@ -18,6 +18,14 @@ test.describe("Files - Create Folder", () => {
   };
 
   test.beforeEach(async ({ page }) => {
+    // Mock auth to skip login
+    await page.route("**/api/auth/mode", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: "single-user", user: { userId: "user-1", id: "user-1", email: "test@test.com", displayName: "Test User", isAdmin: true, canExecuteCode: true } }),
+      });
+    });
     // Mock projects API
     await page.route("**/api/projects", async (route) => {
       await route.fulfill({
@@ -86,7 +94,7 @@ test.describe("Files - Create Folder", () => {
     await page.goto("/");
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Switch to Files panel
     await page.getByRole("button", { name: "Files" }).click();
@@ -117,7 +125,7 @@ test.describe("Files - Create Folder", () => {
     // Verify the folder creation request was made
     expect(folderCreationRequest).not.toBeNull();
     expect(folderCreationRequest?.method).toBe("POST");
-    expect(folderCreationRequest?.url).toContain("/folders/");
+    expect(folderCreationRequest?.url).toContain("/projects/project-1/folders/");
     expect(folderCreationRequest?.url).toContain("my-new-folder");
   });
 
@@ -125,7 +133,7 @@ test.describe("Files - Create Folder", () => {
     await page.goto("/");
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Switch to Files panel
     await page.getByRole("button", { name: "Files" }).click();
@@ -147,7 +155,7 @@ test.describe("Files - Create Folder", () => {
     await page.goto("/");
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Switch to Files panel
     await page.getByRole("button", { name: "Files" }).click();
@@ -186,7 +194,7 @@ test.describe("Files - Create Folder", () => {
     await page.goto("/");
 
     // Select the project
-    await page.getByRole("button", { name: "Test Project", exact: true }).click();
+    await page.getByRole("button", { name: /Test Project/ }).first().click();
 
     // Switch to Files panel
     await page.getByRole("button", { name: "Files" }).click();
