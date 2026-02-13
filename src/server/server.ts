@@ -12,6 +12,43 @@ import { ExtensionRegistry, startExtensionServer, stopAllExtensionServers } from
 import { ProjectService } from "../services/projects.ts";
 import { ProjectConfigService } from "../config/project.ts";
 
+/**
+ * Mark stale incomplete assistant messages as errored on startup.
+ * These are messages where the LLM stream died (crash/restart) without completing.
+ */
+function cleanupStaleMessages() {
+  try {
+    const rootDb = DatabaseManager.getRootDb();
+    const projects = ProjectService.list(rootDb, {});
+    const now = Date.now();
+    let totalCleaned = 0;
+
+    for (const project of projects) {
+      try {
+        const db = DatabaseManager.getProjectDb(project.id);
+        const result = db.prepare(`
+          UPDATE messages SET
+            finish_reason = 'error',
+            error_type = 'server_restart',
+            error_message = 'Server restarted while response was in progress',
+            completed_at = ?
+          WHERE role = 'assistant'
+            AND completed_at IS NULL
+        `).run(now);
+        totalCleaned += result.changes;
+      } catch {
+        // Skip inaccessible project DBs
+      }
+    }
+
+    if (totalCleaned > 0) {
+      console.log(`🧹 Cleaned up ${totalCleaned} stale incomplete message(s) from previous run`);
+    }
+  } catch (error) {
+    console.error("Failed to clean up stale messages:", error);
+  }
+}
+
 export interface ServerOptions {
   port?: number;
   host?: string;
@@ -34,6 +71,10 @@ export async function createServer(
 
   // Initialize database
   await DatabaseManager.initialize();
+
+  // Clean up stale incomplete messages from previous crashes
+  // (assistant messages with completed_at IS NULL that will never complete)
+  cleanupStaleMessages();
 
   // Register core tools for agent use
   registerCoreTools();
