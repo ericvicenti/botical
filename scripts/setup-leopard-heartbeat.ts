@@ -18,10 +18,11 @@ async function main() {
 
   try {
     await DatabaseManager.initialize();
-    const db = DatabaseManager.getProjectDb("prj_root");
+    const projectId = "prj_2go5oq0sa9o-51985ca1"; // Botical Tiger
+    const db = DatabaseManager.getProjectDb(projectId);
 
     // Check if heartbeat schedule already exists
-    const schedules = ScheduleService.list(db, "prj_root", { limit: 100 });
+    const schedules = ScheduleService.list(db, projectId, { limit: 100 });
     const existingHeartbeat = schedules.find(s => s.name === "Leopard Heartbeat");
 
     if (existingHeartbeat) {
@@ -37,7 +38,7 @@ async function main() {
     // We'll use timezone "America/Los_Angeles" for PST
     const schedule = ScheduleService.create(
       db,
-      "prj_root",
+      projectId,
       "system:setup",
       {
         name: "Leopard Heartbeat",
@@ -46,7 +47,7 @@ async function main() {
         actionConfig: {
           actionId: "heartbeat.leopard",
           actionParams: {
-            projectId: "prj_root",
+            projectId: "prj_2go5oq0sa9o-51985ca1",
             message: "Read PRIORITIES.md. Check CHANGELOG-AUTO.md for recent work. Run tests (bun test). Pick the highest priority item and make one small improvement. Commit and deploy if tests pass."
           }
         },

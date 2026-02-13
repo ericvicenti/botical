@@ -225,8 +225,8 @@ status.get("/", async (c) => {
   };
 
   try {
-    const rootDb = DatabaseManager.getProjectDb("prj_root");
-    const schedules = ScheduleService.list(rootDb, "prj_root", { limit: 100 });
+    const tigerDb = DatabaseManager.getProjectDb("prj_2go5oq0sa9o-51985ca1");
+    const schedules = ScheduleService.list(tigerDb, "prj_2go5oq0sa9o-51985ca1", { limit: 100 });
     const leopardHeartbeat = schedules.find(s => s.name === "Leopard Heartbeat");
     
     if (leopardHeartbeat) {

@@ -2,73 +2,118 @@
  * Heartbeat Actions
  *
  * Actions for managing the Leopard self-improvement heartbeat system.
- * Creates sessions and sends improvement messages to the leopard agent.
+ * Triggers improvement cycles via the Botical API (which invokes the orchestrator).
  */
 
 import { z } from "zod";
 import { defineAction, success, error } from "./types.ts";
-import { DatabaseManager } from "@/database/index.ts";
-import { SessionService } from "@/services/sessions.ts";
-import { MessageService, MessagePartService } from "@/services/messages.ts";
+
+const DEFAULT_MESSAGE = `Read PRIORITIES.md. Check CHANGELOG-AUTO.md for recent work. Run tests (bun test). Pick the highest priority item and make one small improvement. Commit and deploy if tests pass.`;
+
+const API_KEY = "botical_leopard_194fbb476a9f614465838ea1a13df29a";
+const DEFAULT_PROJECT_ID = "prj_2go5oq0sa9o-51985ca1"; // Botical Tiger
 
 /**
- * heartbeat.leopard - Send heartbeat message to Leopard agent
+ * heartbeat.leopard - Trigger Leopard improvement cycle
  *
- * Creates a new session with the leopard agent and sends the improvement prompt.
- * This action is designed to be triggered by the scheduler every 2 hours.
+ * Creates or continues a session via the REST API, which triggers the
+ * orchestrator to actually run the LLM and execute tools.
  */
 export const leopardHeartbeat = defineAction({
   id: "heartbeat.leopard",
   label: "Leopard Heartbeat",
-  description: "Send improvement cycle trigger to Leopard agent",
+  description: "Trigger improvement cycle for Leopard agent",
   category: "service",
   icon: "heart",
 
   params: z.object({
-    projectId: z.string().optional().describe("Project ID (defaults to prj_root)"),
+    projectId: z.string().optional().describe("Project ID"),
     message: z.string().optional().describe("Custom heartbeat message"),
   }),
 
-  execute: async ({ projectId = "prj_root", message }, context) => {
+  execute: async ({ projectId, message }) => {
+    const pid = projectId || DEFAULT_PROJECT_ID;
+    const port = process.env.BOTICAL_PORT || "6001";
+    const baseUrl = `http://localhost:${port}`;
+    const heartbeatMessage = message || DEFAULT_MESSAGE;
+
     try {
-      const db = DatabaseManager.getProjectDb(projectId);
-      
-      // Create a new session for the leopard agent
-      const session = SessionService.create(db, {
-        title: `Leopard Heartbeat - ${new Date().toISOString().slice(0, 10)}`,
-        agent: "leopard",
+      // Check for active leopard session (created in last 2 hours)
+      const twoHoursAgo = Date.now() - 7200000;
+      let sessionId: string | null = null;
+
+      // Try to find existing active session via API
+      try {
+        const sessResp = await fetch(`${baseUrl}/api/sessions?projectId=${pid}&agent=leopard&status=active`, {
+          headers: { "Authorization": `Bearer ${API_KEY}` },
+        });
+        if (sessResp.ok) {
+          const sessData = await sessResp.json() as { data: Array<{ id: string; createdAt: number }> };
+          const recent = sessData.data?.find((s: { id: string; createdAt: number }) => s.createdAt > twoHoursAgo);
+          if (recent) sessionId = recent.id;
+        }
+      } catch {
+        // Fall through to create new session
+      }
+
+      if (!sessionId) {
+        // Create new session
+        const createResp = await fetch(`${baseUrl}/api/sessions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            projectId: pid,
+            title: `Improvement Cycle ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+            agent: "leopard",
+            providerId: "anthropic-oauth",
+          }),
+        });
+
+        if (!createResp.ok) {
+          const errData = await createResp.text();
+          return error(`Failed to create session: ${errData}`);
+        }
+
+        const createData = await createResp.json() as { data: { id: string } };
+        sessionId = createData.data?.id;
+        if (!sessionId) {
+          return error("No session ID returned");
+        }
+      }
+
+      // Send message (this triggers the orchestrator via the messages handler)
+      const msgResp = await fetch(`${baseUrl}/api/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          projectId: pid,
+          sessionId,
+          content: heartbeatMessage,
+          userId: "system",
+          providerId: "anthropic-oauth",
+          canExecuteCode: true,
+        }),
       });
 
-      // Default heartbeat message
-      const heartbeatMessage = message || `Read PRIORITIES.md. Check CHANGELOG-AUTO.md for recent work. Run tests (bun test). Pick the highest priority item and make one small improvement. Commit and deploy if tests pass.`;
-
-      // Create the user message
-      const userMessage = MessageService.create(db, {
-        sessionId: session.id,
-        role: "user",
-      });
-
-      // Add the text content
-      MessagePartService.create(db, {
-        messageId: userMessage.id,
-        sessionId: session.id,
-        type: "text",
-        content: heartbeatMessage,
-      });
+      if (!msgResp.ok) {
+        const errData = await msgResp.text();
+        return error(`Failed to send message: ${errData}`);
+      }
 
       return success(
-        "Leopard Heartbeat Sent", 
-        `Created heartbeat session ${session.id} for leopard agent`
+        "Leopard Heartbeat Triggered",
+        `Sent improvement cycle message to session ${sessionId}`
       );
     } catch (err) {
-      return error(`Failed to create leopard heartbeat: ${err instanceof Error ? err.message : "Unknown error"}`);
+      return error(`Heartbeat failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   },
 });
 
-/**
- * All heartbeat actions
- */
-export const heartbeatActions = [
-  leopardHeartbeat,
-];
+export const heartbeatActions = [leopardHeartbeat];
