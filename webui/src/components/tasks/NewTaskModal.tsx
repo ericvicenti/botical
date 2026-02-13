@@ -25,7 +25,6 @@ export function NewTaskModal({ projectId, onClose }: NewTaskModalProps) {
   const { data: agents } = useAgents(projectId);
   const { data: settings } = useSettings();
   const createSession = useCreateSession();
-  const sendMessage = useSendMessage();
 
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
