@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, FolderTree, LayoutList, Plus, FolderOpen } from "lucide-react";
+import { ChevronDown, FolderTree, LayoutDashboard, Plus, FolderOpen } from "lucide-react";
 import { useProjects } from "@/lib/api/queries";
 import { useUI } from "@/contexts/ui";
 import { useTabs } from "@/contexts/tabs";
@@ -160,8 +160,8 @@ export function ProjectSelector() {
                   "text-sm text-text-secondary"
                 )}
               >
-                <LayoutList className="w-4 h-4 shrink-0" />
-                <span>View All Projects</span>
+                <LayoutDashboard className="w-4 h-4 shrink-0" />
+                <span>Dashboard</span>
               </button>
               <button
                 onClick={handleOpenProject}
