@@ -27,7 +27,7 @@ interface UseTaskMessagesOptions {
   projectId: string;
 }
 
-interface SendMessageOptions {
+export interface SendMessageOptions {
   agentName?: string;
   providerId?: string;
   modelId?: string;

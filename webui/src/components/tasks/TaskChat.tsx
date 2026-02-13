@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useSession, useSettings, useProject, useCoreTools, useSkills, useUpdateSystemPrompt, useAgent } from "@/lib/api/queries";
 import { useTaskMessages } from "@/hooks/useTaskMessages";
+import type { SendMessageOptions } from "@/hooks/useTaskMessages";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
-import { Send, Loader2, Bot, MoreHorizontal, AlertTriangle, Info, X, ChevronDown, Wrench, Sparkles, ArrowDown, Mic } from "lucide-react";
+import { Send, Loader2, Bot, AlertTriangle, Info, X, Wrench, Sparkles, ArrowDown, Mic } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Link } from "@tanstack/react-router";
 import { Markdown } from "@/components/ui/Markdown";
@@ -57,6 +58,7 @@ export function TaskChat({ sessionId, projectId, isActive = true }: TaskChatProp
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [voiceInterim, setVoiceInterim] = useState("");
+  const [messageQueue, setMessageQueue] = useState<Array<{ content: string; options?: SendMessageOptions }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -407,18 +409,36 @@ You have access to tools for reading, writing, and editing files, as well as exe
     }
   }, [ttsEnabled, messages]);
 
+  // Process message queue when not sending
+  useEffect(() => {
+    if (!isSending && messageQueue.length > 0 && hasApiKey && currentModel) {
+      const nextMessage = messageQueue[0];
+      setMessageQueue(queue => queue.slice(1));
+      sendMessage(nextMessage.content, nextMessage.options);
+    }
+  }, [isSending, messageQueue, hasApiKey, currentModel, sendMessage]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const content = input.trim();
-    if (!content || isSending || !hasApiKey || !currentModel) return;
+    if (!content || !hasApiKey || !currentModel) return;
 
-    setInput("");
-    await sendMessage(content, {
+    const messageOptions: SendMessageOptions = {
       providerId: currentModel.providerId,
       modelId: currentModel.id,
       canExecuteCode: true, // Always allow code execution
       enabledTools: Array.from(enabledTools),
-    });
+    };
+
+    setInput(""); // Clear input immediately
+
+    if (isSending) {
+      // Agent is working, queue the message
+      setMessageQueue(queue => [...queue, { content, options: messageOptions }]);
+    } else {
+      // Send immediately
+      await sendMessage(content, messageOptions);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -462,13 +482,12 @@ You have access to tools for reading, writing, and editing files, as well as exe
       >
         {/* Model selector in top right */}
         <div className="relative" ref={modelDropdownRef}>
-          {/* Mobile: icon only */}
           <button
             type="button"
             onClick={() => setShowModelDropdown(!showModelDropdown)}
             disabled={availableModels.length === 0}
             className={cn(
-              "sm:hidden p-1.5 rounded-lg transition-colors",
+              "p-1.5 rounded-lg transition-colors",
               showModelDropdown
                 ? "bg-accent-primary/20 text-accent-primary"
                 : "hover:bg-bg-elevated text-text-muted hover:text-text-primary",
@@ -477,24 +496,6 @@ You have access to tools for reading, writing, and editing files, as well as exe
             title={`Current model: ${currentModel?.name || 'None'}`}
           >
             <Bot className="w-4 h-4" />
-          </button>
-          {/* Desktop: full dropdown button */}
-          <button
-            type="button"
-            onClick={() => setShowModelDropdown(!showModelDropdown)}
-            disabled={availableModels.length === 0}
-            className={cn(
-              "hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
-              "bg-bg-primary border border-border",
-              "hover:border-accent-primary/50 transition-colors",
-              "text-text-primary min-w-0",
-              availableModels.length === 0 && "opacity-50 cursor-not-allowed"
-            )}
-            title={`Current model: ${currentModel?.name || 'None'}`}
-          >
-            <Bot className="w-4 h-4 text-accent-primary shrink-0" />
-            <span className="truncate max-w-32">{currentModel?.name ?? "Select model"}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-text-muted shrink-0" />
           </button>
           {showModelDropdown && availableModels.length > 0 && (
             <>
@@ -900,6 +901,14 @@ You have access to tools for reading, writing, and editing files, as well as exe
             <div className="flex items-center gap-2 mb-3 text-xs text-text-muted">
               <Bot className="w-3.5 h-3.5 text-accent-primary" />
               <span>Using {currentModel.name} ({currentModel.providerName})</span>
+              {messageQueue.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="text-yellow-500 font-medium">
+                    {messageQueue.length} message{messageQueue.length === 1 ? '' : 's'} queued
+                  </span>
+                </>
+              )}
             </div>
           )}
           
@@ -920,31 +929,37 @@ You have access to tools for reading, writing, and editing files, as well as exe
                   "transition-colors",
                   !hasApiKey && "opacity-50"
                 )}
-                disabled={isSending || !hasApiKey}
+                disabled={!hasApiKey}
               />
             </div>
             <VoiceButton
               onTranscript={handleVoiceTranscript}
               onInterim={setVoiceInterim}
-              disabled={isSending || !hasApiKey}
+              disabled={!hasApiKey}
             />
             <button
               type="submit"
-              disabled={!input.trim() || isSending || !hasApiKey}
+              disabled={!input.trim() || !hasApiKey}
               className={cn(
                 "px-4 py-3 rounded-xl font-medium",
                 "flex items-center justify-center gap-2",
-                "transition-colors",
-                input.trim() && !isSending && hasApiKey
+                "transition-colors relative",
+                input.trim() && hasApiKey
                   ? "bg-accent-primary text-white hover:bg-accent-primary/90"
                   : "bg-bg-elevated text-text-muted cursor-not-allowed"
               )}
               data-testid="send-message-button"
+              title={messageQueue.length > 0 ? `${messageQueue.length} message${messageQueue.length === 1 ? '' : 's'} queued` : undefined}
             >
               {isSending ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Send className="w-5 h-5" />
+              )}
+              {messageQueue.length > 0 && (
+                <div className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {messageQueue.length}
+                </div>
               )}
             </button>
           </div>
