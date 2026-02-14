@@ -79,12 +79,14 @@ export class CredentialResolver {
       return apiKey;
     }
 
-    // For OAuth, check if tokens need refresh and persist if so
+    // For OAuth, always try to refresh if expired
     try {
       const tokens = JSON.parse(apiKey);
       if (Date.now() >= tokens.expires) {
         return this.refreshOAuthTokens(tokens);
       }
+      // Even if not "expired" per timestamp, tokens may have been revoked.
+      // The oauthFetch wrapper handles 401 retry, so just return here.
       return apiKey;
     } catch {
       return apiKey;

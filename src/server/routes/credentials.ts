@@ -163,8 +163,8 @@ credentials.post("/health", async (c) => {
     if (provider === "anthropic-oauth") {
       try {
         const tokens = JSON.parse(apiKey);
-        const current = await refreshAnthropicOAuthTokens(tokens, auth.userId);
-        const resp = await fetch("https://api.anthropic.com/v1/models?beta=true&limit=1", {
+        let current = await refreshAnthropicOAuthTokens(tokens, auth.userId);
+        let resp = await fetch("https://api.anthropic.com/v1/models?beta=true&limit=1", {
           headers: {
             "Authorization": `Bearer ${current.access}`,
             "anthropic-version": "2023-06-01",
@@ -172,8 +172,21 @@ credentials.post("/health", async (c) => {
           },
           signal: AbortSignal.timeout(10000),
         });
+        // If 401, force refresh regardless of expires timestamp
+        if (resp.status === 401) {
+          current.expires = 0; // Force refresh
+          current = await refreshAnthropicOAuthTokens(current, auth.userId);
+          resp = await fetch("https://api.anthropic.com/v1/models?beta=true&limit=1", {
+            headers: {
+              "Authorization": `Bearer ${current.access}`,
+              "anthropic-version": "2023-06-01",
+              "anthropic-beta": "oauth-2025-04-20",
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+        }
         if (resp.ok) return c.json({ status: "ok", message: "OAuth tokens valid" });
-        return c.json({ status: "error", message: `HTTP ${resp.status}` });
+        return c.json({ status: "error", message: `OAuth token expired — please reconnect (HTTP ${resp.status})` });
       } catch {
         return c.json({ status: "error", message: "Invalid OAuth token data" });
       }

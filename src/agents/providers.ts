@@ -270,29 +270,36 @@ export class ProviderRegistry {
           throw new Error("Invalid OAuth credentials for anthropic-oauth");
         }
 
+        const doRefresh = async () => {
+          const refreshResp = await globalThis.fetch(
+            "https://console.anthropic.com/v1/oauth/token",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                grant_type: "refresh_token",
+                refresh_token: tokens.refresh,
+                client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+              }),
+            }
+          );
+          if (refreshResp.ok) {
+            const data = await refreshResp.json() as { access_token: string; refresh_token?: string; expires_in?: number };
+            tokens.access = data.access_token;
+            tokens.refresh = data.refresh_token || tokens.refresh;
+            tokens.expires = Date.now() + (data.expires_in || 3600) * 1000;
+            onTokenRefresh?.(JSON.stringify(tokens));
+            console.log("[oauthFetch] Tokens refreshed successfully");
+            return true;
+          }
+          console.error(`[oauthFetch] Token refresh failed: ${refreshResp.status}`);
+          return false;
+        };
+
         const oauthFetch: typeof globalThis.fetch = async (input, init) => {
           // Auto-refresh if expired
           if (Date.now() >= tokens.expires) {
-            const refreshResp = await globalThis.fetch(
-              "https://console.anthropic.com/v1/oauth/token",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  grant_type: "refresh_token",
-                  refresh_token: tokens.refresh,
-                  client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
-                }),
-              }
-            );
-            if (refreshResp.ok) {
-              const data = await refreshResp.json();
-              tokens.access = data.access_token;
-              tokens.refresh = data.refresh_token || tokens.refresh;
-              tokens.expires = Date.now() + (data.expires_in || 3600) * 1000;
-              // Persist refreshed tokens
-              onTokenRefresh?.(JSON.stringify(tokens));
-            }
+            await doRefresh();
           }
 
           const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url;
@@ -357,7 +364,17 @@ export class ProviderRegistry {
             } catch { /* ignore parse errors */ }
           }
 
-          const response = await globalThis.fetch(newUrl, { ...init, body, headers });
+          let response = await globalThis.fetch(newUrl, { ...init, body, headers });
+
+          // Retry once on 401 — token may have been revoked server-side
+          if (response.status === 401) {
+            console.log("[oauthFetch] Got 401, forcing token refresh and retrying...");
+            const refreshed = await doRefresh();
+            if (refreshed) {
+              headers.set("authorization", `Bearer ${tokens.access}`);
+              response = await globalThis.fetch(newUrl, { ...init, body, headers });
+            }
+          }
 
           // Transform streaming response: remove mcp_ prefix from tool names
           if (response.body) {

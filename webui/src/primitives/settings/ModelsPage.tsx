@@ -149,10 +149,20 @@ export default function ModelsPage(_props: ModelsPageProps) {
     (credentials || []).map((c: ProviderCredential) => c.provider)
   );
 
-  // Check if OAuth is configured
+  // Check if OAuth is configured AND valid
   useEffect(() => {
     if (configuredProviders.has("anthropic-oauth")) {
-      setOauthState("connected");
+      // Don't just trust existence — validate the token
+      setOauthState("connected"); // optimistic, then verify
+      checkHealth.mutateAsync("anthropic-oauth").then((res) => {
+        if (res?.status !== "ok") {
+          setOauthState("idle");
+          setOauthError(res?.message || "OAuth token expired — please reconnect");
+        }
+      }).catch(() => {
+        setOauthState("idle");
+        setOauthError("OAuth token expired — please reconnect");
+      });
     }
   }, [credentials]);
 
@@ -596,7 +606,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
                 </button>
               </div>
             )}
-            {oauthError && oauthState === "waiting" && (
+            {oauthError && (oauthState === "waiting" || oauthState === "idle") && (
               <p className="text-xs text-red-600 dark:text-red-400 mt-2">
                 {oauthError}
               </p>
