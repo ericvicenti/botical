@@ -1,24 +1,18 @@
 /**
  * Heartbeat Actions
  *
- * Actions for managing the Leopard self-improvement heartbeat system.
- * Triggers improvement cycles via the Botical API (which invokes the orchestrator).
+ * Triggers Leopard improvement cycles via the Botical API.
+ * Uses fire-and-forget: sends the request but doesn't await the full LLM response.
  */
 
 import { z } from "zod";
 import { defineAction, success, error } from "./types.ts";
 
-const DEFAULT_MESSAGE = `Read PRIORITIES.md. Check CHANGELOG-AUTO.md for recent work. Run tests (bun test). Pick the highest priority item and make one small improvement. Commit and deploy if tests pass.`;
-
 const API_KEY = "botical_leopard_194fbb476a9f614465838ea1a13df29a";
-const DEFAULT_PROJECT_ID = "prj_2go5oq0sa9o-51985ca1"; // Botical Tiger
+const DEFAULT_PROJECT_ID = "prj_2go5oq0sa9o-51985ca1";
 
-/**
- * heartbeat.leopard - Trigger Leopard improvement cycle
- *
- * Creates or continues a session via the REST API, which triggers the
- * orchestrator to actually run the LLM and execute tools.
- */
+const DEFAULT_MESSAGE = `Read PRIORITIES.md. Check CHANGELOG-AUTO.md for recent work. Run tests (bun test). Pick the highest priority bug or feature and implement a fix. Commit your changes and update CHANGELOG-AUTO.md. Deploy if tests pass.`;
+
 export const leopardHeartbeat = defineAction({
   id: "heartbeat.leopard",
   label: "Leopard Heartbeat",
@@ -27,8 +21,8 @@ export const leopardHeartbeat = defineAction({
   icon: "heart",
 
   params: z.object({
-    projectId: z.string().optional().describe("Project ID"),
-    message: z.string().optional().describe("Custom heartbeat message"),
+    projectId: z.string().optional(),
+    message: z.string().optional(),
   }),
 
   execute: async ({ projectId, message }) => {
@@ -38,97 +32,55 @@ export const leopardHeartbeat = defineAction({
     const heartbeatMessage = message || DEFAULT_MESSAGE;
 
     try {
-      // Check for active leopard session (created in last 2 hours)
-      const twoHoursAgo = Date.now() - 7200000;
-      let sessionId: string | null = null;
+      // Create new session
+      const createResp = await fetch(`${baseUrl}/api/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          projectId: pid,
+          title: `Improvement Cycle ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+          agent: "leopard",
+          providerId: "anthropic-oauth",
+        }),
+      });
 
-      // Try to find existing active session via API
-      try {
-        const sessResp = await fetch(`${baseUrl}/api/sessions?projectId=${pid}&agent=leopard&status=active`, {
-          headers: { "Authorization": `Bearer ${API_KEY}` },
-        });
-        if (sessResp.ok) {
-          const sessData = await sessResp.json() as { data: Array<{ id: string; createdAt: number }> };
-          const recent = sessData.data?.find((s: { id: string; createdAt: number }) => s.createdAt > twoHoursAgo);
-          if (recent) sessionId = recent.id;
-        }
-      } catch {
-        // Fall through to create new session
+      if (!createResp.ok) {
+        return error(`Failed to create session: ${await createResp.text()}`);
       }
 
-      if (!sessionId) {
-        // Create new session
-        const createResp = await fetch(`${baseUrl}/api/sessions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${API_KEY}`,
-          },
-          body: JSON.stringify({
-            projectId: pid,
-            title: `Improvement Cycle ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
-            agent: "leopard",
-            providerId: "anthropic-oauth",
-          }),
-        });
+      const createData = await createResp.json() as { data: { id: string } };
+      const sessionId = createData.data?.id;
+      if (!sessionId) return error("No session ID returned");
 
-        if (!createResp.ok) {
-          const errData = await createResp.text();
-          return error(`Failed to create session: ${errData}`);
-        }
+      // Send message WITHOUT awaiting — the fetch fires and we return immediately.
+      // The server processes the message and runs the LLM in the background.
+      fetch(`${baseUrl}/api/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          projectId: pid,
+          sessionId,
+          content: heartbeatMessage,
+          userId: "system",
+          providerId: "anthropic-oauth",
+          canExecuteCode: true,
+        }),
+      }).catch(() => {
+        // Silently ignore — LLM will process in background
+      });
 
-        const createData = await createResp.json() as { data: { id: string } };
-        sessionId = createData.data?.id;
-        if (!sessionId) {
-          return error("No session ID returned");
-        }
-      }
-
-      // Send message fire-and-forget — don't wait for the LLM to finish.
-      // The POST /api/messages blocks until the full LLM response completes,
-      // which can take 10+ minutes with tool calls. We just need to confirm
-      // the message was accepted, not wait for the response.
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000); // 60s to accept + start streaming
-
-      try {
-        const msgResp = await fetch(`${baseUrl}/api/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${API_KEY}`,
-          },
-          body: JSON.stringify({
-            projectId: pid,
-            sessionId,
-            content: heartbeatMessage,
-            userId: "system",
-            providerId: "anthropic-oauth",
-            canExecuteCode: true,
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-
-        if (!msgResp.ok) {
-          const errData = await msgResp.text();
-          return error(`Failed to send message: ${errData}`);
-        }
-      } catch (e) {
-        clearTimeout(timeout);
-        // AbortError means the request was accepted but LLM is still running — that's fine
-        if (e instanceof Error && e.name === "AbortError") {
-          return success(
-            "Leopard Heartbeat Triggered",
-            `Message sent to session ${sessionId} (LLM processing in background)`
-          );
-        }
-        throw e;
-      }
+      // Small delay to ensure the request is sent before we return
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       return success(
         "Leopard Heartbeat Triggered",
-        `Sent improvement cycle message to session ${sessionId}`
+        `Created session ${sessionId} and sent improvement message`
       );
     } catch (err) {
       return error(`Heartbeat failed: ${err instanceof Error ? err.message : "Unknown error"}`);
