@@ -143,6 +143,25 @@ export default function ModelsPage(_props: ModelsPageProps) {
   const [oauthError, setOauthError] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
   const [pkceVerifier, setPkceVerifier] = useState<string | null>(null);
+  const [oauthUrl, setOauthUrl] = useState<string | null>(null);
+
+  // Pre-generate OAuth URL so we can use a real <a href> link
+  useEffect(() => {
+    generatePKCE().then(({ verifier, challenge }) => {
+      setPkceVerifier(verifier);
+      const params = new URLSearchParams({
+        code: "true",
+        client_id: OAUTH_CLIENT_ID,
+        response_type: "code",
+        redirect_uri: OAUTH_REDIRECT_URI,
+        scope: OAUTH_SCOPES,
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+        state: verifier,
+      });
+      setOauthUrl(`${OAUTH_AUTHORIZE_URL}?${params}`);
+    });
+  }, []);
 
   // Build a set of configured providers from server credentials
   const configuredProviders = new Set(
@@ -503,38 +522,23 @@ export default function ModelsPage(_props: ModelsPageProps) {
             )}
           </div>
           <div className="px-4 pb-4 pt-0">
-            {oauthState === "idle" && (
-              <button
-                type="button"
-                onClick={async () => {
-                  const { verifier, challenge } = await generatePKCE();
-                  setPkceVerifier(verifier);
-                  const params = new URLSearchParams({
-                    code: "true",
-                    client_id: OAUTH_CLIENT_ID,
-                    response_type: "code",
-                    redirect_uri: OAUTH_REDIRECT_URI,
-                    scope: OAUTH_SCOPES,
-                    code_challenge: challenge,
-                    code_challenge_method: "S256",
-                    state: verifier,
-                  });
-                  const url = `${OAUTH_AUTHORIZE_URL}?${params}`;
-                  // Create a real <a> element and click it — never blocked by browsers
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.target = "_blank";
-                  a.rel = "noopener noreferrer";
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  setOauthState("waiting");
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm"
+            {oauthState === "idle" && oauthUrl && (
+              <a
+                href={oauthUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOauthState("waiting")}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm no-underline"
               >
                 <LogIn className="w-4 h-4" />
                 Sign in with Claude
-              </button>
+              </a>
+            )}
+            {oauthState === "idle" && !oauthUrl && (
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Preparing...
+              </div>
             )}
             {oauthState === "waiting" && (
               <div className="space-y-3">
