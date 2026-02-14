@@ -139,7 +139,7 @@ export default function ModelsPage(_props: ModelsPageProps) {
   const [migrated, setMigrated] = useState(false);
 
   // OAuth state
-  const [oauthState, setOauthState] = useState<"idle" | "waiting" | "exchanging" | "connected" | "error">("idle");
+  const [oauthState, setOauthState] = useState<"idle" | "waiting" | "exchanging" | "connected" | "expired" | "error">("idle");
   const [oauthError, setOauthError] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
   const [pkceVerifier, setPkceVerifier] = useState<string | null>(null);
@@ -156,11 +156,11 @@ export default function ModelsPage(_props: ModelsPageProps) {
       setOauthState("connected"); // optimistic, then verify
       checkHealth.mutateAsync("anthropic-oauth").then((res) => {
         if (res?.status !== "ok") {
-          setOauthState("idle");
+          setOauthState("expired");
           setOauthError(res?.message || "OAuth token expired — please reconnect");
         }
       }).catch(() => {
-        setOauthState("idle");
+        setOauthState("expired");
         setOauthError("OAuth token expired — please reconnect");
       });
     }
@@ -485,6 +485,8 @@ export default function ModelsPage(_props: ModelsPageProps) {
             "border rounded-lg transition-colors",
             oauthState === "connected"
               ? "border-green-500/40 bg-green-500/5"
+              : oauthState === "expired"
+              ? "border-red-500/40 bg-red-500/5"
               : "border-border bg-bg-secondary/50"
           )}
         >
@@ -504,10 +506,9 @@ export default function ModelsPage(_props: ModelsPageProps) {
             {oauthState === "idle" && (
               <button
                 type="button"
-                onClick={() => {
-                  // Open window synchronously to avoid popup blockers, then set URL after PKCE
-                  const popup = window.open("about:blank", "_blank");
-                  generatePKCE().then(({ verifier, challenge }) => {
+                onClick={async () => {
+                  try {
+                    const { verifier, challenge } = await generatePKCE();
                     setPkceVerifier(verifier);
                     const params = new URLSearchParams({
                       code: "true",
@@ -520,13 +521,17 @@ export default function ModelsPage(_props: ModelsPageProps) {
                       state: verifier,
                     });
                     const url = `${OAUTH_AUTHORIZE_URL}?${params}`;
-                    if (popup) {
-                      popup.location.href = url;
-                    } else {
-                      window.location.href = url;
+                    console.log("[OAuth] Opening:", url);
+                    const w = window.open(url, "_blank");
+                    if (!w) {
+                      // Popup blocked — show URL for manual copy
+                      setOauthError(`Popup blocked. Open this URL manually: ${url}`);
                     }
                     setOauthState("waiting");
-                  });
+                  } catch (err) {
+                    console.error("[OAuth] Error:", err);
+                    setOauthError(`OAuth error: ${err}`);
+                  }
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm"
               >
@@ -591,6 +596,28 @@ export default function ModelsPage(_props: ModelsPageProps) {
               <div className="flex items-center gap-2 text-sm text-text-muted">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Exchanging code for tokens...
+              </div>
+            )}
+            {oauthState === "expired" && (
+              <div className="space-y-2">
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  ⚠️ OAuth token expired — please disconnect and sign in again
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const cred = (credentials || []).find(
+                      (c: ProviderCredential) => c.provider === "anthropic-oauth"
+                    );
+                    if (cred) await deleteCredential.mutateAsync(cred.id);
+                    setOauthState("idle");
+                    setOauthError("");
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Disconnect & Re-authenticate
+                </button>
               </div>
             )}
             {oauthState === "connected" && (
