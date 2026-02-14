@@ -504,21 +504,29 @@ export default function ModelsPage(_props: ModelsPageProps) {
             {oauthState === "idle" && (
               <button
                 type="button"
-                onClick={async () => {
-                  const { verifier, challenge } = await generatePKCE();
-                  setPkceVerifier(verifier);
-                  const params = new URLSearchParams({
-                    code: "true",
-                    client_id: OAUTH_CLIENT_ID,
-                    response_type: "code",
-                    redirect_uri: OAUTH_REDIRECT_URI,
-                    scope: OAUTH_SCOPES,
-                    code_challenge: challenge,
-                    code_challenge_method: "S256",
-                    state: verifier,
+                onClick={() => {
+                  // Open window synchronously to avoid popup blockers, then set URL after PKCE
+                  const popup = window.open("about:blank", "_blank");
+                  generatePKCE().then(({ verifier, challenge }) => {
+                    setPkceVerifier(verifier);
+                    const params = new URLSearchParams({
+                      code: "true",
+                      client_id: OAUTH_CLIENT_ID,
+                      response_type: "code",
+                      redirect_uri: OAUTH_REDIRECT_URI,
+                      scope: OAUTH_SCOPES,
+                      code_challenge: challenge,
+                      code_challenge_method: "S256",
+                      state: verifier,
+                    });
+                    const url = `${OAUTH_AUTHORIZE_URL}?${params}`;
+                    if (popup) {
+                      popup.location.href = url;
+                    } else {
+                      window.location.href = url;
+                    }
+                    setOauthState("waiting");
                   });
-                  window.open(`${OAUTH_AUTHORIZE_URL}?${params}`, "_blank");
-                  setOauthState("waiting");
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm"
               >
