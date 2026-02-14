@@ -52,7 +52,7 @@ const WorkflowInputSchemaSchema = z.object({
  */
 const WorkflowStepSchema = z.object({
   id: z.string(),
-  type: z.enum(["action", "notify", "resolve", "reject", "log"]),
+  type: z.enum(["action", "notify", "resolve", "reject", "log", "session"]),
   dependsOn: z.array(z.string()).optional(),
   if: z.unknown().optional(),
   // Action step fields
@@ -68,6 +68,12 @@ const WorkflowStepSchema = z.object({
   variant: z.enum(["info", "success", "warning", "error"]).optional(),
   // Resolve step fields
   output: z.record(z.unknown()).optional(),
+  // Session step fields
+  agent: z.unknown().optional(),
+  systemPrompt: z.unknown().optional(),
+  providerId: z.unknown().optional(),
+  modelId: z.unknown().optional(),
+  maxMessages: z.unknown().optional(),
 });
 
 /**
