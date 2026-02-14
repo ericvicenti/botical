@@ -89,7 +89,7 @@ export const leopardHeartbeat = defineAction({
       // which can take 10+ minutes with tool calls. We just need to confirm
       // the message was accepted, not wait for the response.
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s to accept
+      const timeout = setTimeout(() => controller.abort(), 60000); // 60s to accept + start streaming
 
       try {
         const msgResp = await fetch(`${baseUrl}/api/messages`, {
