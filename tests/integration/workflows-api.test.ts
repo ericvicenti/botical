@@ -11,12 +11,14 @@ import {
   beforeAll,
   afterAll,
   beforeEach,
+  spyOn,
 } from "bun:test";
 import { createApp } from "@/server/app";
 import { DatabaseManager } from "@/database/index";
 import { Config } from "@/config/index";
 import { ProjectService } from "@/services/projects";
 import { WorkflowService } from "@/services/workflows";
+import { createAuthSession, createAuthHeaders } from "./helpers/auth";
 import path from "path";
 import fs from "fs";
 
@@ -41,9 +43,18 @@ describe("Workflows API Integration", () => {
     "../../.test-data/workflows-api-test"
   );
   const testUserId = "usr_test-workflow-user";
+  const testEmail = "workflow-test@example.com";
   let projectId: string;
+  let sessionToken: string;
+  let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeAll(async () => {
+    // Disable single-user mode for auth tests
+    process.env.BOTICAL_SINGLE_USER = "false";
+    
+    // Set up console spy FIRST
+    consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
+    
     Config.load({ dataDir: testDataDir });
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -57,7 +68,7 @@ describe("Workflows API Integration", () => {
       .prepare(
         "INSERT INTO users (id, email, username, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
       )
-      .run(testUserId, "workflow-test@example.com", "workflowuser", now, now);
+      .run(testUserId, testEmail, "workflowuser", now, now);
 
     // Create test project
     const project = ProjectService.create(rootDb, {
@@ -65,9 +76,13 @@ describe("Workflows API Integration", () => {
       ownerId: testUserId,
     });
     projectId = project.id;
+
+    // Set up authentication
+    sessionToken = await createAuthSession(app, testEmail, consoleLogSpy);
   });
 
   afterAll(() => {
+    consoleLogSpy?.mockRestore();
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -87,7 +102,7 @@ describe("Workflows API Integration", () => {
     it("should create a new workflow", async () => {
       const response = await app.request("/api/workflows", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           name: "test-workflow",
@@ -107,7 +122,7 @@ describe("Workflows API Integration", () => {
     it("should return 400 if projectId is missing", async () => {
       const response = await app.request("/api/workflows", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           name: "test-workflow",
           label: "Test Workflow",
