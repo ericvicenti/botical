@@ -21,6 +21,7 @@ import { useTabs } from "@/contexts/tabs";
 import { useUI } from "@/contexts/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils/cn";
+import { Save } from "lucide-react";
 
 // Light theme for CodeMirror
 const lightTheme = EditorView.theme(
@@ -396,13 +397,27 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
       {/* Editor */}
       <div ref={containerRef} className="flex-1 overflow-hidden" />
 
-      {/* Status bar */}
-      <div className="h-6 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
+      {/* Status bar with mobile save button */}
+      <div className="h-10 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
         <span className={cn(isDirty && "text-accent-warning")}>
           {isReadOnly ? "Read-only" : isDirty ? "Modified" : "Saved"}
           {saveFile.isPending && " (Saving...)"}
         </span>
-        <span>{extension}</span>
+        <div className="flex items-center gap-2">
+          {/* Mobile save button - only show when dirty and not read-only */}
+          {isDirty && !isReadOnly && (
+            <button
+              onClick={handleSave}
+              disabled={saveFile.isPending}
+              className="flex items-center gap-1 px-2 py-1 bg-accent-primary text-white rounded text-xs hover:bg-accent-primary/80 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+              title="Save file (Ctrl/Cmd+S)"
+            >
+              <Save className="w-3 h-3" />
+              <span className="hidden sm:inline">Save</span>
+            </button>
+          )}
+          <span>{extension}</span>
+        </div>
       </div>
     </div>
   );

@@ -93,7 +93,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 - [ ] **User message should interrupt tool-calling flow** (severity: high) — When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message. Currently the user message doesn't interrupt. The model should see the new user message and adjust its plan accordingly.
 
-- [ ] **Mobile: safe area insets not respected** (severity: high) — UI renders behind notch/home indicator/status bar. Must use `env(safe-area-inset-*)` CSS variables and `viewport-fit=cover` meta tag so nothing is clipped off-screen.
+- [x] **Mobile: safe area insets not respected** (severity: high) — UI renders behind notch/home indicator/status bar. Must use `env(safe-area-inset-*)` CSS variables and `viewport-fit=cover` meta tag so nothing is clipped off-screen. ✅ FIXED: Added viewport-fit=cover and safe area padding to root layout.
 
 - [ ] **Mobile file editor: save button inaccessible** (severity: high) — On mobile web, the save button in the file editor can't be reached/tapped. Likely a layout/overflow issue. Must be fixed for mobile-first UX.
 

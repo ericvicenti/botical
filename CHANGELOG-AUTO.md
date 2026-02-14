@@ -6,6 +6,28 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Mobile Safe Area Insets Fix
+
+**Priority Addressed:** Mobile: safe area insets not respected (severity: high)
+
+**Changes Made:**
+- Added `viewport-fit=cover` to meta viewport tag in webui/index.html
+- Added `env(safe-area-inset-*)` padding to root layout container in webui/src/routes/__root.tsx
+- Ensures UI content doesn't render behind notch/home indicator/status bar on mobile devices
+
+**Results:**
+- ✅ Build test passes successfully
+- ✅ Safe area insets now properly respected on mobile devices
+- ✅ UI will no longer be clipped by device chrome (notch, home indicator, etc.)
+
+**Next Steps:**
+- Move to next mobile bug: "Mobile file editor: save button inaccessible"
+- Test on actual mobile devices to verify fix works correctly
+
+**Commit:** 2268945
+
+---
+
 ### 2026-02-13 - Core Primitives Audit: Session, Action, Workflow Analysis
 
 **Priority Addressed:** Audit existing codebase against the three core primitives definitions
