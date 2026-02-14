@@ -507,31 +507,28 @@ export default function ModelsPage(_props: ModelsPageProps) {
               <button
                 type="button"
                 onClick={async () => {
-                  try {
-                    const { verifier, challenge } = await generatePKCE();
-                    setPkceVerifier(verifier);
-                    const params = new URLSearchParams({
-                      code: "true",
-                      client_id: OAUTH_CLIENT_ID,
-                      response_type: "code",
-                      redirect_uri: OAUTH_REDIRECT_URI,
-                      scope: OAUTH_SCOPES,
-                      code_challenge: challenge,
-                      code_challenge_method: "S256",
-                      state: verifier,
-                    });
-                    const url = `${OAUTH_AUTHORIZE_URL}?${params}`;
-                    console.log("[OAuth] Opening:", url);
-                    const w = window.open(url, "_blank");
-                    if (!w) {
-                      // Popup blocked — show URL for manual copy
-                      setOauthError(`Popup blocked. Open this URL manually: ${url}`);
-                    }
-                    setOauthState("waiting");
-                  } catch (err) {
-                    console.error("[OAuth] Error:", err);
-                    setOauthError(`OAuth error: ${err}`);
-                  }
+                  const { verifier, challenge } = await generatePKCE();
+                  setPkceVerifier(verifier);
+                  const params = new URLSearchParams({
+                    code: "true",
+                    client_id: OAUTH_CLIENT_ID,
+                    response_type: "code",
+                    redirect_uri: OAUTH_REDIRECT_URI,
+                    scope: OAUTH_SCOPES,
+                    code_challenge: challenge,
+                    code_challenge_method: "S256",
+                    state: verifier,
+                  });
+                  const url = `${OAUTH_AUTHORIZE_URL}?${params}`;
+                  // Create a real <a> element and click it — never blocked by browsers
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.target = "_blank";
+                  a.rel = "noopener noreferrer";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  setOauthState("waiting");
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium text-sm"
               >
