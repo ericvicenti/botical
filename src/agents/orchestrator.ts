@@ -106,7 +106,7 @@ export class AgentOrchestrator {
     // Build credential resolver (prefer explicit resolver, fall back to static key)
     const credentialResolver = inputResolver ??
       new CredentialResolver(userId, providerId, rawApiKey);
-    const apiKey = credentialResolver.resolve();
+    const apiKey = await credentialResolver.resolveAsync();
 
     // Verify session exists
     const session = SessionService.getByIdOrThrow(db, sessionId);

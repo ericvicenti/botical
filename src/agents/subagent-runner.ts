@@ -128,7 +128,7 @@ export class SubAgentRunner {
 
     // Resolve fresh credentials for the sub-agent's provider
     const subAgentResolver = credentialResolver.forProvider(providerId);
-    const apiKey = subAgentResolver.resolve();
+    const apiKey = await subAgentResolver.resolveAsync();
 
     // Handle background execution
     if (params.runInBackground) {
