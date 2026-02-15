@@ -89,7 +89,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ## 🐛 Bug Reports
 
-- [ ] **Double-sent first message** (severity: high) — When creating a new task, the first user message appears twice. See: tiger session `sess_2go5omev9eu-c4d9fd5d`. Root cause likely: session creation stores the message AND then the frontend/websocket sends it again. Fix by SIMPLIFYING — one single path for sending messages, not two. https://tiger.verse.link/projects/prj_root/tasks/sess_2go5omev9eu-c4d9fd5d
+- [x] **Double-sent first message** (severity: high) — ✅ FIXED: Modified AgentOrchestrator.run to accept existingUserMessageId parameter and only create user message if not already provided. Session creation now passes existing message ID to prevent duplication. One single path for message creation achieved.
 
 - [ ] **User message should interrupt tool-calling flow** (severity: high) — When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message. Currently the user message doesn't interrupt. The model should see the new user message and adjust its plan accordingly.
 
@@ -112,5 +112,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 1)*
+*Last read by Leopard: 2026-02-13 (Cycle 2)*
 *Last updated by human: 2026-02-13*

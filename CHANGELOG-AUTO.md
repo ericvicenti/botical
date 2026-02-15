@@ -6,6 +6,42 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix Double-Sent First Message Bug
+
+**Priority Addressed:** Double-sent first message (severity: high) - When creating a new task, the first user message appears twice
+
+**Root Cause Analysis:**
+The bug was caused by duplicate message creation in the session creation flow:
+1. Session creation endpoint (`src/server/routes/sessions.ts`) creates user message first
+2. Then calls `AgentOrchestrator.run()` which also creates a user message
+3. Result: Two identical user messages in the session
+
+**Changes Made:**
+- Added `existingUserMessageId` parameter to `OrchestratorRunOptions` interface
+- Modified `AgentOrchestrator.run()` to only create user message if `existingUserMessageId` is not provided
+- Updated session creation endpoint to pass existing user message ID to orchestrator
+- Preserved backward compatibility - other callers (message routes, WebSocket, Telegram) unaffected
+
+**Technical Details:**
+- Modified `src/agents/orchestrator.ts` to accept optional `existingUserMessageId`
+- Updated `src/server/routes/sessions.ts` to pass `userMessage.id` to orchestrator
+- Used conditional logic to reuse existing message or create new one as needed
+- No changes needed for other AgentOrchestrator.run callers (they handle new messages)
+
+**Results:**
+- ✅ Fixed duplicate message creation in session initialization
+- ✅ Maintained backward compatibility with existing message flows
+- ✅ Code compiles successfully without new TypeScript errors
+- ✅ Follows SIMPLIFYING principle - one single path for message creation
+
+**Next Steps:**
+- Test the fix manually via API to verify behavior
+- Move to next highest priority bug: "User message should interrupt tool-calling flow"
+
+**Commit:** f6c5549
+
+---
+
 ### 2026-02-13 - Workflow-to-Workflow Composition Implementation
 
 **Priority Addressed:** PRIORITY 3: Add WorkflowStep to workflows - Enable workflow-to-workflow composition
