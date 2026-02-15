@@ -54,6 +54,26 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [ ] **Self-triggering improvement cycles** — Internal scheduler triggers cycles, not external scripts
 - [ ] Read `BOBCAT-HANDOFF.md` for full knowledge transfer from IonBobcat
 
+#### 🔥 Context Management & Long Chain Efficiency
+**Problem:** Agent sessions accumulate massive context over many tool-call steps. At step 30+ the context is bloated with full file contents, test outputs, and intermediate reasoning — burning tokens and degrading quality. Bumping maxSteps is a band-aid.
+
+**Research first**, then implement. Study these approaches:
+- [ ] **Auto-compaction** — Summarize older conversation turns, keeping recent ones verbatim. Like a sliding window with compressed history. See: Letta's memory blocks (`~/research/letta-memory-blocks-analysis.md`), OpenCode agent memory (`~/research/opencode-agent-memory-analysis.md`)
+- [ ] **Tool output truncation** — Large file reads and test outputs should be truncated/summarized after they've been processed. The agent saw it once; keep a summary, not the full 500-line file.
+- [ ] **Ralph loops / iterative decomposition** — Break long tasks into sub-tasks with fresh context. Instead of one 60-step session, spawn focused sub-sessions (e.g., "read and plan" → "implement" → "test and fix") that pass structured summaries between them.
+- [ ] **Prompt caching** — Use Anthropic's prompt caching to reduce costs on the static parts (system prompt, tools, early messages).
+- [ ] **Context budget tracking** — Track token usage per message. When approaching the model's context limit, trigger compaction automatically rather than failing.
+- [ ] **Memory blocks (Letta-style)** — Persistent scratchpad the agent can read/write across steps. Store "current task", "what I've learned", "files I've modified" as structured memory instead of relying on conversation history.
+
+**Implementation priorities:**
+1. Tool output truncation (quick win — cap file reads at N lines in history, summarize test output)
+2. Auto-compaction of older turns (keep last 5 turns verbatim, summarize rest)
+3. Sub-task decomposition for improvement cycles (plan → implement → verify as separate sessions)
+4. Prompt caching integration
+5. Letta-style memory blocks for persistent state
+
+**Success metric:** Leopard completes a full improvement cycle (read priorities → code → test → deploy) in <20 steps with <500k total tokens.
+
 #### UX: Provider/Model Error Recovery
 - [ ] When an agent specifies an invalid provider/model and the user hits the error, show a clear error message with a one-click fix: "Agent X uses provider Y which has no credentials. [Reassign all agents using Y to use Z instead]"
 - [ ] Settings page should show which agents use which providers, with bulk-reassign capability
