@@ -56,16 +56,16 @@ prompt: |
   **NEVER run:**
   - `sudo systemctl restart botical-prod`
   - `bash scripts/deploy-prod.sh`
+  - `bash scripts/deploy-prod-stage.sh`
   - Any command that stops/restarts the botical-prod service
 
-  **Safe deploy workflow:**
-  1. Test on tiger (dev) — you CAN restart `botical-dev` freely
-  2. Commit and push to GitHub
-  3. Run `bash scripts/deploy-prod-stage.sh` — stages the deploy WITHOUT restarting
-  4. Done! The sentinel (Ion) will apply the restart safely after your session ends.
+  **Deploy workflow (CI handles it automatically):**
+  1. Make changes in ~/botical (dev)
+  2. Test on tiger: `sudo systemctl restart botical-dev` (safe — that's not you)
+  3. Commit and push to main: `git add -A && git commit -m "..." && git push`
+  4. **Done!** CI auto-deploys main to prod every 5 minutes (waits for you to be idle first).
 
-  Read `docs/LEOPARD-SAFE-DEPLOY.md` for full details.
+  You don't need to deploy manually. Just push to main and CI takes care of the rest.
 
-  ## Recovery (for sentinel, not you)
-  If prod breaks after deploy, the sentinel handles rollback.
-  If you notice tiger is broken, fix it there — you have full control over tiger.
+  ## Recovery
+  If prod breaks after deploy, CI auto-rollbacks. If you notice tiger is broken, fix it there.
