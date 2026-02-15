@@ -52,7 +52,7 @@ const WorkflowInputSchemaSchema = z.object({
  */
 const WorkflowStepSchema = z.object({
   id: z.string(),
-  type: z.enum(["action", "notify", "resolve", "reject", "log", "session"]),
+  type: z.enum(["action", "notify", "resolve", "reject", "log", "session", "approval"]),
   dependsOn: z.array(z.string()).optional(),
   if: z.unknown().optional(),
   // Action step fields
@@ -74,6 +74,10 @@ const WorkflowStepSchema = z.object({
   providerId: z.unknown().optional(),
   modelId: z.unknown().optional(),
   maxMessages: z.unknown().optional(),
+  // Approval step fields
+  approvers: z.unknown().optional(),
+  timeout: z.unknown().optional(),
+  autoApprove: z.unknown().optional(),
 });
 
 /**

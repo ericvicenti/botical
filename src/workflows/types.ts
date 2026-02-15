@@ -180,6 +180,17 @@ export interface SessionStep extends BaseStep {
 }
 
 /**
+ * Approval step - pause workflow for human approval
+ */
+export interface ApprovalStep extends BaseStep {
+  type: "approval";
+  message: ArgBinding; // Message to show to the user
+  approvers?: ArgBinding; // List of user IDs who can approve (default: any project member)
+  timeout?: ArgBinding; // Timeout in milliseconds (default: no timeout)
+  autoApprove?: ArgBinding; // Auto-approve after timeout (default: false, fails instead)
+}
+
+/**
  * Union of all step types
  */
 export type WorkflowStep =
@@ -188,7 +199,8 @@ export type WorkflowStep =
   | ResolveStep
   | RejectStep
   | LogStep
-  | SessionStep;
+  | SessionStep
+  | ApprovalStep;
 
 // ============================================================================
 // Workflow Definition

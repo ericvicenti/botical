@@ -228,6 +228,21 @@ async function executeStep(
         return { error: message };
       }
 
+      case "approval": {
+        const message = String(resolveBinding(step.message, ctx) || "Approval required");
+        const approvers = step.approvers ? resolveBinding(step.approvers, ctx) : null;
+        const timeout = step.timeout ? Number(resolveBinding(step.timeout, ctx)) : null;
+        const autoApprove = step.autoApprove ? Boolean(resolveBinding(step.autoApprove, ctx)) : false;
+
+        return await executeApprovalStep({
+          message,
+          approvers,
+          timeout,
+          autoApprove,
+          ctx,
+        });
+      }
+
       default:
         return { error: `Unknown step type: ${(step as WorkflowStep).type}` };
     }
@@ -480,6 +495,85 @@ async function executeSessionStep(params: {
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Session execution failed",
+    };
+  }
+}
+
+// ============================================================================
+// Approval Step Execution
+// ============================================================================
+
+/**
+ * Execute an approval step by creating an approval request
+ */
+async function executeApprovalStep(params: {
+  message: string;
+  approvers: unknown;
+  timeout: number | null;
+  autoApprove: boolean;
+  ctx: ExecutorContext;
+}): Promise<{ output?: unknown; error?: string }> {
+  const { message, approvers, timeout, autoApprove, ctx } = params;
+
+  try {
+    // Import services (dynamic import to avoid circular dependencies)
+    const { ApprovalService } = await import("@/services/approvals.ts");
+    const { ProjectService } = await import("@/services/projects.ts");
+
+    // Determine approvers - default to all project members
+    let approverIds: string[];
+    if (Array.isArray(approvers)) {
+      approverIds = approvers.map(String);
+    } else {
+      // Get all project members as default approvers
+      const members = ProjectService.listMembers(ctx.db, ctx.workflow.projectId);
+      approverIds = members.map(m => m.userId);
+    }
+
+    if (approverIds.length === 0) {
+      return { error: "No approvers available for approval step" };
+    }
+
+    // Create the approval request
+    const approval = ApprovalService.create(ctx.db, {
+      workflowExecutionId: ctx.executionId,
+      stepId: ctx.currentStep.id,
+      title: `Workflow Approval: ${ctx.workflow.name}`,
+      message,
+      approvers: approverIds,
+      timeout,
+      onTimeout: autoApprove ? "continue" : "fail",
+    });
+
+    // Broadcast approval request to all approvers
+    const event = createEvent("workflow.approval.required", {
+      approvalId: approval.id,
+      workflowExecutionId: ctx.executionId,
+      stepId: ctx.currentStep.id,
+      message,
+      approvers: approverIds,
+      timeout,
+    });
+
+    for (const connectionId of ConnectionManager.getAllIds()) {
+      ConnectionManager.send(connectionId, event);
+    }
+
+    // For now, return pending state - the approval will be resolved externally
+    // In a full implementation, this would wait for the approval or timeout
+    return {
+      output: {
+        approvalId: approval.id,
+        status: "pending",
+        message,
+        approvers: approverIds,
+        timeout,
+        createdAt: approval.createdAt,
+      },
+    };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Approval step execution failed",
     };
   }
 }
