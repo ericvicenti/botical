@@ -136,9 +136,71 @@ function evaluateCondition(
 // ============================================================================
 
 /**
- * Execute a single step
+ * Execute a step with retry logic and exponential backoff
  */
-async function executeStep(
+async function executeStepWithRetry(
+  step: WorkflowStep,
+  ctx: ExecutorContext,
+  errorHandling: { strategy: "retry"; retryCount?: number; retryDelay?: number }
+): Promise<{ output?: unknown; error?: string }> {
+  const maxRetries = errorHandling.retryCount || 3;
+  const baseDelay = errorHandling.retryDelay || 1000; // 1 second default
+  
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // If this is a retry attempt, wait with exponential backoff
+      if (attempt > 0) {
+        const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+        const jitter = Math.random() * 0.1 * delay; // Add 10% jitter to prevent thundering herd
+        const totalDelay = delay + jitter;
+        
+        console.log(`[Workflow ${ctx.executionId}] Retrying step ${step.id} (attempt ${attempt + 1}/${maxRetries + 1}) after ${Math.round(totalDelay)}ms`);
+        await new Promise(resolve => setTimeout(resolve, totalDelay));
+      }
+      
+      // Execute the step (without the outer try-catch that handles retries)
+      const result = await executeStepCore(step, ctx);
+      
+      // If we get here, the step succeeded
+      if (attempt > 0) {
+        console.log(`[Workflow ${ctx.executionId}] Step ${step.id} succeeded on retry attempt ${attempt + 1}`);
+      }
+      
+      return result;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      
+      // If this was the last attempt, don't continue
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Check if this is a retryable error (for now, retry all errors)
+      // In the future, we could add logic to only retry certain types of errors
+      console.log(`[Workflow ${ctx.executionId}] Step ${step.id} failed on attempt ${attempt + 1}: ${lastError.message}`);
+    }
+  }
+  
+  // All retries exhausted
+  const errorMessage = lastError?.message || "Unknown error";
+  console.log(`[Workflow ${ctx.executionId}] Step ${step.id} failed after ${maxRetries + 1} attempts: ${errorMessage}`);
+  
+  return {
+    output: {
+      error: errorMessage,
+      retryFailed: true,
+      attempts: maxRetries + 1,
+      lastAttemptAt: Date.now(),
+    }
+  };
+}
+
+/**
+ * Execute a single step (core logic without retry handling)
+ */
+async function executeStepCore(
   step: WorkflowStep,
   ctx: ExecutorContext
 ): Promise<{ output?: unknown; error?: string; skipped?: boolean }> {
@@ -153,122 +215,132 @@ async function executeStep(
   });
   broadcastStepUpdate(ctx.executionId, step.id, "running");
 
-  try {
-    switch (step.type) {
-      case "action": {
-        if (!step.action) {
-          throw new Error("Action step missing action ID");
-        }
-        const args = resolveArgs(step.args, ctx);
-        WorkflowExecutionService.updateStep(ctx.db, ctx.executionId, step.id, {
-          resolvedArgs: args,
-        });
-
-        const result = await ActionRegistry.execute(
-          step.action,
-          args,
-          ctx.actionContext
-        );
-
-        return handleActionResult(result);
+  switch (step.type) {
+    case "action": {
+      if (!step.action) {
+        throw new Error("Action step missing action ID");
       }
 
-      case "notify": {
-        const message = String(resolveBinding(step.message, ctx) || "");
-        const variant = step.variant || "info";
-        // In agent context, just return the message as output for the agent
-        // In user context, broadcast a toast notification
-        if (!ctx.isAgentContext) {
-          broadcastNotification(message, variant);
-        }
-        return { output: { notified: true, message, variant } };
-      }
+      const resolvedArgs = resolveArgs(step.args, ctx);
+      WorkflowExecutionService.updateStep(ctx.db, ctx.executionId, step.id, {
+        resolvedArgs,
+      });
 
-      case "log": {
-        const message = String(resolveBinding(step.message, ctx) || "");
-        console.log(`[Workflow ${ctx.executionId}] ${message}`);
-        return { output: { logged: true, message } };
-      }
+      const result = await ActionRegistry.execute(
+        step.action,
+        resolvedArgs,
+        ctx.actionContext
+      );
 
-      case "session": {
-        const message = String(resolveBinding(step.message, ctx) || "");
-        if (!message) {
-          throw new Error("Session step missing message");
-        }
-
-        const agent = String(resolveBinding(step.agent, ctx) || "default");
-        const systemPrompt = step.systemPrompt ? String(resolveBinding(step.systemPrompt, ctx) || "") : null;
-        const providerId = step.providerId ? String(resolveBinding(step.providerId, ctx) || "") : null;
-        const modelId = step.modelId ? String(resolveBinding(step.modelId, ctx) || "") : null;
-        const maxMessages = step.maxMessages ? Number(resolveBinding(step.maxMessages, ctx) || 10) : 10;
-
-        return await executeSessionStep({
-          message,
-          agent,
-          systemPrompt,
-          providerId,
-          modelId,
-          maxMessages,
-          ctx,
-        });
-      }
-
-      case "resolve": {
-        const output: Record<string, unknown> = {};
-        if (step.output) {
-          for (const [key, binding] of Object.entries(step.output)) {
-            output[key] = resolveBinding(binding, ctx);
-          }
-        }
-        return { output };
-      }
-
-      case "reject": {
-        const message = String(resolveBinding(step.message, ctx) || "Workflow rejected");
-        return { error: message };
-      }
-
-      case "approval": {
-        const message = String(resolveBinding(step.message, ctx) || "Approval required");
-        const approvers = step.approvers ? resolveBinding(step.approvers, ctx) : null;
-        const timeout = step.timeout ? Number(resolveBinding(step.timeout, ctx)) : null;
-        const autoApprove = step.autoApprove ? Boolean(resolveBinding(step.autoApprove, ctx)) : false;
-
-        return await executeApprovalStep({
-          message,
-          approvers,
-          timeout,
-          autoApprove,
-          stepId: step.id,
-          ctx,
-        });
-      }
-
-      case "workflow": {
-        const workflowId = step.workflowId ? String(resolveBinding(step.workflowId, ctx) || "") : null;
-        const workflowName = step.workflowName ? String(resolveBinding(step.workflowName, ctx) || "") : null;
-        
-        if (!workflowId && !workflowName) {
-          throw new Error("Workflow step must specify either workflowId or workflowName");
-        }
-        
-        if (workflowId && workflowName) {
-          throw new Error("Workflow step cannot specify both workflowId and workflowName");
-        }
-
-        const input = resolveArgs(step.input, ctx);
-
-        return await executeWorkflowStep({
-          workflowId,
-          workflowName,
-          input,
-          ctx,
-        });
-      }
-
-      default:
-        return { error: `Unknown step type: ${(step as WorkflowStep).type}` };
+      return handleActionResult(result);
     }
+
+    case "notify": {
+      const message = String(resolveBinding(step.message, ctx) || "");
+      const variant = (step.variant as "info" | "success" | "warning" | "error") || "info";
+      
+      if (!ctx.isAgentContext) {
+        broadcastNotification(message, variant);
+      }
+      return { output: { notified: true, message, variant } };
+    }
+
+    case "log": {
+      const message = String(resolveBinding(step.message, ctx) || "");
+      console.log(`[Workflow ${ctx.executionId}] ${message}`);
+      return { output: { logged: true, message } };
+    }
+
+    case "session": {
+      const message = String(resolveBinding(step.message, ctx) || "");
+      if (!message) {
+        throw new Error("Session step missing message");
+      }
+
+      const agent = String(resolveBinding(step.agent, ctx) || "default");
+      const systemPrompt = step.systemPrompt ? String(resolveBinding(step.systemPrompt, ctx) || "") : null;
+      const providerId = step.providerId ? String(resolveBinding(step.providerId, ctx) || "") : null;
+      const modelId = step.modelId ? String(resolveBinding(step.modelId, ctx) || "") : null;
+      const maxMessages = step.maxMessages ? Number(resolveBinding(step.maxMessages, ctx) || 10) : 10;
+
+      return await executeSessionStep({
+        message,
+        agent,
+        systemPrompt,
+        providerId,
+        modelId,
+        maxMessages,
+        ctx,
+      });
+    }
+
+    case "resolve": {
+      const output: Record<string, unknown> = {};
+      if (step.output) {
+        for (const [key, binding] of Object.entries(step.output)) {
+          output[key] = resolveBinding(binding, ctx);
+        }
+      }
+      return { output };
+    }
+
+    case "reject": {
+      const message = String(resolveBinding(step.message, ctx) || "Workflow rejected");
+      throw new Error(message);
+    }
+
+    case "approval": {
+      const message = String(resolveBinding(step.message, ctx) || "Approval required");
+      const approvers = step.approvers ? resolveBinding(step.approvers, ctx) : null;
+      const timeout = step.timeout ? Number(resolveBinding(step.timeout, ctx)) : null;
+      const autoApprove = step.autoApprove ? Boolean(resolveBinding(step.autoApprove, ctx)) : false;
+
+      return await executeApprovalStep({
+        message,
+        approvers,
+        timeout,
+        autoApprove,
+        stepId: step.id,
+        ctx,
+      });
+    }
+
+    case "workflow": {
+      const workflowId = step.workflowId ? String(resolveBinding(step.workflowId, ctx) || "") : null;
+      const workflowName = step.workflowName ? String(resolveBinding(step.workflowName, ctx) || "") : null;
+      
+      if (!workflowId && !workflowName) {
+        throw new Error("Workflow step must specify either workflowId or workflowName");
+      }
+      
+      if (workflowId && workflowName) {
+        throw new Error("Workflow step cannot specify both workflowId and workflowName");
+      }
+
+      const input = resolveArgs(step.input, ctx);
+
+      return await executeWorkflowStep({
+        workflowId,
+        workflowName,
+        input,
+        ctx,
+      });
+    }
+
+    default:
+      throw new Error(`Unknown step type: ${(step as WorkflowStep).type}`);
+  }
+}
+
+/**
+ * Execute a single step (main entry point with error handling)
+ */
+async function executeStep(
+  step: WorkflowStep,
+  ctx: ExecutorContext
+): Promise<{ output?: unknown; error?: string; skipped?: boolean }> {
+  try {
+    return await executeStepCore(step, ctx);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
@@ -278,8 +350,7 @@ async function executeStep(
         case "continue":
           return { output: { error: errorMessage, continued: true } };
         case "retry":
-          // For now, just continue - proper retry logic would need more infrastructure
-          return { output: { error: errorMessage, retryFailed: true } };
+          return await executeStepWithRetry(step, ctx, step.onError);
         case "fail":
         default:
           return { error: errorMessage };
