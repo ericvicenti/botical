@@ -239,6 +239,29 @@ async function executeStep(
           approvers,
           timeout,
           autoApprove,
+          stepId: step.id,
+          ctx,
+        });
+      }
+
+      case "workflow": {
+        const workflowId = step.workflowId ? String(resolveBinding(step.workflowId, ctx) || "") : null;
+        const workflowName = step.workflowName ? String(resolveBinding(step.workflowName, ctx) || "") : null;
+        
+        if (!workflowId && !workflowName) {
+          throw new Error("Workflow step must specify either workflowId or workflowName");
+        }
+        
+        if (workflowId && workflowName) {
+          throw new Error("Workflow step cannot specify both workflowId and workflowName");
+        }
+
+        const input = resolveArgs(step.input, ctx);
+
+        return await executeWorkflowStep({
+          workflowId,
+          workflowName,
+          input,
           ctx,
         });
       }
@@ -250,7 +273,7 @@ async function executeStep(
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
     // Handle error based on step's onError config
-    if ((step.type === "action" || step.type === "session") && step.onError) {
+    if ((step.type === "action" || step.type === "session" || step.type === "workflow") && step.onError) {
       switch (step.onError.strategy) {
         case "continue":
           return { output: { error: errorMessage, continued: true } };
@@ -511,13 +534,14 @@ async function executeApprovalStep(params: {
   approvers: unknown;
   timeout: number | null;
   autoApprove: boolean;
+  stepId: string;
   ctx: ExecutorContext;
 }): Promise<{ output?: unknown; error?: string }> {
-  const { message, approvers, timeout, autoApprove, ctx } = params;
+  const { message, approvers, timeout, autoApprove, stepId, ctx } = params;
 
   try {
     // Import services (dynamic import to avoid circular dependencies)
-    const { ApprovalService } = await import("@/services/approvals.ts");
+    const { ApprovalRequestService } = await import("@/services/approval-requests.ts");
     const { ProjectService } = await import("@/services/projects.ts");
 
     // Determine approvers - default to all project members
@@ -535,21 +559,20 @@ async function executeApprovalStep(params: {
     }
 
     // Create the approval request
-    const approval = ApprovalService.create(ctx.db, {
-      workflowExecutionId: ctx.executionId,
-      stepId: ctx.currentStep.id,
-      title: `Workflow Approval: ${ctx.workflow.name}`,
+    const approval = ApprovalRequestService.create(ctx.db, {
+      executionId: ctx.executionId,
+      stepId: stepId,
       message,
       approvers: approverIds,
-      timeout,
-      onTimeout: autoApprove ? "continue" : "fail",
+      timeoutMs: timeout,
+      autoApprove,
     });
 
     // Broadcast approval request to all approvers
     const event = createEvent("workflow.approval.required", {
       approvalId: approval.id,
       workflowExecutionId: ctx.executionId,
-      stepId: ctx.currentStep.id,
+      stepId: stepId,
       message,
       approvers: approverIds,
       timeout,
@@ -574,6 +597,121 @@ async function executeApprovalStep(params: {
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Approval step execution failed",
+    };
+  }
+}
+
+// ============================================================================
+// Workflow Step Execution
+// ============================================================================
+
+/**
+ * Execute a workflow step by invoking another workflow
+ */
+async function executeWorkflowStep(params: {
+  workflowId: string | null;
+  workflowName: string | null;
+  input: Record<string, unknown>;
+  ctx: ExecutorContext;
+}): Promise<{ output?: unknown; error?: string }> {
+  const { workflowId, workflowName, input, ctx } = params;
+
+  try {
+    // Import services (dynamic import to avoid circular dependencies)
+    const { UnifiedWorkflowService } = await import("@/services/workflows-unified.ts");
+    const { ProjectService } = await import("@/services/projects.ts");
+
+    // Get the project path
+    const project = ProjectService.getById(ctx.db, ctx.workflow.projectId);
+    if (!project?.path) {
+      throw new Error("Project path not found for workflow execution");
+    }
+
+    // Find the target workflow
+    let targetWorkflow;
+    if (workflowId) {
+      targetWorkflow = UnifiedWorkflowService.getById(
+        ctx.db,
+        ctx.workflow.projectId,
+        project.path,
+        workflowId
+      );
+    } else if (workflowName) {
+      targetWorkflow = UnifiedWorkflowService.getByName(
+        ctx.db,
+        ctx.workflow.projectId,
+        project.path,
+        workflowName
+      );
+    }
+
+    if (!targetWorkflow) {
+      const identifier = workflowId || workflowName;
+      throw new Error(`Workflow not found: ${identifier}`);
+    }
+
+    // Prevent infinite recursion by checking if we're calling ourselves
+    if (targetWorkflow.id === ctx.workflow.id) {
+      throw new Error("Workflow cannot call itself (infinite recursion detected)");
+    }
+
+    // Execute the target workflow
+    const { executeWorkflow } = await import("@/workflows/executor.ts");
+    const result = await executeWorkflow(
+      ctx.db,
+      targetWorkflow,
+      input,
+      ctx.actionContext,
+      { isAgentContext: ctx.isAgentContext }
+    );
+
+    // Wait for the workflow to complete
+    const { WorkflowExecutionService } = await import("@/services/workflow-executions.ts");
+    
+    // Poll for completion (in a real implementation, this could use WebSocket events)
+    let execution;
+    let attempts = 0;
+    const maxAttempts = 300; // 5 minutes at 1 second intervals
+    
+    do {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      execution = WorkflowExecutionService.getById(ctx.db, result.executionId);
+      attempts++;
+    } while (
+      execution && 
+      (execution.status === "pending" || execution.status === "running") && 
+      attempts < maxAttempts
+    );
+
+    if (!execution) {
+      throw new Error("Workflow execution not found");
+    }
+
+    if (execution.status === "failed") {
+      throw new Error(execution.error || "Workflow execution failed");
+    }
+
+    if (execution.status === "cancelled") {
+      throw new Error("Workflow execution was cancelled");
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error("Workflow execution timed out");
+    }
+
+    return {
+      output: {
+        executionId: result.executionId,
+        workflowId: targetWorkflow.id,
+        workflowName: targetWorkflow.name,
+        status: execution.status,
+        output: execution.output,
+        completedAt: execution.completedAt,
+      },
+    };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Workflow execution failed",
     };
   }
 }

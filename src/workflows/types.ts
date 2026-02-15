@@ -191,6 +191,17 @@ export interface ApprovalStep extends BaseStep {
 }
 
 /**
+ * Workflow step - invoke another workflow
+ */
+export interface WorkflowCallStep extends BaseStep {
+  type: "workflow";
+  workflowId?: ArgBinding; // Workflow ID to invoke (mutually exclusive with workflowName)
+  workflowName?: ArgBinding; // Workflow name to invoke (mutually exclusive with workflowId)
+  input: Record<string, ArgBinding>; // Input arguments to pass to the workflow
+  onError?: ErrorHandling;
+}
+
+/**
  * Union of all step types
  */
 export type WorkflowStep =
@@ -200,7 +211,8 @@ export type WorkflowStep =
   | RejectStep
   | LogStep
   | SessionStep
-  | ApprovalStep;
+  | ApprovalStep
+  | WorkflowCallStep;
 
 // ============================================================================
 // Workflow Definition

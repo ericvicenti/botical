@@ -573,4 +573,37 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 11,
+    name: "approval_requests",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- APPROVAL REQUESTS
+        -- Human-in-the-loop workflow approvals
+        -- ============================================
+
+        CREATE TABLE approval_requests (
+          id TEXT PRIMARY KEY,
+          execution_id TEXT NOT NULL REFERENCES workflow_executions(id) ON DELETE CASCADE,
+          step_id TEXT NOT NULL,
+          message TEXT NOT NULL,
+          approvers TEXT, -- JSON array of user IDs who can approve (null = any user)
+          timeout_ms INTEGER, -- Timeout in milliseconds (null = no timeout)
+          auto_approve INTEGER NOT NULL DEFAULT 0, -- Auto-approve on timeout (0 = fail, 1 = approve)
+          status TEXT NOT NULL DEFAULT 'pending', -- pending, approved, rejected, timeout
+          approved_by TEXT, -- User ID who approved/rejected
+          approved_at INTEGER, -- Timestamp of approval/rejection
+          response_message TEXT, -- Optional message from approver
+          created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          expires_at INTEGER -- Calculated expiration timestamp (created_at + timeout_ms)
+        );
+
+        CREATE INDEX idx_approval_requests_execution ON approval_requests(execution_id);
+        CREATE INDEX idx_approval_requests_status ON approval_requests(status);
+        CREATE INDEX idx_approval_requests_expires ON approval_requests(expires_at) WHERE expires_at IS NOT NULL;
+        CREATE UNIQUE INDEX idx_approval_requests_execution_step ON approval_requests(execution_id, step_id);
+      `);
+    },
+  },
 ];
