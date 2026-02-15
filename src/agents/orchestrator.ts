@@ -70,6 +70,8 @@ export interface OrchestratorRunOptions {
   abortSignal?: AbortSignal;
   /** Callback for processed events */
   onEvent?: (event: ProcessedEvent) => void | Promise<void>;
+  /** Existing user message ID (if already created, prevents duplicate message creation) */
+  existingUserMessageId?: string;
 }
 
 import { extractTextContent } from "@/services/message-content.ts";
@@ -101,6 +103,7 @@ export class AgentOrchestrator {
       temperature,
       abortSignal,
       onEvent,
+      existingUserMessageId,
     } = options;
 
     // Build credential resolver (prefer explicit resolver, fall back to static key)
@@ -125,22 +128,29 @@ export class AgentOrchestrator {
     const effectiveTemperature = temperature ?? agentConfig.temperature ?? undefined;
     const effectivePrompt = agentPrompt ?? agentConfig.prompt ?? undefined;
 
-    // Create user message
-    const userMessage = MessageService.create(db, {
-      sessionId,
-      role: "user",
-    });
+    // Create user message only if not already provided
+    let userMessage;
+    if (existingUserMessageId) {
+      // Use existing user message
+      userMessage = MessageService.getByIdOrThrow(db, existingUserMessageId);
+    } else {
+      // Create new user message
+      userMessage = MessageService.create(db, {
+        sessionId,
+        role: "user",
+      });
 
-    // Create user message text part
-    MessagePartService.create(db, {
-      messageId: userMessage.id,
-      sessionId,
-      type: "text",
-      content: { text: content },
-    });
+      // Create user message text part
+      MessagePartService.create(db, {
+        messageId: userMessage.id,
+        sessionId,
+        type: "text",
+        content: { text: content },
+      });
 
-    // Update session message count
-    SessionService.updateStats(db, sessionId, { messageCount: 1 });
+      // Update session message count
+      SessionService.updateStats(db, sessionId, { messageCount: 1 });
+    }
 
     // Create assistant message (ensure created_at is after user message)
     const assistantMessage = MessageService.create(db, {

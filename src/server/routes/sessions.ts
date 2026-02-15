@@ -243,6 +243,7 @@ sessions.post("/", async (c) => {
         credentialResolver,
         providerId,
         modelId,
+        existingUserMessageId: userMessage.id,
         agentName: session.agent,
       }).catch((err) => {
         console.error(`[sessions] Background orchestration failed for session ${session.id}:`, err);
