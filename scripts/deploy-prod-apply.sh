@@ -32,13 +32,9 @@ echo "⏳ Waiting for health check..."
 HEALTHY=false
 for i in $(seq 1 15); do
   sleep 1
-  if curl -sf -m 2 http://localhost:6001/api/health >/dev/null 2>&1; then
-    HEALTHY=true
-    break
-  fi
-  # Also accept auth error (means server is up)
-  RESP=$(curl -sf -m 2 http://localhost:6001/api/health 2>&1 || true)
-  if echo "$RESP" | grep -q "AUTHENTICATION_ERROR"; then
+  RESP=$(curl -s -m 2 http://localhost:6001/api/health 2>&1 || true)
+  # Server is up if we get any JSON response (even auth error)
+  if echo "$RESP" | grep -qE "AUTHENTICATION_ERROR|\"ok\""; then
     HEALTHY=true
     break
   fi
