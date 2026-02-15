@@ -15,6 +15,8 @@ import { WorkflowExecutionService } from "@/services/workflow-executions.ts";
 import { ActionRegistry } from "@/actions/registry.ts";
 import type { ActionContext, ActionResult } from "@/actions/types.ts";
 import { ConnectionManager, createEvent } from "@/websocket/index.ts";
+import { CircuitBreakerRegistry } from "@/utils/circuit-breaker.ts";
+import { classifyError, isRetryableError, getRetryDelay } from "@/utils/error-classification.ts";
 
 // ============================================================================
 // Types
@@ -177,9 +179,15 @@ async function executeStepWithRetry(
         break;
       }
       
-      // Check if this is a retryable error (for now, retry all errors)
-      // In the future, we could add logic to only retry certain types of errors
-      console.log(`[Workflow ${ctx.executionId}] Step ${step.id} failed on attempt ${attempt + 1}: ${lastError.message}`);
+      // Classify the error to determine if it should be retried
+      const errorClassification = classifyError(lastError);
+      
+      if (!errorClassification.shouldRetry) {
+        console.log(`[Workflow ${ctx.executionId}] Step ${step.id} failed with non-retryable error: ${lastError.message} (${errorClassification.reason})`);
+        break; // Exit retry loop immediately for non-retryable errors
+      }
+      
+      console.log(`[Workflow ${ctx.executionId}] Step ${step.id} failed on attempt ${attempt + 1}: ${lastError.message} (${errorClassification.reason})`);
     }
   }
   
@@ -226,11 +234,22 @@ async function executeStepCore(
         resolvedArgs,
       });
 
-      const result = await ActionRegistry.execute(
-        step.action,
-        resolvedArgs,
-        ctx.actionContext
-      );
+      // Use circuit breaker for action execution
+      const circuitBreakerKey = `action:${step.action}`;
+      const circuitBreaker = CircuitBreakerRegistry.getOrCreate(circuitBreakerKey, {
+        failureThreshold: 5,
+        resetTimeout: 30000, // 30 seconds
+        monitoringPeriod: 60000, // 1 minute
+        name: `Action-${step.action}`,
+      });
+
+      const result = await circuitBreaker.execute(async () => {
+        return await ActionRegistry.execute(
+          step.action,
+          resolvedArgs,
+          ctx.actionContext
+        );
+      });
 
       return handleActionResult(result);
     }

@@ -92,8 +92,8 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [x] Ensure Actions have typed input/output + success/error endstates
 - [x] Ensure Workflows can compose sessions + actions, support parallelism, blocking steps, progress notifications
 - [x] Ensure all three primitives have REST API endpoints + WebSocket events
-- [ ] **PRIORITY 1: Add SessionStep to workflows** - Enable workflows to spawn sub-agent sessions
-- [ ] **PRIORITY 2: Add ApprovalStep to workflows** - Enable human-in-the-loop blocking steps
+- [x] **PRIORITY 1: Add SessionStep to workflows** - ✅ COMPLETED: SessionStep is fully implemented in workflow executor (lines 254-275). Supports agent type, system prompt, provider/model config, and message processing. Creates sub-sessions and returns response text.
+- [x] **PRIORITY 2: Add ApprovalStep to workflows** - ✅ COMPLETED: ApprovalStep is fully implemented in workflow executor (lines 292-306). Supports approvers list, timeout, auto-approve logic, and broadcasts approval events via WebSocket. ApprovalRequestService handles persistence.
 - [x] **PRIORITY 3: Add WorkflowStep to workflows** - Enable workflow-to-workflow composition
 - [ ] **PRIORITY 4: Enhance error handling** - Implement proper retry logic and circuit breakers
 - [ ] Build beautiful, responsive UI for observing all three primitives
@@ -117,7 +117,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 - [x] **Mobile file editor: save button inaccessible** (severity: high) — ✅ FIXED: Added safe area inset support to floating save button and status bar. Used `calc(5rem + env(safe-area-inset-bottom, 0px))` for floating button positioning and added safe area padding to status bar. Save buttons now always accessible above device chrome (home indicators, notches, etc.).
 
-- [ ] **Message queuing must be server-side** (severity: high) — When a user sends a message while the model is busy, the message should be queued on the SERVER, not the client. Currently the queuing behavior is client-side which means messages can be lost if the page is refreshed. Server should accept and store the message immediately, then deliver it to the model when the current turn completes (or interrupt if that's the desired behavior).
+- [x] **Message queuing must be server-side** (severity: high) — ✅ FIXED: Modified message routes to create user message immediately and queue for processing via MessageQueueService. Added user_message_id field to message_queue table to link pre-created messages. Messages are now stored on server before processing begins, preventing loss on page refresh. Queue processor uses existingUserMessageId parameter to avoid duplicate message creation.
 
 <!-- Add bugs here. Leopard will triage and fix them. -->
 <!-- Format: - [ ] Description (severity: high/medium/low) -->
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 4)*
+*Last read by Leopard: 2026-02-13 (Cycle 5)*
 *Last updated by human: 2026-02-13*

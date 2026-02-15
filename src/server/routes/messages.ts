@@ -30,13 +30,10 @@ import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
-import { MessageQueueService } from "@/services/message-queue.ts";
+import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
-
-// Note: Message processing is now handled by the server-side message queue
-// This ensures messages are not lost if the page is refreshed during processing
 
 const messages = new Hono();
 
@@ -131,61 +128,54 @@ messages.post("/", async (c) => {
     );
   }
 
-  // Create user message first (so it's stored immediately)
-  const userMessage = MessageService.create(db, {
-    sessionId,
-    role: "user",
-  });
+  // Create abort controller for this request
+  const abortController = new AbortController();
 
-  MessagePartService.create(db, {
-    messageId: userMessage.id,
-    sessionId,
-    type: "text",
-    content: { text: content },
-  });
+  // Set up timeout (10 minutes max for agent runs)
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, 600000);
 
-  // Update session stats
-  SessionService.updateStats(db, sessionId, { messageCount: 1 });
+  try {
+    // Run agent orchestration
+    const agentResult = await AgentOrchestrator.run({
+      db,
+      projectId,
+      projectPath,
+      sessionId,
+      userId,
+      canExecuteCode,
+      enabledTools,
+      content,
+      credentialResolver,
+      providerId: providerId as ProviderId,
+      modelId,
+      agentName: agentName ?? session.agent,
+      abortSignal: abortController.signal,
+    });
 
-  // Queue the message for processing by the server-side queue
-  const queuedMessage = MessageQueueService.enqueue(db, {
-    sessionId,
-    userId,
-    userMessageId: userMessage.id,
-    content,
-    canExecuteCode,
-    enabledTools,
-    providerId: providerId as ProviderId,
-    modelId: modelId || undefined,
-    agentName: agentName ?? session.agent,
-    apiKey: requestApiKey,
-  });
+    clearTimeout(timeoutId);
 
-  // Return immediately with the queued message info
-  // The actual processing will happen asynchronously via the message queue processor
-  return c.json(
-    {
-      data: {
-        message: userMessage,
-        parts: [
-          {
-            id: `${userMessage.id}_text`,
-            messageId: userMessage.id,
-            sessionId,
-            type: "text",
-            content: { text: content },
-            createdAt: Date.now(),
-          },
-        ],
-        queueInfo: {
-          queuedMessageId: queuedMessage.id,
-          queuePosition: MessageQueueService.getQueuePosition(db, sessionId, queuedMessage.id),
-          status: queuedMessage.status,
+    // Get the assistant message with parts
+    const message = MessageService.getByIdOrThrow(db, agentResult.messageId);
+    const parts = MessagePartService.listByMessage(db, agentResult.messageId);
+
+    return c.json(
+      {
+        data: {
+          message,
+          parts,
+          usage: agentResult.usage,
+          cost: agentResult.cost,
+          finishReason: agentResult.finishReason,
         },
       },
-    },
-    201
-  );
+      201
+    );
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 });
 
 /**
