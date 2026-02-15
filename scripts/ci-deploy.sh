@@ -21,11 +21,17 @@ if [ -f "$LOCK" ]; then
   rm -f "$LOCK"
 fi
 
-# Fetch latest from GitHub
+# Fetch latest from GitHub (use upstream = ericvicenti/botical)
 cd "$DEV_DIR"
 git fetch origin main --quiet 2>/dev/null
 
 DEV_HEAD=$(git rev-parse origin/main)
+
+# Prod may use ion-kitty fork as origin, so add upstream if needed
+cd "$PROD_DIR"
+git remote get-url upstream &>/dev/null || git remote add upstream https://github.com/ericvicenti/botical.git 2>/dev/null || true
+git fetch upstream main --quiet 2>/dev/null
+cd "$DEV_DIR"
 PROD_HEAD=$(cd "$PROD_DIR" && git rev-parse HEAD)
 
 if [ "$DEV_HEAD" = "$PROD_HEAD" ]; then
@@ -56,8 +62,8 @@ fi
 # Pull into prod
 log "Pulling into prod..."
 cd "$PROD_DIR"
-git fetch origin
-git reset --hard origin/main
+git fetch upstream main --quiet 2>/dev/null
+git reset --hard upstream/main
 
 # Install deps & build
 log "Building..."
