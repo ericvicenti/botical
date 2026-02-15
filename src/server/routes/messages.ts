@@ -35,6 +35,9 @@ import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
 
+// Map of active abort controllers by sessionId (shared with WebSocket handler)
+const activeStreams = new Map<string, AbortController>();
+
 const messages = new Hono();
 
 /**
@@ -128,8 +131,17 @@ messages.post("/", async (c) => {
     );
   }
 
+  // Check if there's already an active stream for this session
+  const existingController = activeStreams.get(sessionId);
+  if (existingController) {
+    // Interrupt the current tool-calling flow
+    existingController.abort();
+    activeStreams.delete(sessionId);
+  }
+
   // Create abort controller for this request
   const abortController = new AbortController();
+  activeStreams.set(sessionId, abortController);
 
   // Set up timeout (10 minutes max for agent runs)
   const timeoutId = setTimeout(() => {
@@ -155,6 +167,7 @@ messages.post("/", async (c) => {
     });
 
     clearTimeout(timeoutId);
+    activeStreams.delete(sessionId);
 
     // Get the assistant message with parts
     const message = MessageService.getByIdOrThrow(db, agentResult.messageId);
@@ -174,6 +187,7 @@ messages.post("/", async (c) => {
     );
   } catch (error) {
     clearTimeout(timeoutId);
+    activeStreams.delete(sessionId);
     throw error;
   }
 });

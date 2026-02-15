@@ -83,6 +83,14 @@ export const MessageHandlers = {
     // Get project path
     const projectPath = getProjectPath(projectId);
 
+    // Check if there's already an active stream for this session
+    const existingController = activeStreams.get(input.sessionId);
+    if (existingController) {
+      // Interrupt the current tool-calling flow
+      existingController.abort();
+      activeStreams.delete(input.sessionId);
+    }
+
     // Create abort controller for cancellation
     const abortController = new AbortController();
     activeStreams.set(input.sessionId, abortController);
