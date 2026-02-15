@@ -401,7 +401,10 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
           <button
             onClick={handleSave}
             disabled={saveFile.isPending}
-            className="fixed bottom-20 right-4 md:hidden flex items-center gap-2 px-4 py-3 bg-accent-primary text-white rounded-lg shadow-lg hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation z-50 transition-all duration-200"
+            className="fixed right-4 md:hidden flex items-center gap-2 px-4 py-3 bg-accent-primary text-white rounded-lg shadow-lg hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation z-50 transition-all duration-200"
+            style={{ 
+              bottom: `calc(5rem + env(safe-area-inset-bottom, 0px))` 
+            }}
             title="Save file (Ctrl/Cmd+S)"
           >
             <Save className="w-4 h-4" />
@@ -411,7 +414,12 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
       </div>
 
       {/* Status bar with mobile save button */}
-      <div className="h-12 sm:h-10 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
+      <div 
+        className="h-12 sm:h-10 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary"
+        style={{ 
+          paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px))` 
+        }}
+      >
         <span className={cn(isDirty && "text-accent-warning")}>
           {isReadOnly ? "Read-only" : isDirty ? "Modified" : "Saved"}
           {saveFile.isPending && " (Saving...)"}
