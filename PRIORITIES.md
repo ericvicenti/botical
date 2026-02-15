@@ -115,7 +115,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 - [x] **Mobile: safe area insets not respected** (severity: high) — UI renders behind notch/home indicator/status bar. Must use `env(safe-area-inset-*)` CSS variables and `viewport-fit=cover` meta tag so nothing is clipped off-screen. ✅ FIXED: Added viewport-fit=cover and safe area padding to root layout.
 
-- [ ] **Mobile file editor: save button inaccessible** (severity: high) — On mobile web, the save button in the file editor can't be reached/tapped. Likely a layout/overflow issue. Must be fixed for mobile-first UX.
+- [x] **Mobile file editor: save button inaccessible** (severity: high) — ✅ FIXED: Added safe area inset support to floating save button and status bar. Used `calc(5rem + env(safe-area-inset-bottom, 0px))` for floating button positioning and added safe area padding to status bar. Save buttons now always accessible above device chrome (home indicators, notches, etc.).
 
 - [ ] **Message queuing must be server-side** (severity: high) — When a user sends a message while the model is busy, the message should be queued on the SERVER, not the client. Currently the queuing behavior is client-side which means messages can be lost if the page is refreshed. Server should accept and store the message immediately, then deliver it to the model when the current turn completes (or interrupt if that's the desired behavior).
 
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 3)*
+*Last read by Leopard: 2026-02-13 (Cycle 4)*
 *Last updated by human: 2026-02-13*

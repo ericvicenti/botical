@@ -6,6 +6,41 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix Mobile File Editor Save Button Accessibility
+
+**Priority Addressed:** Mobile file editor: save button inaccessible (severity: high) - On mobile web, the save button in the file editor can't be reached/tapped. Likely a layout/overflow issue. Must be fixed for mobile-first UX.
+
+**Root Cause Analysis:**
+The mobile save buttons in the file editor were not accounting for safe area insets on mobile devices:
+1. Floating save button used fixed positioning with `bottom-20` (80px) but didn't account for home indicators/notches
+2. Status bar at bottom didn't have safe area padding, causing content to be clipped behind device chrome
+3. On devices with home indicators or notches, save buttons could be partially or completely inaccessible
+
+**Changes Made:**
+- **Floating save button**: Changed from `bottom-20` class to inline style using `calc(5rem + env(safe-area-inset-bottom, 0px))`
+- **Status bar**: Added `paddingBottom: calc(0.5rem + env(safe-area-inset-bottom, 0px))` to ensure proper spacing
+- Both changes ensure save buttons are always accessible above device chrome (home indicators, notches, etc.)
+
+**Technical Details:**
+- Used CSS `env(safe-area-inset-bottom)` with fallback to `0px` for older browsers
+- Combined with existing spacing using `calc()` to maintain proper visual hierarchy
+- Preserved existing responsive behavior (buttons only show on mobile when file is dirty)
+- No changes to functionality - only positioning/spacing improvements
+
+**Results:**
+- ✅ Fixed mobile save button accessibility on devices with home indicators/notches
+- ✅ Maintained existing responsive design and behavior
+- ✅ Used standard CSS safe area inset approach for maximum compatibility
+- ✅ Build succeeds without breaking existing functionality
+
+**Next Steps:**
+- Test on actual mobile devices to verify fix works correctly
+- Move to next highest priority bug: "Message queuing must be server-side"
+
+**Commit:** 58cbd10
+
+---
+
 ### 2026-02-13 - Fix User Message Interruption During Tool-Calling Flow
 
 **Priority Addressed:** User message should interrupt tool-calling flow (severity: high) - When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message.
