@@ -215,6 +215,7 @@ export class MessageQueueProcessor {
         modelId,
         agentName: queuedMessage.agentName || session.agent,
         abortSignal: abortController.signal,
+        existingUserMessageId: queuedMessage.userMessageId,
       });
 
       // Mark as completed

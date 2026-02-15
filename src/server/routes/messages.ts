@@ -31,10 +31,12 @@ import { SessionService } from "@/services/sessions.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { MessageQueueService } from "@/services/message-queue.ts";
-import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
+
+// Note: Message processing is now handled by the server-side message queue
+// This ensures messages are not lost if the page is refreshed during processing
 
 const messages = new Hono();
 
@@ -129,34 +131,60 @@ messages.post("/", async (c) => {
     );
   }
 
-  // Enqueue the message for processing
+  // Create user message first (so it's stored immediately)
+  const userMessage = MessageService.create(db, {
+    sessionId,
+    role: "user",
+  });
+
+  MessagePartService.create(db, {
+    messageId: userMessage.id,
+    sessionId,
+    type: "text",
+    content: { text: content },
+  });
+
+  // Update session stats
+  SessionService.updateStats(db, sessionId, { messageCount: 1 });
+
+  // Queue the message for processing by the server-side queue
   const queuedMessage = MessageQueueService.enqueue(db, {
     sessionId,
     userId,
+    userMessageId: userMessage.id,
     content,
-    providerId,
-    modelId,
-    agentName: agentName ?? session.agent,
     canExecuteCode,
     enabledTools,
+    providerId: providerId as ProviderId,
+    modelId: modelId || undefined,
+    agentName: agentName ?? session.agent,
     apiKey: requestApiKey,
   });
 
-  // Get queue position for user feedback
-  const queuePosition = MessageQueueService.getQueuePosition(db, sessionId, queuedMessage.id);
-  const queueLength = MessageQueueService.getQueueLength(db, sessionId);
-
+  // Return immediately with the queued message info
+  // The actual processing will happen asynchronously via the message queue processor
   return c.json(
     {
       data: {
-        queuedMessageId: queuedMessage.id,
-        status: "queued",
-        queuePosition,
-        queueLength,
-        message: "Message queued for processing. You will receive the response when processing completes.",
+        message: userMessage,
+        parts: [
+          {
+            id: `${userMessage.id}_text`,
+            messageId: userMessage.id,
+            sessionId,
+            type: "text",
+            content: { text: content },
+            createdAt: Date.now(),
+          },
+        ],
+        queueInfo: {
+          queuedMessageId: queuedMessage.id,
+          queuePosition: MessageQueueService.getQueuePosition(db, sessionId, queuedMessage.id),
+          status: queuedMessage.status,
+        },
       },
     },
-    202 // Accepted - processing will happen asynchronously
+    201
   );
 });
 

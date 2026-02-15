@@ -22,7 +22,7 @@ import { serveStatic } from "hono/bun";
 import { existsSync } from "fs";
 import { handleError, logger, requestId } from "./middleware/index.ts";
 import { requireAuth } from "../auth/middleware.ts";
-import { health, auth, credentials, sessions, messages, messageQueue, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules, oauthProxy, status, statusPage } from "./routes/index.ts";
+import { health, auth, credentials, sessions, messages, agents, projects, tools, sessionTodos, todos, projectMissions, missions, projectTasks, tasks, projectProcesses, processes, projectServices, services, files, projectGit, gitClone, gitIdentity, workflows, workflowExecutions, filesystem, skills, templates, extensionsRouter, projectSchedules, schedules, oauthProxy, status, statusPage } from "./routes/index.ts";
 import { createWebSocketHandler } from "../websocket/index.ts";
 
 /**
@@ -86,7 +86,6 @@ export function createApp() {
   app.route("/api/sessions", sessions);
   app.route("/api/sessions", sessionTodos); // Session-scoped todo routes (backwards compat)
   app.route("/api/messages", messages);
-  app.route("/api", messageQueue); // Message queue management routes
   app.route("/api/agents", agents);
   app.route("/api/tools", tools);
   app.route("/api/todos", todos); // Individual todo routes (backwards compat)

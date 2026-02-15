@@ -3,6 +3,7 @@ import { MagicLinkService } from "@/auth/magic-link.ts";
 import { DatabaseManager } from "@/database/manager.ts";
 import { Config } from "@/config/index.ts";
 import { AuthenticationError } from "@/utils/errors.ts";
+import { EmailService } from "@/services/email.ts";
 import fs from "fs";
 import path from "path";
 
@@ -27,6 +28,7 @@ interface UserRow {
 describe("MagicLinkService", () => {
   const testDataDir = path.join(import.meta.dirname, "../../../.test-data/magic-link-test");
   let consoleLogSpy: ReturnType<typeof spyOn>;
+  let emailServiceSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
     // Reset database for each test
@@ -40,8 +42,11 @@ describe("MagicLinkService", () => {
     // Initialize database
     await DatabaseManager.initialize();
 
-    // Spy on console.log to capture magic link output
+    // Spy on console.log to capture magic link output (for tests that check console output)
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
+
+    // Mock EmailService.sendMagicLink to avoid actual email operations
+    emailServiceSpy = spyOn(EmailService, "sendMagicLink").mockResolvedValue();
   });
 
   afterEach(() => {
@@ -50,6 +55,7 @@ describe("MagicLinkService", () => {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
     consoleLogSpy.mockRestore();
+    emailServiceSpy.mockRestore();
   });
 
   describe("request", () => {
@@ -126,24 +132,21 @@ describe("MagicLinkService", () => {
       expect(token.user_id).toBe("usr_123");
     });
 
-    it("outputs magic link to console in dev mode", async () => {
+    it("calls EmailService.sendMagicLink with correct parameters", async () => {
       await MagicLinkService.request("test@example.com");
 
-      expect(consoleLogSpy).toHaveBeenCalled();
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      expect(output).toContain("MAGIC LINK");
+      expect(emailServiceSpy).toHaveBeenCalledTimes(1);
+      expect(emailServiceSpy).toHaveBeenCalledWith("test@example.com", expect.any(String));
     });
   });
 
   describe("verify", () => {
     it("creates new user on first verification", async () => {
-      // Get the token by capturing console output
+      // Get the token from the EmailService mock call
       await MagicLinkService.request("newuser@example.com");
 
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      expect(tokenMatch).toBeDefined();
-      const token = tokenMatch![1];
+      expect(emailServiceSpy).toHaveBeenCalledTimes(1);
+      const token = emailServiceSpy.mock.calls[0][1]; // Second parameter is the token
 
       const result = MagicLinkService.verify(token);
 
@@ -160,9 +163,8 @@ describe("MagicLinkService", () => {
     it("first user becomes admin", async () => {
       await MagicLinkService.request("first@example.com");
 
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
+      expect(emailServiceSpy).toHaveBeenCalledTimes(1);
+      const token = emailServiceSpy.mock.calls[0][1]; // Second parameter is the token
 
       const result = MagicLinkService.verify(token);
 
@@ -177,18 +179,16 @@ describe("MagicLinkService", () => {
     it("second user is not admin", async () => {
       // Create first user
       await MagicLinkService.request("first@example.com");
-      let output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      let tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      MagicLinkService.verify(tokenMatch![1]);
+      const firstToken = emailServiceSpy.mock.calls[0][1];
+      MagicLinkService.verify(firstToken);
 
       // Reset spy
-      consoleLogSpy.mockClear();
+      emailServiceSpy.mockClear();
 
       // Create second user
       await MagicLinkService.request("second@example.com");
-      output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const result = MagicLinkService.verify(tokenMatch![1]);
+      const secondToken = emailServiceSpy.mock.calls[0][1];
+      const result = MagicLinkService.verify(secondToken);
 
       expect(result.isAdmin).toBe(false);
 
@@ -207,10 +207,9 @@ describe("MagicLinkService", () => {
       `).run(Date.now(), Date.now());
 
       await MagicLinkService.request("existing@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+      const token = emailServiceSpy.mock.calls[0][1];
 
-      const result = MagicLinkService.verify(tokenMatch![1]);
+      const result = MagicLinkService.verify(token);
 
       expect(result.isNewUser).toBe(false);
       expect(result.userId).toBe("usr_existing");
@@ -219,9 +218,7 @@ describe("MagicLinkService", () => {
 
     it("marks token as used", async () => {
       await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
+      const token = emailServiceSpy.mock.calls[0][1];
 
       MagicLinkService.verify(token);
 
@@ -235,9 +232,7 @@ describe("MagicLinkService", () => {
 
     it("throws on already used token", async () => {
       await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
+      const token = emailServiceSpy.mock.calls[0][1];
 
       MagicLinkService.verify(token);
 
@@ -250,26 +245,22 @@ describe("MagicLinkService", () => {
 
     it("throws on expired token", async () => {
       await MagicLinkService.request("test@example.com");
+      const token = emailServiceSpy.mock.calls[0][1];
 
       // Manually expire the token
       const db = DatabaseManager.getRootDb();
       db.prepare("UPDATE email_verification_tokens SET expires_at = ? WHERE email = ?")
         .run(Date.now() - 1000, "test@example.com");
 
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-      const token = tokenMatch![1];
-
       expect(() => MagicLinkService.verify(token)).toThrow(AuthenticationError);
     });
 
     it("updates last_login_at", async () => {
       await MagicLinkService.request("test@example.com");
-      const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-      const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+      const token = emailServiceSpy.mock.calls[0][1];
 
       const before = Date.now();
-      const result = MagicLinkService.verify(tokenMatch![1]);
+      const result = MagicLinkService.verify(token);
       const after = Date.now();
 
       const db = DatabaseManager.getRootDb();

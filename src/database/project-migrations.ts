@@ -644,4 +644,18 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 13,
+    name: "message_queue_user_message_id",
+    up: (db) => {
+      db.exec(`
+        -- Add user_message_id field to message_queue table
+        -- This allows the queue to reference the pre-created user message
+        ALTER TABLE message_queue ADD COLUMN user_message_id TEXT;
+        
+        -- Index for efficient lookup by user message ID
+        CREATE INDEX idx_message_queue_user_message ON message_queue(user_message_id);
+      `);
+    },
+  },
 ];

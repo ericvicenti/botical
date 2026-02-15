@@ -24,6 +24,7 @@ export interface QueuedMessageRecord {
   id: string;
   session_id: string;
   user_id: string;
+  user_message_id: string | null;
   content: string;
   provider_id: string | null;
   model_id: string | null;
@@ -43,6 +44,7 @@ export interface QueuedMessage {
   id: string;
   sessionId: string;
   userId: string;
+  userMessageId?: string;
   content: string;
   providerId?: string;
   modelId?: string;
@@ -61,6 +63,7 @@ export interface QueuedMessage {
 export interface EnqueueMessageParams {
   sessionId: string;
   userId: string;
+  userMessageId?: string;
   content: string;
   providerId?: string;
   modelId?: string;
@@ -84,14 +87,15 @@ export const MessageQueueService = {
 
     db.prepare(
       `INSERT INTO message_queue (
-        id, session_id, user_id, content, provider_id, model_id, agent_name,
+        id, session_id, user_id, user_message_id, content, provider_id, model_id, agent_name,
         can_execute_code, enabled_tools, api_key, status, retry_count,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       params.sessionId,
       params.userId,
+      params.userMessageId || null,
       params.content,
       params.providerId || null,
       params.modelId || null,
@@ -380,6 +384,7 @@ export const MessageQueueService = {
       id: record.id,
       sessionId: record.session_id,
       userId: record.user_id,
+      userMessageId: record.user_message_id || undefined,
       content: record.content,
       providerId: record.provider_id || undefined,
       modelId: record.model_id || undefined,
