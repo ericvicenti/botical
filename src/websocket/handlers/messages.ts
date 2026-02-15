@@ -14,6 +14,8 @@ import {
 import { DatabaseManager } from "@/database/manager.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { MessageService, MessagePartService } from "@/services/messages.ts";
+import { MessageQueueService } from "@/services/message-queue.ts";
+import { messageQueueProcessor } from "@/services/message-queue-processor.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
@@ -21,9 +23,6 @@ import { EventBus } from "@/bus/index.ts";
 import type { WSData } from "../connections.ts";
 import type { ProviderId } from "@/agents/types.ts";
 import { extractTextContent } from "@/services/message-content.ts";
-
-// Map of active abort controllers by sessionId
-const activeStreams = new Map<string, AbortController>();
 
 /**
  * Get project path from projects table
@@ -80,64 +79,53 @@ export const MessageHandlers = {
       }
     }
 
-    // Get project path
-    const projectPath = getProjectPath(projectId);
+    // Enqueue the message for processing
+    const queuedMessage = MessageQueueService.enqueue(db, {
+      sessionId: input.sessionId,
+      userId: ctx.userId,
+      content: input.content,
+      providerId,
+      modelId: session.modelId,
+      canExecuteCode: true, // TODO: Get from user auth context
+    });
 
-    // Check if there's already an active stream for this session
-    const existingController = activeStreams.get(input.sessionId);
-    if (existingController) {
-      // Interrupt the current tool-calling flow
-      existingController.abort();
-      activeStreams.delete(input.sessionId);
-    }
+    // Get queue position for user feedback
+    const queuePosition = MessageQueueService.getQueuePosition(db, input.sessionId, queuedMessage.id);
+    const queueLength = MessageQueueService.getQueueLength(db, input.sessionId);
 
-    // Create abort controller for cancellation
-    const abortController = new AbortController();
-    activeStreams.set(input.sessionId, abortController);
-
-    try {
-      // Run the orchestrator
-      const result = await AgentOrchestrator.run({
-        db,
-        projectId,
-        projectPath,
-        sessionId: input.sessionId,
-        userId: ctx.userId,
-        canExecuteCode: true, // TODO: Get from user auth context
-        content: input.content,
-        credentialResolver,
-        providerId,
-        modelId: session.modelId,
-        abortSignal: abortController.signal,
-        onEvent: async (event) => {
-          // Events are automatically published via EventBus by StreamProcessor
-          // The bus-bridge will forward them to WebSocket clients
-        },
-      });
-
-      return {
-        messageId: result.messageId,
-        finishReason: result.finishReason,
-        usage: result.usage,
-      };
-    } finally {
-      activeStreams.delete(input.sessionId);
-    }
+    return {
+      queuedMessageId: queuedMessage.id,
+      status: "queued",
+      queuePosition,
+      queueLength,
+      message: "Message queued for processing",
+    };
   },
 
   /**
-   * Cancel an active message stream
+   * Cancel an active message stream or queued messages
    */
   async cancel(payload: unknown, ctx: WSData) {
     const input = MessageCancelPayload.parse(payload);
+    const db = DatabaseManager.getProjectDb(ctx.projectId);
 
-    const abortController = activeStreams.get(input.sessionId);
-    if (abortController) {
-      abortController.abort();
-      activeStreams.delete(input.sessionId);
+    // Try to cancel active processing first
+    const wasCancelledFromProcessor = messageQueueProcessor.cancelSession(input.sessionId);
+
+    // Cancel any pending messages in the queue
+    const pendingMessages = MessageQueueService.listBySession(db, input.sessionId, { status: "pending" });
+    let cancelledCount = 0;
+
+    for (const message of pendingMessages) {
+      MessageQueueService.cancel(db, message.id);
+      cancelledCount++;
     }
 
-    return { cancelled: true };
+    return { 
+      cancelled: true,
+      cancelledProcessing: wasCancelledFromProcessor,
+      cancelledQueued: cancelledCount,
+    };
   },
 
   /**

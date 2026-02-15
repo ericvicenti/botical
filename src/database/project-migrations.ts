@@ -606,4 +606,42 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+
+  {
+    id: 12,
+    name: "message_queue",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- MESSAGE QUEUE
+        -- ============================================
+        
+        CREATE TABLE message_queue (
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          content TEXT NOT NULL,
+          provider_id TEXT,
+          model_id TEXT,
+          agent_name TEXT,
+          can_execute_code INTEGER NOT NULL DEFAULT 0,
+          enabled_tools TEXT, -- JSON array
+          api_key TEXT,
+          status TEXT NOT NULL DEFAULT 'pending', -- pending, processing, completed, failed
+          retry_count INTEGER NOT NULL DEFAULT 0,
+          error_message TEXT,
+          created_at INTEGER NOT NULL,
+          started_at INTEGER,
+          completed_at INTEGER
+        );
+
+        -- Indexes for efficient querying
+        CREATE INDEX idx_message_queue_session ON message_queue(session_id);
+        CREATE INDEX idx_message_queue_status ON message_queue(status);
+        CREATE INDEX idx_message_queue_session_status ON message_queue(session_id, status);
+        CREATE INDEX idx_message_queue_created ON message_queue(created_at);
+        CREATE INDEX idx_message_queue_session_created ON message_queue(session_id, created_at);
+      `);
+    },
+  },
 ];

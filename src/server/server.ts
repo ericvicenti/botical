@@ -7,6 +7,7 @@ import { registerCoreTools } from "../tools/index.ts";
 import { registerAllActions } from "../actions/index.ts";
 import { ServiceRunner } from "../services/service-runner.ts";
 import { Scheduler } from "../services/scheduler.ts";
+import { messageQueueProcessor } from "../services/message-queue-processor.ts";
 import { startTelegramBot, stopTelegramBot } from "../integrations/telegram.ts";
 import { ExtensionRegistry, startExtensionServer, stopAllExtensionServers } from "../extensions/index.ts";
 import { ProjectService } from "../services/projects.ts";
@@ -111,6 +112,9 @@ export async function createServer(
   // Start the scheduler for recurring tasks
   Scheduler.start();
 
+  // Start the message queue processor
+  messageQueueProcessor.start();
+
   // Start Telegram bot if configured
   startTelegramBot();
 
@@ -151,6 +155,8 @@ export async function createServer(
     close: async () => {
       // Stop the scheduler
       Scheduler.stop();
+      // Stop the message queue processor
+      messageQueueProcessor.stop();
       // Stop Telegram bot
       stopTelegramBot();
       // Stop all running services

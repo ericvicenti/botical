@@ -30,13 +30,11 @@ import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
+import { MessageQueueService } from "@/services/message-queue.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
-
-// Map of active abort controllers by sessionId (shared with WebSocket handler)
-const activeStreams = new Map<string, AbortController>();
 
 const messages = new Hono();
 
@@ -131,65 +129,35 @@ messages.post("/", async (c) => {
     );
   }
 
-  // Check if there's already an active stream for this session
-  const existingController = activeStreams.get(sessionId);
-  if (existingController) {
-    // Interrupt the current tool-calling flow
-    existingController.abort();
-    activeStreams.delete(sessionId);
-  }
+  // Enqueue the message for processing
+  const queuedMessage = MessageQueueService.enqueue(db, {
+    sessionId,
+    userId,
+    content,
+    providerId,
+    modelId,
+    agentName: agentName ?? session.agent,
+    canExecuteCode,
+    enabledTools,
+    apiKey: requestApiKey,
+  });
 
-  // Create abort controller for this request
-  const abortController = new AbortController();
-  activeStreams.set(sessionId, abortController);
+  // Get queue position for user feedback
+  const queuePosition = MessageQueueService.getQueuePosition(db, sessionId, queuedMessage.id);
+  const queueLength = MessageQueueService.getQueueLength(db, sessionId);
 
-  // Set up timeout (10 minutes max for agent runs)
-  const timeoutId = setTimeout(() => {
-    abortController.abort();
-  }, 600000);
-
-  try {
-    // Run agent orchestration
-    const agentResult = await AgentOrchestrator.run({
-      db,
-      projectId,
-      projectPath,
-      sessionId,
-      userId,
-      canExecuteCode,
-      enabledTools,
-      content,
-      credentialResolver,
-      providerId: providerId as ProviderId,
-      modelId,
-      agentName: agentName ?? session.agent,
-      abortSignal: abortController.signal,
-    });
-
-    clearTimeout(timeoutId);
-    activeStreams.delete(sessionId);
-
-    // Get the assistant message with parts
-    const message = MessageService.getByIdOrThrow(db, agentResult.messageId);
-    const parts = MessagePartService.listByMessage(db, agentResult.messageId);
-
-    return c.json(
-      {
-        data: {
-          message,
-          parts,
-          usage: agentResult.usage,
-          cost: agentResult.cost,
-          finishReason: agentResult.finishReason,
-        },
+  return c.json(
+    {
+      data: {
+        queuedMessageId: queuedMessage.id,
+        status: "queued",
+        queuePosition,
+        queueLength,
+        message: "Message queued for processing. You will receive the response when processing completes.",
       },
-      201
-    );
-  } catch (error) {
-    clearTimeout(timeoutId);
-    activeStreams.delete(sessionId);
-    throw error;
-  }
+    },
+    202 // Accepted - processing will happen asynchronously
+  );
 });
 
 /**
