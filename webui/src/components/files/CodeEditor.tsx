@@ -401,7 +401,7 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
           <button
             onClick={handleSave}
             disabled={saveFile.isPending}
-            className="absolute bottom-4 right-4 md:hidden flex items-center gap-2 px-4 py-3 bg-accent-primary text-white rounded-lg shadow-lg hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation z-10 transition-all duration-200"
+            className="fixed bottom-20 right-4 md:hidden flex items-center gap-2 px-4 py-3 bg-accent-primary text-white rounded-lg shadow-lg hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation z-50 transition-all duration-200"
             title="Save file (Ctrl/Cmd+S)"
           >
             <Save className="w-4 h-4" />
