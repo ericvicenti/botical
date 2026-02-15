@@ -395,10 +395,23 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
       </div>
 
       {/* Editor */}
-      <div ref={containerRef} className="flex-1 overflow-hidden" />
+      <div ref={containerRef} className="flex-1 overflow-hidden relative">
+        {/* Floating save button for mobile - appears when dirty */}
+        {isDirty && !isReadOnly && (
+          <button
+            onClick={handleSave}
+            disabled={saveFile.isPending}
+            className="absolute bottom-4 right-4 md:hidden flex items-center gap-2 px-4 py-3 bg-accent-primary text-white rounded-lg shadow-lg hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation z-10 transition-all duration-200"
+            title="Save file (Ctrl/Cmd+S)"
+          >
+            <Save className="w-4 h-4" />
+            <span className="font-medium">Save</span>
+          </button>
+        )}
+      </div>
 
       {/* Status bar with mobile save button */}
-      <div className="h-10 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
+      <div className="h-12 sm:h-10 px-2 flex items-center justify-between bg-bg-secondary border-t border-border text-xs text-text-secondary">
         <span className={cn(isDirty && "text-accent-warning")}>
           {isReadOnly ? "Read-only" : isDirty ? "Modified" : "Saved"}
           {saveFile.isPending && " (Saving...)"}
@@ -409,10 +422,10 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
             <button
               onClick={handleSave}
               disabled={saveFile.isPending}
-              className="flex items-center gap-1 px-2 py-1 bg-accent-primary text-white rounded text-xs hover:bg-accent-primary/80 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+              className="flex items-center gap-1 px-3 py-2 sm:px-2 sm:py-1 bg-accent-primary text-white rounded text-xs hover:bg-accent-primary/80 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[36px] sm:min-h-[auto]"
               title="Save file (Ctrl/Cmd+S)"
             >
-              <Save className="w-3 h-3" />
+              <Save className="w-4 h-4 sm:w-3 sm:h-3" />
               <span className="hidden sm:inline">Save</span>
             </button>
           )}

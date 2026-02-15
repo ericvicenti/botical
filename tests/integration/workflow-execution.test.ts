@@ -449,6 +449,66 @@ describe("Workflow Execution Integration", () => {
       const execution = WorkflowExecutionService.getById(db, data.data.executionId);
       expect(execution?.status).toBe("completed");
     });
+
+    it("should execute a workflow with a session step", async () => {
+      const db = DatabaseManager.getProjectDb(projectId);
+
+      // Create a workflow with a session step
+      const workflow = WorkflowService.create(db, projectId, {
+        ...defaultWorkflowFields,
+        name: "session-test",
+        label: "Session Test Workflow",
+        steps: [
+          {
+            id: "session-step",
+            type: "session",
+            message: { type: "literal", value: "Hello, what is 2+2?" },
+            agent: { type: "literal", value: "default" },
+            maxMessages: { type: "literal", value: 3 },
+          } as WorkflowStep,
+        ],
+      });
+
+      // Execute the workflow
+      const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          input: {},
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      const data = (await response.json()) as ExecuteResponse;
+      expect(data.data.executionId).toMatch(/^wfx_/);
+      expect(data.data.status).toBe("pending");
+
+      // Wait for execution to complete (session steps may take longer)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Check execution status
+      const execution = WorkflowExecutionService.getById(db, data.data.executionId);
+      expect(execution).toBeDefined();
+      expect(execution?.status).toBe("completed");
+
+      // Check session step output
+      const steps = execution?.steps;
+      expect(steps?.["session-step"]).toBeDefined();
+      expect(steps?.["session-step"]?.status).toBe("completed");
+      
+      const stepOutput = steps?.["session-step"]?.output as {
+        sessionId?: string;
+        messageCount?: number;
+        response?: string;
+        status?: string;
+      } | undefined;
+      
+      expect(stepOutput?.sessionId).toMatch(/^sess_/);
+      expect(stepOutput?.messageCount).toBeGreaterThan(0);
+      expect(stepOutput?.response).toBeDefined();
+      expect(stepOutput?.status).toBe("active");
+    });
   });
 
   describe("GET /api/workflow-executions/:id", () => {
