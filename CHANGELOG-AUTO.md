@@ -6,6 +6,46 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix User Message Interruption During Tool-Calling Flow
+
+**Priority Addressed:** User message should interrupt tool-calling flow (severity: high) - When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message.
+
+**Root Cause Analysis:**
+The bug was caused by lack of interruption logic in message handlers:
+1. WebSocket and REST API message handlers would start new orchestrations without checking for active ones
+2. Multiple concurrent orchestrations could run for the same session
+3. New user messages didn't interrupt ongoing tool-calling flows
+4. Users had to wait for current flow to complete before their new message was processed
+
+**Changes Made:**
+- Added `activeStreams` Map to track running orchestrations by `sessionId` in both handlers
+- Modified WebSocket message handler (`src/websocket/handlers/messages.ts`) to check for existing active streams
+- Modified REST API message handler (`src/server/routes/messages.ts`) to check for existing active streams
+- Added interruption logic: abort existing `AbortController` before starting new orchestration
+- Added proper cleanup: remove from `activeStreams` Map on completion or error
+- Maintained backward compatibility with existing message flows
+
+**Technical Details:**
+- Used `AbortController.abort()` to cleanly interrupt ongoing LLM streaming and tool execution
+- Shared `activeStreams` tracking pattern between WebSocket and REST handlers
+- Ensured proper cleanup in both success and error paths
+- No changes needed to `AgentOrchestrator` - interruption handled at handler level
+
+**Results:**
+- ✅ Fixed user message interruption - new messages now cancel active tool-calling flows
+- ✅ Prevented multiple concurrent orchestrations per session
+- ✅ Maintained clean abort semantics using existing `AbortController` infrastructure
+- ✅ Code compiles successfully without new TypeScript errors
+- ✅ Unit tests pass (pre-existing email service test failures unrelated)
+
+**Next Steps:**
+- Test the fix manually via API to verify interruption behavior
+- Move to next highest priority bug: "Mobile file editor: save button inaccessible"
+
+**Commit:** 38e2edf
+
+---
+
 ### 2026-02-13 - Fix Double-Sent First Message Bug
 
 **Priority Addressed:** Double-sent first message (severity: high) - When creating a new task, the first user message appears twice

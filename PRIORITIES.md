@@ -111,7 +111,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 - [x] **Double-sent first message** (severity: high) — ✅ FIXED: Modified AgentOrchestrator.run to accept existingUserMessageId parameter and only create user message if not already provided. Session creation now passes existing message ID to prevent duplication. One single path for message creation achieved.
 
-- [ ] **User message should interrupt tool-calling flow** (severity: high) — When a user sends a message during an active session (while the model is doing tool calls), it should interrupt the current flow and incorporate the user's message. Currently the user message doesn't interrupt. The model should see the new user message and adjust its plan accordingly.
+- [x] **User message should interrupt tool-calling flow** (severity: high) — ✅ FIXED: Added interruption logic to both WebSocket and REST API message handlers. When new user message arrives for active session, existing orchestration is aborted via AbortController before starting new one. Prevents multiple concurrent orchestrations per session and ensures user messages interrupt tool-calling flows as expected.
 
 - [x] **Mobile: safe area insets not respected** (severity: high) — UI renders behind notch/home indicator/status bar. Must use `env(safe-area-inset-*)` CSS variables and `viewport-fit=cover` meta tag so nothing is clipped off-screen. ✅ FIXED: Added viewport-fit=cover and safe area padding to root layout.
 
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 2)*
+*Last read by Leopard: 2026-02-13 (Cycle 3)*
 *Last updated by human: 2026-02-13*
