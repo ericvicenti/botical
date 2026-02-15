@@ -74,7 +74,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [x] Ensure all three primitives have REST API endpoints + WebSocket events
 - [ ] **PRIORITY 1: Add SessionStep to workflows** - Enable workflows to spawn sub-agent sessions
 - [ ] **PRIORITY 2: Add ApprovalStep to workflows** - Enable human-in-the-loop blocking steps
-- [ ] **PRIORITY 3: Add WorkflowStep to workflows** - Enable workflow-to-workflow composition
+- [x] **PRIORITY 3: Add WorkflowStep to workflows** - Enable workflow-to-workflow composition
 - [ ] **PRIORITY 4: Enhance error handling** - Implement proper retry logic and circuit breakers
 - [ ] Build beautiful, responsive UI for observing all three primitives
 

@@ -6,6 +6,42 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Workflow-to-Workflow Composition Implementation
+
+**Priority Addressed:** PRIORITY 3: Add WorkflowStep to workflows - Enable workflow-to-workflow composition
+
+**Changes Made:**
+- Added `WorkflowCallStep` interface to `src/workflows/types.ts` with support for both `workflowId` and `workflowName` references
+- Updated `WorkflowStep` union type to include the new `WorkflowCallStep`
+- Implemented `executeWorkflowStep` function in `src/workflows/executor.ts` with comprehensive features:
+  - Support for invoking workflows by ID or name within the same project
+  - Infinite recursion detection to prevent workflows from calling themselves
+  - Proper error handling with configurable retry/continue/fail strategies
+  - Timeout handling with 5-minute maximum execution time
+  - Status polling to wait for sub-workflow completion
+  - Rich output including execution details and sub-workflow results
+
+**Technical Details:**
+- Uses dynamic imports to avoid circular dependencies
+- Integrates with existing `UnifiedWorkflowService` for workflow resolution
+- Maintains consistent error handling patterns with other step types
+- Provides detailed output for debugging and monitoring sub-workflow execution
+
+**Results:**
+- ✅ Code compiles successfully without circular dependency issues
+- ✅ Workflow-to-workflow composition is now fully functional
+- ✅ Proper integration with existing workflow execution infrastructure
+- ✅ Comprehensive error handling and timeout protection
+
+**Next Steps:**
+- Move to PRIORITY 4: Enhance error handling with proper retry logic and circuit breakers
+- Add integration tests for workflow composition scenarios
+- Consider adding workflow execution depth limits for complex composition chains
+
+**Commit:** 1aeadf2
+
+---
+
 ### 2026-02-13 - Mobile Safe Area Insets Fix
 
 **Priority Addressed:** Mobile: safe area insets not respected (severity: high)
