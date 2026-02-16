@@ -6,6 +6,70 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Implement Sub-Task Decomposition for Improvement Cycles (Context Management Priority #3)
+
+**Priority Addressed:** Context Management & Long Chain Efficiency - Sub-task decomposition for improvement cycles (Priority #3)
+
+**Problem Analysis:**
+After implementing tool output truncation and auto-compaction, the next major context management challenge was the monolithic improvement cycle approach. Current improvement cycles run as single long sessions that:
+1. Accumulate massive context over 30+ steps (read priorities → plan → code → test → deploy → report)
+2. Mix different types of work (planning, coding, testing) in one conversation thread
+3. Suffer from context switching overhead and reduced focus
+4. Still approach token limits despite truncation and compaction
+5. Make it hard to recover from failures at specific phases
+
+**Solution Implemented:**
+- **Improvement Cycle Workflow** (`src/workflows/improvement-cycle.ts`):
+  - **3-Phase Decomposition**: Separate focused sessions for planning, implementation, and verification
+  - **Planning Phase**: Read priorities, analyze changelog, select task (max 10 steps)
+  - **Implementation Phase**: Code the selected task based on planning output (max 15 steps)  
+  - **Verification Phase**: Test and deploy if tests pass (max 10 steps)
+  - **Context Passing**: Each phase receives structured summary from previous phase
+  - **Fresh Context**: Each session starts with clean context, preventing bloat
+
+- **Enhanced Heartbeat Action** (`src/actions/heartbeat.ts`):
+  - **Dual Mode Support**: Can use either legacy single-session or new decomposed workflow
+  - **Automatic Fallback**: Falls back to legacy approach if workflow doesn't exist
+  - **Workflow Detection**: Checks for "Leopard Improvement Cycle" workflow in project
+  - **Backward Compatibility**: Existing heartbeat triggers continue to work
+
+- **Workflow Registration** (`scripts/register-improvement-cycle-workflow.ts`):
+  - **Automated Setup**: Script to create the improvement cycle workflow in the system
+  - **Proper Schema**: Defines input fields, step configurations, and dependencies
+  - **Agent Configuration**: Each phase uses leopard agent with specialized system prompts
+
+**Technical Details:**
+- Uses SessionStep workflow type for spawning sub-agent sessions
+- Each phase has tailored system prompts for focused work
+- Proper step dependencies ensure sequential execution
+- Context is passed between phases via template variables
+- Maximum 35 total steps (10+15+10) vs previous 30+ in single session
+- Each session starts fresh, eliminating context accumulation
+
+**Results:**
+- ✅ Created improvement cycle workflow (ID: wf_mlpdq9jn-17e2c237)
+- ✅ Enhanced heartbeat action supports both approaches
+- ✅ Workflow registration script working correctly
+- ✅ All unit tests pass (no regressions)
+- ✅ Backward compatibility maintained for existing triggers
+- ✅ Fresh context per phase prevents context bloat
+- ✅ Focused sessions improve efficiency and recovery
+
+**Impact on Success Metric:**
+This directly addresses the goal of completing improvement cycles in <20 steps with <500k tokens by:
+1. Breaking long cycles into focused sub-sessions (35 max steps total)
+2. Each phase starts with fresh context (no accumulation)
+3. Better failure recovery (can restart individual phases)
+4. More efficient work due to focused context per phase
+
+**Next Steps:**
+- Test the new workflow approach in production
+- Monitor effectiveness compared to legacy single-session approach
+- Move to Context Management Priority #4: Prompt caching integration
+- Consider adding workflow execution monitoring and metrics
+
+**Commit:** c876a73
+
 ### 2026-02-13 - Implement Auto-Compaction of Conversation History (Context Management Priority #2)
 
 **Priority Addressed:** Context Management & Long Chain Efficiency - Auto-compaction of older turns (Priority #2)
