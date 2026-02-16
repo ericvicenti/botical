@@ -659,6 +659,7 @@ export const PROJECT_MIGRATIONS: Migration[] = [
     },
   },
   {
+    id: 14,
     name: "message_queue_interrupts",
     up: (db) => {
       db.exec(`
