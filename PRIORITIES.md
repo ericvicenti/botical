@@ -69,7 +69,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 1. [x] **Tool output truncation** (quick win — cap file reads at N lines in history, summarize test output) - ✅ COMPLETED: Implemented smart content truncation utility with context-aware strategies. Tool outputs are now capped at 2000 chars for general tools, 1500 for tests, 3000 for files. Uses "both" strategy to preserve start/end of large outputs. Prevents context bloat while preserving essential information.
 2. [x] **Auto-compaction of older turns** (keep last 5 turns verbatim, summarize rest) - ✅ COMPLETED: Implemented sliding window context compaction with smart compression strategies. Keeps recent 5 turns verbatim, compresses older turns into structured summaries. Detects tool usage, file operations, and errors. Configurable thresholds and comprehensive test coverage. Integrated into AgentOrchestrator with monitoring.
 3. [x] **Sub-task decomposition for improvement cycles** (plan → implement → verify as separate sessions) - ✅ COMPLETED: Created improvement cycle workflow with 3 focused phases: planning (10 steps), implementation (15 steps), verification (10 steps). Each phase runs in fresh session with specialized context. Enhanced heartbeat action supports both legacy and decomposed approaches. Prevents context accumulation while maintaining efficiency. Workflow registered as wf_mlpdq9jn-17e2c237.
-4. Prompt caching integration
+4. [x] **Prompt caching integration** - ✅ COMPLETED: Implemented comprehensive prompt caching for both Anthropic and OpenAI providers. Intelligent analysis splits conversations into cacheable (early/static) and uncached (recent/dynamic) portions. Provider-specific optimizations: Anthropic (4+ messages, 2 recent uncached), OpenAI (6+ messages, 3 recent uncached). Estimated 90% token savings for cached portions. Seamless integration with existing context management. Comprehensive test coverage and detailed monitoring.
 5. Letta-style memory blocks for persistent state
 
 **Success metric:** Leopard completes a full improvement cycle (read priorities → code → test → deploy) in <20 steps with <500k total tokens.
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 7)*
+*Last read by Leopard: 2026-02-13 (Cycle 8)*
 *Last updated by human: 2026-02-13*
