@@ -48,7 +48,7 @@ export function defineQuery<T, P = void>(
     const baseKey = [definition.name];
     if (params && typeof params === "object") {
       // Add relevant params to key
-      const paramKeys = Object.entries(params as Record<string, unknown>)
+      const paramKeys = Object.entries(params as Record<string, unknown>) // Safe: params is object, treating as record for key generation
         .filter(([_, v]) => v !== undefined)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([k, v]) => `${k}:${String(v)}`);

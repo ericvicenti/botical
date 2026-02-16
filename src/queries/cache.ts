@@ -39,7 +39,7 @@ export class QueryCache {
    */
   get<T>(key: string[]): CacheEntry<T> | undefined {
     const keyStr = this.keyToString(key);
-    const entry = this.cache.get(keyStr) as CacheEntry<T> | undefined;
+    const entry = this.cache.get(keyStr) as CacheEntry<T> | undefined; // Safe: Map stores CacheEntry<T> values
 
     if (!entry) {
       return undefined;

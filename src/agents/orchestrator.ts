@@ -25,6 +25,7 @@ import type { ProviderId, AgentRunResult, AgentConfig } from "./types.ts";
 import { AgentRegistry } from "./registry.ts";
 import { SubAgentRunner } from "./subagent-runner.ts";
 import type { TaskParams } from "@/tools/task.ts";
+import { TaskParamsSchema } from "@/tools/task.ts";
 import { EventBus } from "@/bus/index.ts";
 import { SkillService } from "@/services/skills.ts";
 import { MemoryBlockService } from "@/services/memory-blocks.ts";
@@ -293,7 +294,8 @@ export class AgentOrchestrator {
       tools.task = {
         ...originalTaskTool,
         execute: async (args: unknown) => {
-          const result = await taskToolHandler(args as TaskParams);
+          const validatedArgs = TaskParamsSchema.parse(args); // Safe: runtime validation with Zod schema
+          const result = await taskToolHandler(validatedArgs);
           return JSON.stringify(result);
         },
       };

@@ -10,6 +10,7 @@ import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
 import { defineTool } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 export const writeTool = defineTool("write", {
   description: `Write content to a file. Creates the file if it doesn't exist, or overwrites if it does.
@@ -79,7 +80,7 @@ Usage:
         success: true,
       };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "EACCES") {
+      if (isErrnoException(error) && error.code === "EACCES") {
         return {
           title: "Permission denied",
           output: `Error: Permission denied writing to: "${filePath}"`,
@@ -87,7 +88,7 @@ Usage:
         };
       }
 
-      if ((error as NodeJS.ErrnoException).code === "EISDIR") {
+      if (isErrnoException(error) && error.code === "EISDIR") {
         return {
           title: "Cannot write to directory",
           output: `Error: "${filePath}" is a directory`,

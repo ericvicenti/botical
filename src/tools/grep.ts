@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs/promises";
 import { Glob } from "bun";
 import { defineTool } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 const MAX_RESULTS = 100;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
@@ -233,7 +234,7 @@ Examples:
         success: true,
       };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isErrnoException(error) && error.code === "ENOENT") {
         return {
           title: "Path not found",
           output: `Error: Path not found: "${searchPath}"`,

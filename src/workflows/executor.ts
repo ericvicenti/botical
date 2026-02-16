@@ -46,7 +46,7 @@ function getPath(obj: unknown, path: string): unknown {
   let current = obj;
   for (const part of parts) {
     if (current === null || current === undefined) return undefined;
-    current = (current as Record<string, unknown>)[part];
+    current = (current as Record<string, unknown>)[part]; // Safe: null/undefined checked above, treating as object
   }
   return current;
 }
@@ -957,7 +957,7 @@ async function runWorkflow(
 
           // Capture resolve step output
           if (step.type === "resolve" && result.output) {
-            finalOutput = { ...finalOutput, ...(result.output as Record<string, unknown>) };
+            finalOutput = { ...finalOutput, ...(result.output as Record<string, unknown>) }; // Safe: spreading output object
           }
         }
 

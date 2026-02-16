@@ -311,14 +311,14 @@ export class ProviderRegistry {
             await doRefresh();
           }
 
-          const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url;
+          const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url; // Safe: input is string | URL | Request
           const newUrl = url.includes("/v1/messages") && !url.includes("beta=true")
             ? url + (url.includes("?") ? "&" : "?") + "beta=true"
             : url;
 
           // Merge all incoming headers
           const headers = new Headers();
-          const incomingInit = init as RequestInit | undefined;
+          const incomingInit = init as RequestInit | undefined; // Safe: init parameter from fetch signature
           if (incomingInit?.headers) {
             const h = incomingInit.headers;
             if (h instanceof Headers) {

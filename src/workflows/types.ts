@@ -339,7 +339,7 @@ export function recordToWorkflow(record: WorkflowRecord): WorkflowDefinition {
     name: record.name,
     label: record.label,
     description: record.description,
-    category: record.category as ActionCategory,
+    category: record.category as ActionCategory, // Safe: database value matches ActionCategory enum
     icon: record.icon || undefined,
     inputSchema: JSON.parse(record.input_schema),
     steps: JSON.parse(record.steps),

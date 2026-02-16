@@ -17,7 +17,7 @@ import { defineTool } from "./types.ts";
 /**
  * Task tool parameters schema
  */
-const TaskParamsSchema = z.object({
+export const TaskParamsSchema = z.object({
   /**
    * A short description of what this task will accomplish (3-5 words)
    */

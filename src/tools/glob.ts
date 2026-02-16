@@ -11,6 +11,7 @@ import path from "path";
 import { Glob } from "bun";
 import fs from "fs/promises";
 import { defineTool } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 const MAX_RESULTS = 1000;
 
@@ -133,7 +134,7 @@ Examples:
         success: true,
       };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isErrnoException(error) && error.code === "ENOENT") {
         return {
           title: "Directory not found",
           output: `Error: Directory not found: "${searchPath}"`,

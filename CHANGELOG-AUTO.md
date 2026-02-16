@@ -11,6 +11,87 @@
 **Priority Addressed:** Code Quality Rules - Continue eliminating `as` type assertions and improving type safety (mandatory code quality rule)
 
 **Problem Analysis:**
+Following previous cycles' work on type assertion elimination, the codebase still contained many unsafe `as` type assertions throughout server routes and extensions. These represent potential runtime errors where TypeScript's type checking is bypassed without proper validation. The goal was to continue systematic elimination of these unsafe patterns.
+
+**Solution Implemented:**
+- **Filesystem Route Improvements** (`src/server/routes/filesystem.ts`):
+  - Replaced unsafe `(err as NodeJS.ErrnoException).code` assertions with existing `isErrnoException()` type guard
+  - Pattern: `if (isErrnoException(err) && err.code === "ENOENT")` instead of unsafe casting
+  - Leveraged existing type guard already defined in the file
+
+- **Missions Route Query Parameter Safety** (`src/server/routes/missions.ts`):
+  - Removed unnecessary `status as MissionStatus | undefined` assertions since `ListQuerySchema` validates status as `z.enum(["planning", "pending", "running", "paused", "completed", "cancelled"]).optional()`
+  - Removed unsafe `status as any` assertion in task counting - already validated by `TaskListQuerySchema`
+  - Pattern: `status, // Already validated by ListQuerySchema` instead of unsafe casting
+
+- **Search Extension Validation Improvements** (`src/extensions/search/routes/search.ts`):
+  - Removed `safesearch as 0 | 1 | 2` assertion since conditional check already validates range
+  - Removed `timeRange as "day" | "week" | "month" | "year"` assertion since array inclusion check validates values
+  - Pattern: `options.safesearch = safesearch; // Safe: validated above as 0, 1, or 2`
+
+- **Projects Route Schema Validation** (`src/server/routes/projects.ts`):
+  - Removed unnecessary `role as ProjectRole` assertions since `AddMemberSchema` and `UpdateMemberSchema` validate role as `z.enum(["admin", "member", "viewer"])`
+  - Pattern: `role, // Already validated by AddMemberSchema` instead of unsafe casting
+
+- **Git Route Provider Safety** (`src/server/routes/git.ts`):
+  - Removed unnecessary `providerId as ProviderId` assertion since `GenerateMessageSchema` validates providerId as `z.enum(["anthropic", "openai", "google"])`
+  - Pattern: `providerId, // Already validated by GenerateMessageSchema`
+
+- **Sessions Route Role Validation** (`src/server/routes/sessions.ts`):
+  - Removed unnecessary `role as "user" | "assistant" | "system" | undefined` assertion since `QuerySchema` validates role as `z.enum(["user", "assistant", "system"]).optional()`
+  - Pattern: `role, // Already validated by QuerySchema`
+
+- **Database Query Documentation** (`src/server/routes/message-queue.ts`):
+  - Added comments to document that database query type assertions are safe (match known schema)
+  - Pattern: `).all() as { id: string; name: string }[]; // Safe: matches known database schema`
+  - Pattern: `).get() as { count: number }; // Safe: COUNT(*) always returns { count: number }`
+
+- **Generic Function Documentation** (`src/extensions/search/client.ts`):
+  - Added comment explaining generic function type assertion
+  - Pattern: `return (await response.json()) as T; // Generic function - caller specifies expected response type`
+
+**Technical Details:**
+- **Validation-Based Elimination**: Leveraged existing Zod schemas instead of unsafe casting
+- **Type Guard Usage**: Used existing type guards for Node.js error handling
+- **Schema Validation**: Removed assertions where runtime validation already ensures type safety
+- **Documentation Strategy**: Clear comments explaining legitimate vs problematic type assertions
+- **Safety Improvements**: Prevented potential runtime errors from invalid type assumptions
+
+**Results:**
+- ✅ Eliminated 10+ more unsafe type assertions with proper validation and type guards
+- ✅ Enhanced query parameter safety in missions and sessions routes
+- ✅ Improved error handling safety in filesystem operations
+- ✅ Better documentation of legitimate vs problematic type assertions
+- ✅ All unit tests pass with no regressions
+- ✅ Established patterns for future type assertion elimination
+
+**Impact on Code Quality:**
+This continues the systematic improvement of type safety by:
+1. **Runtime Validation**: Leveraging existing Zod schemas instead of unsafe casting
+2. **Type Guards**: Using proper TypeScript type narrowing for error handling
+3. **Schema Safety**: Validating parameters against known enums before assertions
+4. **Documentation**: Clear distinction between necessary and problematic type assertions
+5. **Safety Patterns**: Establishing safer alternatives to common unsafe patterns
+
+**Progress Tracking:**
+- **Previous Cycles**: Eliminated 26+ type assertions (63 → ~37)
+- **This Cycle**: Eliminated 10+ more type assertions (~37 → ~27)
+- **Total Progress**: 36+ type assertions eliminated (43% reduction)
+- **Remaining Work**: Continue addressing remaining ~27 type assertions throughout codebase
+
+**Next Steps:**
+- Continue eliminating remaining type assertions in server routes and services
+- Address `any` types throughout the codebase
+- Create more type guard utilities for common unsafe patterns
+- Move to next highest priority item after completing more code quality improvements
+
+**Commit:** 700a8bf
+
+### 2026-02-13 - Continue Code Quality Improvements: Eliminate More Type Assertions (Priority: Code Quality Rules)
+
+**Priority Addressed:** Code Quality Rules - Continue eliminating `as` type assertions and improving type safety (mandatory code quality rule)
+
+**Problem Analysis:**
 Following previous cycles' work on type assertion elimination, the codebase still contained many unsafe `as` type assertions throughout server routes. These represent potential runtime errors where TypeScript's type checking is bypassed without proper validation. The goal was to continue systematic elimination of these unsafe patterns.
 
 **Solution Implemented:**

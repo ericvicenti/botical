@@ -10,6 +10,7 @@ import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
 import { defineTool } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 export const editTool = defineTool("edit", {
   description: `Edit a file by replacing specific text. This is safer than rewriting the entire file.
@@ -117,7 +118,7 @@ Usage:
         success: true,
       };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isErrnoException(error) && error.code === "ENOENT") {
         return {
           title: "File not found",
           output: `Error: File not found: "${filePath}"`,
@@ -125,7 +126,7 @@ Usage:
         };
       }
 
-      if ((error as NodeJS.ErrnoException).code === "EACCES") {
+      if (isErrnoException(error) && error.code === "EACCES") {
         return {
           title: "Permission denied",
           output: `Error: Permission denied editing: "${filePath}"`,
