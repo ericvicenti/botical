@@ -38,7 +38,8 @@ export function loadYamlFile<T = unknown>(
   }
 
   const content = fs.readFileSync(filePath, "utf-8");
-  return yaml.load(content) as T;
+  // TODO: Replace with loadYamlFileWithSchema for type safety
+  return yaml.load(content) as T; // Unsafe: no runtime validation
 }
 
 /**

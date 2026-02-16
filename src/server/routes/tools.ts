@@ -161,7 +161,7 @@ tools.get("/", async (c) => {
   const db = DatabaseManager.getProjectDb(projectId);
 
   const toolList = ToolService.list(db, {
-    type: type as ToolType | undefined,
+    type, // Already validated by ListQuerySchema
     enabled,
     limit,
     offset,

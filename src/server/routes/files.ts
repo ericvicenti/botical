@@ -19,6 +19,13 @@ import { NotFoundError, ValidationError } from "@/utils/errors.ts";
 const files = new Hono();
 
 /**
+ * Type guard to check if error is a Node.js ErrnoException
+ */
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return typeof err === "object" && err !== null && "code" in err;
+}
+
+/**
  * File entry in directory listing
  */
 interface FileEntry {
@@ -319,7 +326,7 @@ files.get("/:projectId/files", async (c) => {
 
     return c.json({ data: fileList });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       return c.json({ data: [] });
     }
     throw err;
@@ -463,7 +470,7 @@ files.get("/:projectId/folders", async (c) => {
 
     return c.json({ data: folderDetails });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       throw new NotFoundError("Folder", dirPath);
     }
     throw err;
@@ -539,7 +546,7 @@ files.get("/:projectId/files/*", async (c) => {
       },
     });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       throw new NotFoundError("File", decodedPath);
     }
     throw err;
@@ -633,7 +640,7 @@ files.delete("/:projectId/files/*", async (c) => {
 
     return c.json({ success: true });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       throw new NotFoundError("File", filePath);
     }
     throw err;
@@ -858,7 +865,7 @@ files.get("/:projectId/files-raw/*", async (c) => {
       },
     });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       throw new NotFoundError("File", decodedPath);
     }
     throw err;

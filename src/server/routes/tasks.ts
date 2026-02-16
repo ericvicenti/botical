@@ -93,12 +93,12 @@ sessionTasks.get("/:sessionId/todos", async (c) => {
   SessionService.getByIdOrThrow(db, sessionId);
 
   const taskList = TaskService.listBySession(db, sessionId, {
-    status: status as TaskStatus | undefined,
+    status, // Already validated by ListQuerySchema
     limit,
     offset,
   });
 
-  const total = TaskService.count(db, sessionId, status as TaskStatus | undefined);
+  const total = TaskService.count(db, sessionId, status); // Already validated by ListQuerySchema
 
   return c.json({
     data: taskList,
@@ -285,7 +285,7 @@ projectTasks.get("/:projectId/tasks", async (c) => {
   const db = DatabaseManager.getProjectDb(projectId);
 
   const taskList = TaskService.list(db, {
-    status: status as TaskStatus | undefined,
+    status, // Already validated by ProjectTaskListSchema
     sessionId,
     missionId,
     limit,

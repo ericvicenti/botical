@@ -117,8 +117,8 @@ projectProcesses.get("/:projectId/processes", async (c) => {
   const query = queryResult.data;
   const db = DatabaseManager.getProjectDb(projectId);
   const processes = ProcessService.listByProject(db, projectId, {
-    type: query.type as ProcessType | undefined,
-    status: query.status as ProcessStatus | undefined,
+    type: query.type, // Already validated by ListQuerySchema
+    status: query.status, // Already validated by ListQuerySchema
     scope: query.scope,
     scopeId: query.scopeId,
     limit: query.limit,
@@ -126,8 +126,8 @@ projectProcesses.get("/:projectId/processes", async (c) => {
   });
 
   const total = ProcessService.count(db, projectId, {
-    type: query.type as ProcessType | undefined,
-    status: query.status as ProcessStatus | undefined,
+    type: query.type, // Already validated by ListQuerySchema
+    status: query.status, // Already validated by ListQuerySchema
   });
 
   return c.json({
