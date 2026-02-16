@@ -6,6 +6,57 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix Integration Test Authentication Setup
+
+**Priority Addressed:** Fix remaining integration test failures (401 auth errors in API tests)
+
+**Problem Analysis:**
+Many integration tests were failing with 401 authentication errors because:
+1. Tests were making API requests without authentication headers
+2. No shared auth helper existed for integration tests
+3. Magic link token extraction wasn't working in test environment
+4. EmailService wasn't properly configured for test mode
+
+**Solution Implemented:**
+- **Auth Helper Module** (`tests/integration/helpers/auth.ts`):
+  - `createAuthSession()`: Handles complete magic link authentication flow
+  - `createAuthHeaders()`: Creates Bearer token headers for authenticated requests
+  - `createAuthCookieHeaders()`: Alternative cookie-based auth headers
+  - Proper test environment setup with NODE_ENV and EmailService reset
+
+- **Magic Link Token Extraction**:
+  - Fixed regex pattern to match actual console output format
+  - Handles dev mode email logging: `Link: https://...?token=...`
+  - Proper console.log spying and cleanup
+
+- **Test Environment Configuration**:
+  - Forces NODE_ENV=test for email service dev mode
+  - Resets EmailService config to pick up test environment
+  - Proper cleanup and restoration of environment variables
+
+**Technical Details:**
+- Magic link flow: Request → Extract token from logs → Verify → Poll for session
+- Session tokens are Bearer tokens for Authorization headers
+- Supports both email creation and existing user authentication
+- Comprehensive error handling with descriptive messages
+
+**Results:**
+- ✅ Auth helper module created and working
+- ✅ Magic link token extraction fixed for test environment
+- ✅ First schedules API test now passes (was 401, now 201)
+- ✅ Authentication flow verified end-to-end in tests
+- ⚠️ Remaining integration tests still need to be updated to use auth helpers
+
+**Next Steps:**
+- Update all integration test files to import and use auth helpers
+- Batch-update API requests to include authentication headers
+- Verify all integration tests pass with proper authentication
+
+**Impact:**
+This fixes the systematic authentication issue blocking proper integration testing. Once all tests are updated, we'll have reliable end-to-end API testing.
+
+**Commit:** aef4867
+
 ### 2026-02-13 - Implement Tool Output Truncation (Context Management Priority)
 
 **Priority Addressed:** Context Management & Long Chain Efficiency - Tool output truncation (quick win)
