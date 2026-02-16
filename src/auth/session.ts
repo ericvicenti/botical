@@ -16,7 +16,7 @@ import { hashSha256, generateSecureToken } from "../services/crypto.ts";
 import type { AuthSession, AuthSessionRow } from "./schemas.ts";
 import { rowToAuthSession } from "./schemas.ts";
 
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_EXPIRY_MS = 180 * 24 * 60 * 60 * 1000; // 6 months
 
 export interface SessionMetadata {
   ipAddress?: string;
