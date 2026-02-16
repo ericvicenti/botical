@@ -36,6 +36,8 @@ import { AgentRegistry } from "@/agents/registry.ts";
 import { getAllBuiltinAgents } from "@/agents/builtin/index.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ValidationError, ForbiddenError, NotFoundError } from "@/utils/errors.ts";
+import { validateProviderCredentials } from "@/utils/provider-validation.ts";
+import type { ProviderId } from "@/agents/types.ts";
 
 const agents = new Hono();
 
@@ -165,6 +167,23 @@ agents.post("/", async (c) => {
     throw new ValidationError("Project has no path configured");
   }
 
+  // Validate provider credentials if specified
+  const auth = c.get("auth") as { userId: string } | undefined;
+  const userId = auth?.userId || "anonymous";
+  
+  if (result.data.providerId) {
+    const validation = validateProviderCredentials(
+      userId,
+      result.data.providerId as ProviderId,
+      result.data.name
+    );
+    
+    if (!validation.isValid) {
+      // Return a warning but allow creation
+      console.warn(`[agents] Creating agent "${result.data.name}" with unconfigured provider "${result.data.providerId}": ${validation.error}`);
+    }
+  }
+
   const agent = UnifiedAgentService.create(
     db,
     projectPath,
@@ -249,6 +268,23 @@ agents.put("/:name", async (c) => {
     throw new ValidationError(
       `Agent name "${result.data.name}" is reserved for built-in agents`
     );
+  }
+
+  // Validate provider credentials if specified
+  const auth = c.get("auth") as { userId: string } | undefined;
+  const userId = auth?.userId || "anonymous";
+  
+  if (result.data.providerId) {
+    const validation = validateProviderCredentials(
+      userId,
+      result.data.providerId as ProviderId,
+      result.data.name || name
+    );
+    
+    if (!validation.isValid) {
+      // Return a warning but allow update
+      console.warn(`[agents] Updating agent "${result.data.name || name}" with unconfigured provider "${result.data.providerId}": ${validation.error}`);
+    }
   }
 
   const agent = UnifiedAgentService.update(

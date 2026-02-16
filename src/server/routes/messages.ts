@@ -35,6 +35,7 @@ import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
 import { generateId } from "@/utils/id.ts";
+import { createProviderErrorInfo, type ProviderValidationResult } from "@/utils/provider-validation.ts";
 
 const messages = new Hono();
 
@@ -124,8 +125,16 @@ messages.post("/", async (c) => {
   try {
     credentialResolver.resolve();
   } catch {
+    // Create enhanced error with recovery actions
+    const validation: ProviderValidationResult = {
+      isValid: false,
+      error: `No API key found for provider "${providerId}".`,
+    };
+    
+    const errorInfo = createProviderErrorInfo(validation);
+    
     throw new AuthenticationError(
-      `No API key found for provider "${providerId}". Please add credentials first or provide an API key.`
+      `${errorInfo.message} Use the Settings page to add credentials or reassign agents to a different provider.`
     );
   }
 
