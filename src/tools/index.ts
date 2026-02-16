@@ -20,6 +20,7 @@ import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
 import { readSkillTool } from "./read-skill.ts";
 import { scheduleTool } from "./schedule.ts";
+import { improvementCycleTool } from "./improvement-cycle.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -81,6 +82,12 @@ export function registerCoreTools(): void {
     requiresCodeExecution: false, // Manages schedules, doesn't execute code directly
   });
 
+  // Improvement cycle tool (specialized for decomposed improvement cycles)
+  ToolRegistry.register(improvementCycleTool, {
+    category: "agent",
+    requiresCodeExecution: true, // Improvement cycles typically need full tool access
+  });
+
   // Note: Git operations are now handled via ActionRegistry
   // See src/actions/git.ts for git actions
 }
@@ -96,4 +103,5 @@ export { grepTool } from "./grep.ts";
 export { taskTool } from "./task.ts";
 export { readSkillTool } from "./read-skill.ts";
 export { scheduleTool } from "./schedule.ts";
+export { improvementCycleTool } from "./improvement-cycle.ts";
 // Git actions moved to src/actions/git.ts

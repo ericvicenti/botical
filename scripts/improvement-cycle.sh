@@ -3,6 +3,7 @@
 set -euo pipefail
 
 INSTANCE="${1:-prod}"
+PR_FEEDBACK="${2:-}"
 
 if [ "$INSTANCE" = "prod" ]; then
   BASE_URL="http://localhost:6001"
