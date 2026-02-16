@@ -11,6 +11,7 @@ import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ProviderRegistry } from "./providers.ts";
 import { EventBus } from "@/bus/index.ts";
+import { truncateToolOutput } from "@/utils/content-truncation.ts";
 import type { StreamEvent } from "./llm.ts";
 import type { ProviderId, FinishReason } from "./types.ts";
 
@@ -311,12 +312,35 @@ export class StreamProcessor {
     toolCallId: string,
     result: unknown
   ): Promise<void> {
+    // Get the tool name for context-aware truncation
+    const toolCallPart = this.toolCallParts.get(toolCallId);
+    let toolName = "unknown";
+    if (toolCallPart) {
+      const toolCallPartData = MessagePartService.getById(this.db, toolCallPart);
+      if (toolCallPartData?.content && typeof toolCallPartData.content === 'object' && 'toolName' in toolCallPartData.content) {
+        toolName = String(toolCallPartData.content.toolName);
+      }
+    }
+
+    // Truncate tool output to prevent context bloat
+    const truncationResult = truncateToolOutput(toolName, result);
+    
+    // Store both truncated and original data
+    const contentToStore = truncationResult.wasTruncated 
+      ? {
+          result: truncationResult.content,
+          originalLength: truncationResult.originalLength,
+          wasTruncated: true,
+          summary: truncationResult.summary,
+        }
+      : { result };
+
     // Create tool result part
     const part = MessagePartService.create(this.db, {
       messageId: this.messageId,
       sessionId: this.sessionId,
       type: "tool-result",
-      content: { result },
+      content: contentToStore,
       toolCallId,
       toolStatus: "completed",
     });
@@ -327,7 +351,7 @@ export class StreamProcessor {
       MessagePartService.updateToolStatus(this.db, toolCallPartId, "completed");
     }
 
-    // Emit to EventBus for WebSocket broadcast
+    // Emit to EventBus for WebSocket broadcast (use truncated content for real-time display)
     EventBus.publish(this.projectId, {
       type: "message.tool.result",
       payload: {
@@ -335,7 +359,9 @@ export class StreamProcessor {
         messageId: this.messageId,
         partId: part.id,
         toolCallId,
-        result,
+        result: truncationResult.wasTruncated ? truncationResult.content : result,
+        wasTruncated: truncationResult.wasTruncated,
+        originalLength: truncationResult.originalLength,
       },
     });
 
@@ -343,7 +369,7 @@ export class StreamProcessor {
       type: "tool-result",
       partId: part.id,
       toolCallId,
-      result,
+      result: truncationResult.wasTruncated ? truncationResult.content : result,
     });
   }
 
