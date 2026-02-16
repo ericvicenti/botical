@@ -66,7 +66,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [ ] **Memory blocks (Letta-style)** — Persistent scratchpad the agent can read/write across steps. Store "current task", "what I've learned", "files I've modified" as structured memory instead of relying on conversation history.
 
 **Implementation priorities:**
-1. Tool output truncation (quick win — cap file reads at N lines in history, summarize test output)
+1. [x] **Tool output truncation** (quick win — cap file reads at N lines in history, summarize test output) - ✅ COMPLETED: Implemented smart content truncation utility with context-aware strategies. Tool outputs are now capped at 2000 chars for general tools, 1500 for tests, 3000 for files. Uses "both" strategy to preserve start/end of large outputs. Prevents context bloat while preserving essential information.
 2. Auto-compaction of older turns (keep last 5 turns verbatim, summarize rest)
 3. Sub-task decomposition for improvement cycles (plan → implement → verify as separate sessions)
 4. Prompt caching integration

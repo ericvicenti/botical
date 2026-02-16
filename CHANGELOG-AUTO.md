@@ -6,6 +6,58 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Implement Tool Output Truncation (Context Management Priority)
+
+**Priority Addressed:** Context Management & Long Chain Efficiency - Tool output truncation (quick win)
+
+**Problem Analysis:**
+Agent sessions accumulate massive context over many tool-call steps. Large tool outputs (file reads, test results, command outputs) were stored verbatim in conversation history, causing:
+1. Context bloat that degrades LLM quality at high step counts
+2. Excessive token usage (approaching model context limits)
+3. Poor performance in long improvement cycles (30+ steps)
+4. No mechanism to preserve essential info while reducing verbosity
+
+**Solution Implemented:**
+- **Content Truncation Utility** (`src/utils/content-truncation.ts`):
+  - Smart truncation strategies: "start", "end", "both" (preserve beginning and end)
+  - Context-aware limits based on content type:
+    - General tool outputs: 2000 chars
+    - Test outputs: 1500 chars (often have long stack traces)
+    - File contents: 3000 chars
+    - Error outputs: 1000 chars
+  - "Both" strategy preserves first/last N lines with truncation summary
+  - Metadata tracking: original length, truncation status, summary
+
+- **Stream Processor Integration** (`src/agents/stream-processor.ts`):
+  - Tool results automatically truncated before database storage
+  - Truncation applied based on tool name heuristics
+  - WebSocket broadcasts include truncation metadata
+  - Original content length preserved for debugging
+
+**Technical Details:**
+- Uses tool name to determine appropriate truncation strategy
+- Preserves both start and end of large outputs (most informative parts)
+- Adds clear truncation summaries: "[Truncated 1500 characters from middle]"
+- Maintains backward compatibility - no changes to existing APIs
+- Zero impact on small tool outputs (under threshold)
+
+**Results:**
+- ✅ Tool outputs now capped at reasonable lengths while preserving key information
+- ✅ Context bloat significantly reduced for file reads, test outputs, command results
+- ✅ Truncation metadata available for debugging and user awareness
+- ✅ Smart strategies preserve most useful parts of large outputs
+- ✅ Unit tests pass - no regressions introduced
+
+**Impact on Success Metric:**
+This directly addresses the goal of completing improvement cycles in <20 steps with <500k tokens by preventing tool output bloat from consuming excessive context.
+
+**Next Steps:**
+- Monitor token usage reduction in practice
+- Move to next context management priority: Auto-compaction of older turns
+- Consider adding user-configurable truncation limits
+
+**Commit:** 0cf0d85
+
 ### 2026-02-13 - Implement Server-Side Message Queuing (High Priority Bug Fix)
 
 **Priority Addressed:** Message queuing must be server-side (severity: high) — When a user sends a message while the model is busy, the message should be queued on the SERVER, not the client. Currently the queuing behavior is client-side which means messages can be lost if the page is refreshed.

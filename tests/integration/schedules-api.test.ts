@@ -17,6 +17,7 @@ import { DatabaseManager } from "@/database/index";
 import { Config } from "@/config/index";
 import { ProjectService } from "@/services/projects";
 import { ScheduleService } from "@/services/schedules";
+import { createAuthSession, createAuthHeaders } from "./helpers/auth";
 import path from "path";
 import fs from "fs";
 
@@ -61,6 +62,7 @@ describe("Schedules API Integration", () => {
   );
   const testUserId = "usr_test-schedule-user";
   let projectId: string;
+  let sessionToken: string;
 
   beforeAll(async () => {
     Config.load({ dataDir: testDataDir });
@@ -84,6 +86,9 @@ describe("Schedules API Integration", () => {
       ownerId: testUserId,
     });
     projectId = project.id;
+
+    // Create authenticated session
+    sessionToken = await createAuthSession(app, "schedule-test@example.com");
   });
 
   afterAll(() => {
@@ -106,7 +111,7 @@ describe("Schedules API Integration", () => {
     it("should create a new schedule", async () => {
       const response = await app.request(`/api/projects/${projectId}/schedules`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           name: "Test Schedule",
           actionType: "action",
