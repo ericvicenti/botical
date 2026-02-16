@@ -75,9 +75,9 @@ Botical has three core primitives. Both humans and agents use the same ones:
 **Success metric:** Leopard completes a full improvement cycle (read priorities → code → test → deploy) in <20 steps with <500k total tokens.
 
 #### UX: Provider/Model Error Recovery
-- [ ] When an agent specifies an invalid provider/model and the user hits the error, show a clear error message with a one-click fix: "Agent X uses provider Y which has no credentials. [Reassign all agents using Y to use Z instead]"
-- [ ] Settings page should show which agents use which providers, with bulk-reassign capability
-- [ ] Validate agent provider/model on save — warn if no credentials exist for that provider
+- [x] When an agent specifies an invalid provider/model and the user hits the error, show a clear error message with a one-click fix: "Agent X uses provider Y which has no credentials. [Reassign all agents using Y to use Z instead]" - ✅ COMPLETED: Implemented comprehensive provider error recovery system with ProviderErrorDialog component providing one-click recovery actions (add credentials, reassign agents). Enhanced error messages include specific recovery suggestions and actionable guidance.
+- [x] Settings page should show which agents use which providers, with bulk-reassign capability - ✅ COMPLETED: Created AgentProviderManagement component that shows which agents use which providers, highlights credential issues, and provides bulk reassignment capabilities with dropdown selection. Groups agents by provider with expandable sections for easy management.
+- [x] Validate agent provider/model on save — warn if no credentials exist for that provider - ✅ COMPLETED: Added provider credential validation to agent creation and update endpoints. Shows warnings when agents use unconfigured providers but allows creation for flexibility. Provides clear feedback during agent configuration.
 
 #### Code Quality Rules (MANDATORY)
 - **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. Currently 63 `as` casts in src/ — eliminate them all over time.
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 9)*
+*Last read by Leopard: 2026-02-13 (Cycle 10)*
 *Last updated by human: 2026-02-13*

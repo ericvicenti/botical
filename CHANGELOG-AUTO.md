@@ -6,6 +6,81 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Implement UX: Provider/Model Error Recovery (Priority: UX Improvements)
+
+**Priority Addressed:** UX: Provider/Model Error Recovery - Clear error messages with one-click fixes when agents use invalid providers
+
+**Problem Analysis:**
+The current system had basic error handling for provider/model configuration issues, but lacked user-friendly error recovery features. When agents used providers without credentials, users received generic error messages with no clear path to resolution. There was no way to see which agents used which providers or bulk-reassign agents to working providers.
+
+**Solution Implemented:**
+- **Provider Validation Utilities** (`src/utils/provider-validation.ts`):
+  - `validateProviderCredentials()` - Validates if a provider has credentials for a user
+  - `getAgentProviderInfo()` - Gets provider information for all agents in a project
+  - `findAgentsUsingProvider()` - Finds agents that use a specific provider
+  - `bulkReassignAgents()` - Bulk reassign agents from one provider to another
+  - `createProviderErrorInfo()` - Creates enhanced error information with recovery actions
+
+- **Provider Error Recovery API** (`src/server/routes/provider-errors.ts`):
+  - `POST /api/provider-errors/validate` - Validate agent provider/model configuration
+  - `GET /api/provider-errors/agents/:projectId` - Get provider info for all agents
+  - `GET /api/provider-errors/agents-using-provider/:projectId/:providerId` - Find agents using provider
+  - `POST /api/provider-errors/bulk-reassign` - Bulk reassign agents between providers
+  - `POST /api/provider-errors/create-error-info` - Create enhanced error information
+
+- **Enhanced Agent Validation** (`src/server/routes/agents.ts`):
+  - Added provider credential validation to agent creation and update endpoints
+  - Warns when agents are created/updated with unconfigured providers
+  - Allows creation but logs warnings for better debugging
+
+- **Improved Error Messages** (`src/server/routes/messages.ts`):
+  - Enhanced provider error messages with recovery suggestions
+  - Provides actionable guidance when API keys are missing
+
+- **Frontend Components**:
+  - **ProviderErrorDialog** (`webui/src/components/ProviderErrorDialog.tsx`): 
+    - Displays provider errors with one-click recovery actions
+    - Supports "Add credentials" and "Reassign agents" actions
+    - Shows execution results and handles bulk operations
+  - **AgentProviderManagement** (`webui/src/components/AgentProviderManagement.tsx`):
+    - Shows which agents use which providers
+    - Highlights agents with missing credentials
+    - Provides bulk reassignment capabilities with dropdown selection
+    - Groups agents by provider with expandable sections
+
+**Technical Features:**
+- **Smart Error Classification**: Distinguishes between missing credentials and other provider issues
+- **Recovery Action Types**: add-credentials, reassign-agents, change-provider
+- **Bulk Operations**: Efficiently reassign multiple agents at once
+- **Provider Availability**: Shows available providers for reassignment suggestions
+- **Validation Warnings**: Non-blocking warnings during agent creation/update
+- **User-Friendly Messages**: Clear, actionable error messages with specific guidance
+
+**Results:**
+- ✅ Clear error messages when agents use providers without credentials
+- ✅ One-click recovery actions for common provider configuration issues
+- ✅ Settings page shows which agents use which providers
+- ✅ Bulk reassignment capability for efficient provider management
+- ✅ Agent provider/model validation on save with warnings
+- ✅ Enhanced error messages with recovery suggestions
+- ✅ All unit tests pass with no regressions
+
+**Impact on User Experience:**
+This significantly improves the user experience when dealing with provider configuration issues:
+1. **Clear Problem Identification**: Users immediately understand which agents have credential issues
+2. **Actionable Solutions**: One-click fixes for common problems (add credentials, reassign agents)
+3. **Bulk Management**: Efficient management of multiple agents using the same provider
+4. **Proactive Warnings**: Validation warnings prevent configuration issues before they cause runtime errors
+5. **Recovery Guidance**: Specific suggestions for resolving provider credential problems
+
+**Next Steps:**
+- Monitor usage of provider error recovery features in production
+- Consider adding provider health monitoring and automatic failover
+- Evaluate adding provider usage analytics and cost tracking
+- Move to next highest priority item in PRIORITIES.md
+
+**Commit:** bf5119b
+
 ### 2026-02-13 - Complete Context Management: Letta-Style Memory Blocks Already Implemented (Priority #5)
 
 **Priority Addressed:** Context Management & Long Chain Efficiency - Letta-style memory blocks for persistent state (Priority #5)
