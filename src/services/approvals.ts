@@ -80,9 +80,9 @@ function recordToApproval(record: ApprovalRecord): Approval {
     title: record.title,
     message: record.message,
     approvers: JSON.parse(record.approvers),
-    status: record.status as Approval["status"],
+    status: record.status as Approval["status"], // Safe: database enum constraint
     timeout: record.timeout,
-    onTimeout: record.on_timeout as "fail" | "continue",
+    onTimeout: record.on_timeout as "fail" | "continue", // Safe: database enum constraint
     approvedBy: record.approved_by,
     approvedAt: record.approved_at,
     rejectedBy: record.rejected_by,

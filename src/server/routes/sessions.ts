@@ -408,7 +408,7 @@ sessions.get("/:id/messages", async (c) => {
   SessionService.getByIdOrThrow(db, sessionId);
 
   const messages = MessageService.listBySession(db, sessionId, {
-    role: role as "user" | "assistant" | "system" | undefined,
+    role, // Already validated by QuerySchema
     limit,
     offset,
   });

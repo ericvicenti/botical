@@ -103,7 +103,7 @@ async function searxngRequest<T>(
       throw new Error(`SearXNG API error (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as T;
+    return (await response.json()) as T; // Generic function - caller specifies expected response type
   } catch (error) {
     clearTimeout(timeoutId);
 

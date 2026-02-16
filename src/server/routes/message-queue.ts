@@ -193,7 +193,7 @@ messageQueue.get("/status", async (c) => {
   const rootDb = DatabaseManager.getRootDb();
   
   // Get all projects
-  const projects = rootDb.prepare("SELECT id, name FROM projects").all() as { id: string; name: string }[];
+  const projects = rootDb.prepare("SELECT id, name FROM projects").all() as { id: string; name: string }[]; // Safe: matches known database schema
   
   const globalStatus = {
     totalProjects: projects.length,
@@ -213,15 +213,15 @@ messageQueue.get("/status", async (c) => {
       
       const pending = db.prepare(
         "SELECT COUNT(*) as count FROM message_queue WHERE status = 'pending'"
-      ).get() as { count: number };
+      ).get() as { count: number }; // Safe: COUNT(*) always returns { count: number }
       
       const processing = db.prepare(
         "SELECT COUNT(*) as count FROM message_queue WHERE status = 'processing'"
-      ).get() as { count: number };
+      ).get() as { count: number }; // Safe: COUNT(*) always returns { count: number }
       
       const failed = db.prepare(
         "SELECT COUNT(*) as count FROM message_queue WHERE status = 'failed'"
-      ).get() as { count: number };
+      ).get() as { count: number }; // Safe: COUNT(*) always returns { count: number }
 
       globalStatus.projectStats.push({
         projectId: project.id,
@@ -257,7 +257,7 @@ messageQueue.post("/cleanup", async (c) => {
   const olderThanMs = olderThanHours * 60 * 60 * 1000;
 
   const rootDb = DatabaseManager.getRootDb();
-  const projects = rootDb.prepare("SELECT id FROM projects").all() as { id: string }[];
+  const projects = rootDb.prepare("SELECT id FROM projects").all() as { id: string }[]; // Safe: matches known database schema
   
   let totalCleaned = 0;
 

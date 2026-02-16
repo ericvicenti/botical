@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs/promises";
 import { Glob } from "bun";
 import { defineAction, success, error } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 const MAX_GLOB_RESULTS = 1000;
 const MAX_GREP_RESULTS = 100;
@@ -77,8 +78,9 @@ export const searchGlob = defineAction({
 
       return success(title, output, { pattern, totalMatches: matches.length });
     } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code === "ENOENT") return error(`Directory not found: "${searchPath}"`);
+      if (isErrnoException(err) && err.code === "ENOENT") {
+        return error(`Directory not found: "${searchPath}"`);
+      }
       throw err;
     }
   },
@@ -186,8 +188,9 @@ export const searchGrep = defineAction({
 
       return success(title, output, { pattern, matches: matches.length, filesSearched });
     } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code === "ENOENT") return error(`Path not found: "${searchPath}"`);
+      if (isErrnoException(err) && err.code === "ENOENT") {
+        return error(`Path not found: "${searchPath}"`);
+      }
       throw err;
     }
   },

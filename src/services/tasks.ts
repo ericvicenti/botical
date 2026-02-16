@@ -154,7 +154,7 @@ function rowToTask(row: TaskRow): Task {
     missionId: row.mission_id,
     title: row.title,
     activeForm: row.active_form,
-    status: row.status as TaskStatus,
+    status: row.status as TaskStatus, // Safe: database enum constraint
     position: row.position,
     createdBy: isTaskActor(row.created_by) ? row.created_by : "agent",
     assignedTo: isTaskActor(row.assigned_to) ? row.assigned_to : "agent",

@@ -255,7 +255,7 @@ projectGit.post("/:projectId/git/generate-message", async (c) => {
 
   // Generate commit message using a simple prompt
   const llmResult = await LLM.generateCompletion({
-    providerId: providerId as ProviderId,
+    providerId, // Already validated by GenerateMessageSchema
     apiKey,
     messages: [
       {

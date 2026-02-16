@@ -15,6 +15,7 @@
 import type { Subprocess, FileSink } from "bun";
 import * as path from "path";
 import * as readline from "readline";
+import { z } from "zod";
 
 /**
  * Process creation options
@@ -50,6 +51,17 @@ interface ActiveProcess {
 /**
  * Message from sidecar
  */
+const SidecarMessageSchema = z.object({
+  type: z.string(),
+  id: z.string().optional(),
+  data: z.string().optional(),
+  exitCode: z.number().optional(),
+  error: z.string().optional(),
+  pid: z.number().optional(),
+  cols: z.number().optional(),
+  rows: z.number().optional(),
+});
+
 interface SidecarMessage {
   type: string;
   id?: string;
@@ -138,7 +150,8 @@ class PtyProcessManager {
         for (const line of lines) {
           if (line.trim()) {
             try {
-              const message = JSON.parse(line) as SidecarMessage;
+              const rawMessage = JSON.parse(line);
+              const message = SidecarMessageSchema.parse(rawMessage);
               this.handleSidecarMessage(message);
             } catch (error) {
               console.error("[PTY] Failed to parse sidecar message:", line);

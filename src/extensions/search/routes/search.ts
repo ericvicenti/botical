@@ -64,12 +64,12 @@ searchRouter.get("/", async (c) => {
   if (safesearchStr) {
     const safesearch = parseInt(safesearchStr, 10);
     if (safesearch >= 0 && safesearch <= 2) {
-      options.safesearch = safesearch as 0 | 1 | 2;
+      options.safesearch = safesearch; // Safe: validated above as 0, 1, or 2
     }
   }
 
   if (timeRange && ["day", "week", "month", "year"].includes(timeRange)) {
-    options.timeRange = timeRange as "day" | "week" | "month" | "year";
+    options.timeRange = timeRange; // Safe: validated above as valid time range
   }
 
   try {

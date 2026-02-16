@@ -253,8 +253,8 @@ export const ProjectConfigService = {
    */
   getSetting<T = unknown>(projectPath: string, key: string): T | undefined {
     const config = this.load(projectPath);
-    // Note: This is inherently unsafe without runtime validation, but maintains existing behavior
-    // TODO: Add runtime validation for specific setting types
+    // UNSAFE: no runtime validation - caller must ensure T matches actual setting type
+    // TODO: Add runtime validation using Zod schemas for specific setting types
     return config.settings?.[key] as T | undefined;
   },
 

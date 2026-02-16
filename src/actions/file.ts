@@ -8,6 +8,7 @@ import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
 import { defineAction, success, error } from "./types.ts";
+import { isErrnoException } from "@/utils/error-guards.ts";
 
 const MAX_LINES = 2000;
 const MAX_LINE_LENGTH = 2000;
@@ -78,9 +79,9 @@ export const fileRead = defineAction({
         linesReturned: selectedLines.length,
       });
     } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code === "ENOENT") return error(`File not found: "${filePath}"`);
-      if (e.code === "EACCES") return error(`Permission denied: "${filePath}"`);
+      if (!isErrnoException(err)) throw err;
+      if (err.code === "ENOENT") return error(`File not found: "${filePath}"`);
+      if (err.code === "EACCES") return error(`Permission denied: "${filePath}"`);
       throw err;
     }
   },
@@ -136,9 +137,9 @@ export const fileWrite = defineAction({
         { path: normalizedPath, isNew, lines: lineCount, bytes: byteCount }
       );
     } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code === "EACCES") return error(`Permission denied: "${filePath}"`);
-      if (e.code === "EISDIR") return error(`"${filePath}" is a directory`);
+      if (!isErrnoException(err)) throw err;
+      if (err.code === "EACCES") return error(`Permission denied: "${filePath}"`);
+      if (err.code === "EISDIR") return error(`"${filePath}" is a directory`);
       throw err;
     }
   },
@@ -208,9 +209,9 @@ export const fileEdit = defineAction({
         { path: normalizedPath, replacements: replacementCount }
       );
     } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code === "ENOENT") return error(`File not found: "${filePath}"`);
-      if (e.code === "EACCES") return error(`Permission denied: "${filePath}"`);
+      if (!isErrnoException(err)) throw err;
+      if (err.code === "ENOENT") return error(`File not found: "${filePath}"`);
+      if (err.code === "EACCES") return error(`Permission denied: "${filePath}"`);
       throw err;
     }
   },

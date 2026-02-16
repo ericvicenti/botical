@@ -63,7 +63,7 @@ status.get("/", async (c) => {
           AND m.completed_at IS NULL
         ORDER BY s.updated_at DESC
         LIMIT 20
-      `).all() as Array<{
+      `).all() as Array<{ // Safe: matches known database schema
         id: string;
         title: string;
         agent: string | null;
@@ -178,7 +178,7 @@ status.get("/", async (c) => {
         WHERE mp.type = 'text'
         ORDER BY mp.created_at DESC
         LIMIT 10
-      `).all() as Array<{
+      `).all() as Array<{ // Safe: matches known database schema
         session_id: string;
         role: string;
         agent: string | null;

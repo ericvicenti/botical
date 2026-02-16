@@ -224,7 +224,7 @@ filesystem.post("/validate", async (c) => {
       },
     });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       return c.json({
         data: {
           valid: false,
@@ -233,7 +233,7 @@ filesystem.post("/validate", async (c) => {
         },
       });
     }
-    if ((err as NodeJS.ErrnoException).code === "EACCES") {
+    if (isErrnoException(err) && err.code === "EACCES") {
       return c.json({
         data: {
           valid: false,

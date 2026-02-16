@@ -80,7 +80,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [x] Validate agent provider/model on save — warn if no credentials exist for that provider - ✅ COMPLETED: Added provider credential validation to agent creation and update endpoints. Shows warnings when agents use unconfigured providers but allows creation for flexibility. Provides clear feedback during agent configuration.
 
 #### Code Quality Rules (MANDATORY)
-- **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. ⚠️ **IN PROGRESS**: Eliminated 18 unsafe type assertions across 3 cycles (63 → 45). Added type guards for TaskActor, provider validation, external API safety with Zod schemas. Documented legitimate database query assertions. Remaining: ~45 type assertions to address.
+- **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. ⚠️ **IN PROGRESS**: Eliminated 26+ unsafe type assertions across 4 cycles (63 → ~37). Added type guards for TaskActor, Node.js errors, provider validation, external API safety with Zod schemas. Documented legitimate database query assertions. Enhanced provider validation in error recovery endpoints. Remaining: ~37 type assertions to address.
 - **NO `any` type** — Use `unknown` with proper narrowing instead. ⚠️ **IN PROGRESS**: Documented legitimate uses (Zod introspection, generic action parameters). Need to address remaining inappropriate `any` types.
 - **Test every API endpoint end-to-end** — Create a session, send a message, verify the response. Not just unit tests.
 - **Manually test via API** before declaring anything fixed — `curl` the endpoint, check the response.
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 13)*
+*Last read by Leopard: 2026-02-13 (Cycle 14)*
 *Last updated by human: 2026-02-13*

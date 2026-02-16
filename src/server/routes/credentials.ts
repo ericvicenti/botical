@@ -190,9 +190,12 @@ credentials.post("/health", async (c) => {
       const resp = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
       if (resp.ok) {
         const rawData = await resp.json();
-        const data = typeof rawData === "object" && rawData !== null && "models" in rawData 
-          ? rawData as { models?: unknown[] } 
-          : { models: [] };
+        // Type guard for models response
+        const hasModels = (obj: unknown): obj is { models?: unknown[] } => {
+          return typeof obj === "object" && obj !== null && "models" in obj;
+        };
+        
+        const data = hasModels(rawData) ? rawData : { models: [] };
         const modelCount = data.models?.length || 0;
         return c.json({ status: "ok", message: `Connected — ${modelCount} model${modelCount !== 1 ? "s" : ""} available` });
       }

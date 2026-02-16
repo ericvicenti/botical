@@ -39,6 +39,7 @@ import { ValidationError, ForbiddenError, NotFoundError } from "@/utils/errors.t
 import { validateProviderCredentials } from "@/utils/provider-validation.ts";
 import type { ProviderId } from "@/agents/types.ts";
 import { ProviderIds } from "@/agents/types.ts";
+import type { AuthContext } from "@/auth/schemas.ts";
 
 const agents = new Hono();
 
@@ -169,13 +170,13 @@ agents.post("/", async (c) => {
   }
 
   // Validate provider credentials if specified
-  const auth = c.get("auth") as { userId: string } | undefined;
+  const auth = c.get("auth") as AuthContext | undefined; // Safe: set by auth middleware
   const userId = auth?.userId || "anonymous";
   
   if (result.data.providerId) {
     // Validate that the providerId is actually a valid ProviderId
     const validProviderIds = Object.values(ProviderIds);
-    if (!validProviderIds.includes(result.data.providerId as any)) {
+    if (!validProviderIds.includes(result.data.providerId)) {
       throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
     }
     // Safe: validation above ensures it's a valid ProviderId
@@ -279,13 +280,13 @@ agents.put("/:name", async (c) => {
   }
 
   // Validate provider credentials if specified
-  const auth = c.get("auth") as { userId: string } | undefined;
+  const auth = c.get("auth") as AuthContext | undefined; // Safe: set by auth middleware
   const userId = auth?.userId || "anonymous";
   
   if (result.data.providerId) {
     // Validate that the providerId is actually a valid ProviderId
     const validProviderIds = Object.values(ProviderIds);
-    if (!validProviderIds.includes(result.data.providerId as any)) {
+    if (!validProviderIds.includes(result.data.providerId)) {
       throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
     }
     // Safe: validation above ensures it's a valid ProviderId

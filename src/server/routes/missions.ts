@@ -115,12 +115,12 @@ projectMissions.get("/:projectId/missions", async (c) => {
   const db = DatabaseManager.getProjectDb(projectId);
 
   const missions = MissionService.list(db, projectId, {
-    status: status as MissionStatus | undefined,
+    status, // Already validated by ListQuerySchema
     limit,
     offset,
   });
 
-  const total = MissionService.count(db, projectId, status as MissionStatus | undefined);
+  const total = MissionService.count(db, projectId, status); // Already validated by ListQuerySchema
 
   return c.json({
     data: missions,
@@ -458,7 +458,7 @@ missions.get("/:id/tasks", async (c) => {
     offset,
   });
 
-  const total = TaskService.countByMission(db, missionId, status as any);
+  const total = TaskService.countByMission(db, missionId, status); // Already validated by TaskListQuerySchema
 
   return c.json({
     data: tasks,

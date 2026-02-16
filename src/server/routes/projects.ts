@@ -307,7 +307,7 @@ projects.post("/:id/members", requireProjectAccess("admin"), async (c) => {
     rootDb,
     projectId,
     userId,
-    role as ProjectRole,
+    role, // Already validated by AddMemberSchema
     invitedBy
   );
 
@@ -349,7 +349,7 @@ projects.put("/:id/members/:userId", requireProjectAccess("admin"), async (c) =>
     rootDb,
     projectId,
     userId,
-    result.data.role as ProjectRole
+    result.data.role // Already validated by UpdateMemberSchema
   );
 
   return c.json({
