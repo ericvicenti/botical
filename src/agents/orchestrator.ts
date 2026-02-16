@@ -19,6 +19,7 @@ import { ToolRegistry } from "@/tools/registry.ts";
 import type { ToolExecutionContext, ToolMetadataUpdate } from "@/tools/types.ts";
 import { ActionRegistry } from "@/actions/index.ts";
 import type { ActionContext } from "@/actions/types.ts";
+import { compactConversationHistory, shouldCompactHistory, getConversationStats, DEFAULT_COMPACTION_OPTIONS } from "@/utils/conversation-compaction.ts";
 import { LLM } from "./llm.ts";
 import { StreamProcessor, type ProcessedEvent } from "./stream-processor.ts";
 import type { ProviderId, AgentRunResult, AgentConfig } from "./types.ts";
@@ -361,7 +362,7 @@ export class AgentOrchestrator {
   }
 
   /**
-   * Build messages array from session history
+   * Build messages array from session history with auto-compaction
    */
   private static buildMessages(
     db: Database,
@@ -415,6 +416,25 @@ export class AgentOrchestrator {
       role: "user",
       content: newUserContent,
     });
+
+    // Apply conversation compaction if needed
+    if (shouldCompactHistory(messages.length, 10)) {
+      const compactionResult = compactConversationHistory(messages, {
+        ...DEFAULT_COMPACTION_OPTIONS,
+        keepRecentTurns: 5, // Keep last 5 turns verbatim
+      });
+      
+      if (compactionResult.wasCompacted) {
+        console.log(`[Conversation Compaction] Session ${sessionId}: Summarized ${compactionResult.summarizedTurns} turns, kept ${DEFAULT_COMPACTION_OPTIONS.keepRecentTurns} recent turns`);
+        
+        // Log conversation stats for monitoring
+        const stats = getConversationStats(messages);
+        const compactedStats = getConversationStats(compactionResult.messages);
+        console.log(`[Conversation Stats] Original: ${stats.totalMessages} messages, ${stats.totalCharacters} chars | Compacted: ${compactedStats.totalMessages} messages, ${compactedStats.totalCharacters} chars`);
+      }
+      
+      return compactionResult.messages;
+    }
 
     return messages;
   }
