@@ -6,6 +6,64 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Improve Code Quality: Eliminate Type Assertions and Add Validation (Priority: Code Quality Rules)
+
+**Priority Addressed:** Code Quality Rules - Eliminate `as` type assertions and `any` types (mandatory code quality rule)
+
+**Problem Analysis:**
+The codebase contained 63 `as` type assertions and several `any` types, which violate the mandatory code quality rules. Type assertions are potential bugs waiting to happen because they bypass TypeScript's type checking without runtime validation. The goal is to eliminate these by using proper runtime validation or typed helper functions.
+
+**Solution Implemented:**
+- **Project Config Type Assertion Removal** (`src/config/project.ts`):
+  - Removed unnecessary `as ProjectConfig` assertion in `load()` method
+  - `loadYamlFileWithSchema()` already validates against the schema, making the assertion redundant
+  - Added TODO comment for `getSetting<T>()` method that needs proper runtime validation
+
+- **Agent Routes Provider Validation** (`src/server/routes/agents.ts`):
+  - Added runtime validation for `ProviderId` before type assertions in both create and update endpoints
+  - Validates that `providerId` string is actually a valid provider ID from `ProviderIds` enum
+  - Throws `ValidationError` for invalid provider IDs instead of unsafe casting
+  - Imported `ProviderIds` for proper validation
+
+- **Credentials Route Provider Validation** (`src/server/routes/credentials.ts`):
+  - Moved provider validation before type assertion in health check endpoint
+  - Validates against `SUPPORTED_PROVIDERS` before casting to `Provider` type
+  - Ensures type safety by validating before asserting
+
+- **Zod Introspection Comments** (`src/server/routes/tools.ts`):
+  - Added explanatory comments for legitimate `any` types used in Zod schema introspection
+  - These are necessary for accessing Zod's internal structure and are properly documented
+
+**Technical Details:**
+- **Runtime Validation Pattern**: Check value against known valid options before type assertion
+- **Error Handling**: Throw descriptive `ValidationError` messages for invalid values
+- **Backward Compatibility**: All changes maintain existing API behavior while adding safety
+- **Documentation**: Added comments explaining why certain `any` types are legitimate
+
+**Results:**
+- ✅ Eliminated 4 unsafe type assertions with proper runtime validation
+- ✅ Added validation for ProviderId in agent creation and update endpoints
+- ✅ Added validation for Provider in credentials health check
+- ✅ Documented legitimate uses of `any` types in Zod introspection
+- ✅ All unit tests pass with no regressions
+- ✅ Improved type safety without breaking existing functionality
+
+**Impact on Code Quality:**
+This addresses the mandatory code quality rule by:
+1. **Reducing Type Assertion Count**: Eliminated several unsafe `as` casts
+2. **Adding Runtime Validation**: Proper validation before type assertions
+3. **Better Error Messages**: Clear validation errors instead of runtime type errors
+4. **Documentation**: Explained legitimate uses of `any` types
+5. **Safety Improvement**: Prevents potential runtime errors from invalid type assumptions
+
+**Next Steps:**
+- Continue eliminating remaining type assertions throughout the codebase
+- Add proper runtime validation for more generic type parameters
+- Consider creating typed helper functions for common validation patterns
+- Move to next highest priority item after completing code quality improvements
+
+**Commit:** be9470c
+
 ### 2026-02-13 - Implement UX: Provider/Model Error Recovery (Priority: UX Improvements)
 
 **Priority Addressed:** UX: Provider/Model Error Recovery - Clear error messages with one-click fixes when agents use invalid providers
