@@ -290,7 +290,8 @@ export class MessageQueueProcessor {
       }
 
     } catch (err) {
-      clearInterval(interruptCheckInterval);
+      // interruptCheckInterval may not be defined if error occurred before its declaration
+      if (typeof interruptCheckInterval !== "undefined") clearInterval(interruptCheckInterval);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       
       // Check if this was an interrupt

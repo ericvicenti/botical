@@ -257,6 +257,7 @@ class EventBusSingleton {
    * Check if an event type matches a pattern
    */
   private matchesPattern(pattern: EventPattern, eventType: string): boolean {
+    if (!eventType) return false;
     // Exact match
     if (pattern === eventType) {
       return true;
