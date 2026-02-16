@@ -32,9 +32,12 @@ export interface QueuedMessageRecord {
   can_execute_code: number;
   enabled_tools: string | null; // JSON array
   api_key: string | null;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "pending" | "processing" | "completed" | "failed" | "interrupted";
   retry_count: number;
   error_message: string | null;
+  interrupt_requested: number;
+  interrupted_at: number | null;
+  can_interrupt: number;
   created_at: number;
   started_at: number | null;
   completed_at: number | null;
@@ -52,9 +55,12 @@ export interface QueuedMessage {
   canExecuteCode: boolean;
   enabledTools?: string[];
   apiKey?: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "pending" | "processing" | "completed" | "failed" | "interrupted";
   retryCount: number;
   errorMessage?: string;
+  interruptRequested: boolean;
+  interruptedAt?: number;
+  canInterrupt: boolean;
   createdAt: number;
   startedAt?: number;
   completedAt?: number;
@@ -71,6 +77,7 @@ export interface EnqueueMessageParams {
   canExecuteCode?: boolean;
   enabledTools?: string[];
   apiKey?: string;
+  canInterrupt?: boolean;
 }
 
 // ============================================================================
@@ -88,9 +95,9 @@ export const MessageQueueService = {
     db.prepare(
       `INSERT INTO message_queue (
         id, session_id, user_id, user_message_id, content, provider_id, model_id, agent_name,
-        can_execute_code, enabled_tools, api_key, status, retry_count,
+        can_execute_code, enabled_tools, api_key, status, retry_count, can_interrupt,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       params.sessionId,
@@ -105,6 +112,7 @@ export const MessageQueueService = {
       params.apiKey || null,
       "pending",
       0,
+      params.canInterrupt !== false ? 1 : 0,
       now
     );
 
@@ -377,6 +385,60 @@ export const MessageQueueService = {
   },
 
   /**
+   * Request interrupt for currently processing message in a session
+   */
+  requestInterrupt(db: Database, sessionId: string): boolean {
+    const result = db.prepare(
+      `UPDATE message_queue 
+       SET interrupt_requested = 1, interrupted_at = ?
+       WHERE session_id = ? AND status = 'processing' AND can_interrupt = 1`
+    ).run(Date.now(), sessionId);
+
+    if (result.changes > 0) {
+      // Emit interrupt event
+      EventBus.publish("message.interrupt.requested", {
+        sessionId,
+      });
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * Check if interrupt was requested for a message
+   */
+  isInterruptRequested(db: Database, messageId: string): boolean {
+    const result = db
+      .prepare("SELECT interrupt_requested FROM message_queue WHERE id = ?")
+      .get(messageId) as { interrupt_requested: number } | undefined;
+
+    return Boolean(result?.interrupt_requested);
+  },
+
+  /**
+   * Mark message as interrupted
+   */
+  markInterrupted(db: Database, id: string): QueuedMessage {
+    const now = Date.now();
+
+    db.prepare(
+      `UPDATE message_queue 
+       SET status = 'interrupted', completed_at = ?
+       WHERE id = ?`
+    ).run(now, id);
+
+    const message = this.getByIdOrThrow(db, id);
+
+    // Emit interrupted event
+    EventBus.publish("message.interrupted", {
+      sessionId: message.sessionId,
+      messageId: id,
+    });
+
+    return message;
+  },
+
+  /**
    * Convert database record to QueuedMessage
    */
   recordToQueuedMessage(record: QueuedMessageRecord): QueuedMessage {
@@ -395,6 +457,9 @@ export const MessageQueueService = {
       status: record.status,
       retryCount: record.retry_count,
       errorMessage: record.error_message || undefined,
+      interruptRequested: Boolean(record.interrupt_requested),
+      interruptedAt: record.interrupted_at || undefined,
+      canInterrupt: Boolean(record.can_interrupt),
       createdAt: record.created_at,
       startedAt: record.started_at || undefined,
       completedAt: record.completed_at || undefined,

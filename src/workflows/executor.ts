@@ -572,9 +572,21 @@ async function executeSessionStep(params: {
     SessionService.updateStats(ctx.db, session.id, { messageCount: 1 });
 
     // Process the message with the agent
-    const orchestrator = new AgentOrchestrator(ctx.db);
-    await orchestrator.processMessage(session.id, userMessage.id, {
-      maxMessages,
+    await AgentOrchestrator.run({
+      db: ctx.db,
+      projectId: ctx.actionContext.projectId,
+      projectPath: ctx.actionContext.projectPath,
+      sessionId: session.id,
+      userId: ctx.actionContext.userId || "system",
+      canExecuteCode: true, // Workflow sessions can execute code
+      content: message,
+      providerId: (providerId as any) || "anthropic", // Default to anthropic if not specified
+      modelId,
+      agentName: agent,
+      agentPrompt: systemPrompt || undefined,
+      maxSteps: maxMessages,
+      existingUserMessageId: userMessage.id,
+      abortSignal: ctx.actionContext.abortSignal,
     });
 
     // Get the final session state

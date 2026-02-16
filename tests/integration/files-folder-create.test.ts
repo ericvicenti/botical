@@ -9,6 +9,7 @@ import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/manager.ts";
 import { Config } from "@/config/index.ts";
 import { ProjectService } from "@/services/projects.ts";
+import { createAuthSession, createAuthHeaders } from "./helpers/auth";
 import fs from "fs";
 import path from "path";
 
@@ -34,6 +35,7 @@ describe("Files Folder Creation API", () => {
   let app: ReturnType<typeof createApp>;
   let projectId: string;
   let testUserId: string;
+  let sessionToken: string;
 
   beforeEach(async () => {
     // Close any existing connections
@@ -72,6 +74,9 @@ describe("Files Folder Creation API", () => {
       path: projectDir,
     });
     projectId = project.id;
+
+    // Create authenticated session
+    sessionToken = await createAuthSession(app, "test@example.com");
   });
 
   afterEach(() => {
@@ -87,10 +92,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/my-new-folder`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // In single-user mode, auth is automatic
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -109,9 +111,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/parent/child/grandchild`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -134,9 +134,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/${encodedName}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -159,9 +157,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/${encodedPath}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -180,9 +176,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -197,9 +191,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/nonexistent-project/folders/test-folder`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -213,9 +205,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/${folderName}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
 
@@ -236,9 +226,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/${folderName}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
     expect(response1.status).toBe(201);
@@ -248,9 +236,7 @@ describe("Files Folder Creation API", () => {
       `/api/projects/${projectId}/folders/${folderName}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(sessionToken),
       }
     );
     expect(response2.status).toBe(201);

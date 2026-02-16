@@ -368,7 +368,7 @@ describe("Workflows API Integration", () => {
       // 3. Update
       const updateResponse = await app.request(`/api/workflows/${workflowId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           label: "Updated Lifecycle Test",
@@ -380,13 +380,17 @@ describe("Workflows API Integration", () => {
       expect(updateResponse.status).toBe(200);
 
       // 4. Verify update in list
-      listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
+      listResponse = await app.request(`/api/workflows?projectId=${projectId}`, {
+        headers: createAuthHeaders(sessionToken)
+      });
       list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       const updatedInList = list.data.find((w) => w.id === workflowId);
       expect(updatedInList!.label).toBe("Updated Lifecycle Test");
 
       // 5. Get to verify steps
-      const getResponse = await app.request(`/api/workflows/${workflowId}?projectId=${projectId}`);
+      const getResponse = await app.request(`/api/workflows/${workflowId}?projectId=${projectId}`, {
+        headers: createAuthHeaders(sessionToken)
+      });
       const getResult = (await getResponse.json()) as ApiResponse<WorkflowData>;
       expect(getResult.data.steps).toHaveLength(1);
       expect(getResult.data.steps[0]!.type).toBe("log");
@@ -394,11 +398,14 @@ describe("Workflows API Integration", () => {
       // 6. Delete
       const deleteResponse = await app.request(`/api/workflows/${workflowId}?projectId=${projectId}`, {
         method: "DELETE",
+        headers: createAuthHeaders(sessionToken),
       });
       expect(deleteResponse.status).toBe(200);
 
       // 7. Verify removed from list
-      listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
+      listResponse = await app.request(`/api/workflows?projectId=${projectId}`, {
+        headers: createAuthHeaders(sessionToken)
+      });
       list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       expect(list.data.some((w) => w.id === workflowId)).toBe(false);
     });

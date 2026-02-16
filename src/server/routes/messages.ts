@@ -30,10 +30,11 @@ import { MessageService, MessagePartService } from "@/services/messages.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { ProjectService } from "@/services/projects.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
-import { AgentOrchestrator } from "@/agents/orchestrator.ts";
+import { MessageQueueService } from "@/services/message-queue.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import type { ProviderId } from "@/agents/types.ts";
+import { generateId } from "@/utils/id.ts";
 
 const messages = new Hono();
 
@@ -137,37 +138,60 @@ messages.post("/", async (c) => {
   }, 600000);
 
   try {
-    // Run agent orchestration
-    const agentResult = await AgentOrchestrator.run({
-      db,
-      projectId,
-      projectPath,
+    // Create user message immediately for persistence
+    const userMessageId = generateId("msg");
+    const userMessage = MessageService.create(db, {
+      id: userMessageId,
+      sessionId,
+      role: "user",
+      parentId: null,
+      finishReason: null,
+      cost: 0,
+      tokensInput: 0,
+      tokensOutput: 0,
+      tokensReasoning: 0,
+    });
+
+    // Add text part
+    MessagePartService.create(db, {
+      messageId: userMessageId,
+      sessionId,
+      type: "text",
+      content: { text: content },
+      toolName: null,
+      toolCallId: null,
+      toolStatus: null,
+    });
+
+    // Enqueue for processing
+    const queuedMessage = MessageQueueService.enqueue(db, {
       sessionId,
       userId,
-      canExecuteCode,
-      enabledTools,
+      userMessageId,
       content,
-      credentialResolver,
-      providerId: providerId as ProviderId,
+      providerId: providerId,
       modelId,
       agentName: agentName ?? session.agent,
-      abortSignal: abortController.signal,
+      canExecuteCode,
+      enabledTools,
+      // Don't pass API key to queue - credential resolver will handle it
     });
 
     clearTimeout(timeoutId);
 
-    // Get the assistant message with parts
-    const message = MessageService.getByIdOrThrow(db, agentResult.messageId);
-    const parts = MessagePartService.listByMessage(db, agentResult.messageId);
-
+    // Return queue information immediately
     return c.json(
       {
         data: {
-          message,
-          parts,
-          usage: agentResult.usage,
-          cost: agentResult.cost,
-          finishReason: agentResult.finishReason,
+          userMessage: {
+            ...userMessage,
+            parts: MessagePartService.listByMessage(db, userMessageId),
+          },
+          queued: {
+            messageId: queuedMessage.id,
+            queuePosition: MessageQueueService.getQueuePosition(db, sessionId, queuedMessage.id),
+            status: queuedMessage.status,
+          },
         },
       },
       201

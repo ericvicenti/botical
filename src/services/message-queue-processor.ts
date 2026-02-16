@@ -200,44 +200,106 @@ export class MessageQueueProcessor {
         throw new Error(`No API key found for provider "${providerId}"`);
       }
 
-      // Run agent orchestration
-      const result = await AgentOrchestrator.run({
-        db,
-        projectId,
-        projectPath,
-        sessionId: queuedMessage.sessionId,
-        userId: queuedMessage.userId,
-        canExecuteCode: queuedMessage.canExecuteCode,
-        enabledTools: queuedMessage.enabledTools,
-        content: queuedMessage.content,
-        credentialResolver,
-        providerId,
-        modelId,
-        agentName: queuedMessage.agentName || session.agent,
-        abortSignal: abortController.signal,
-        existingUserMessageId: queuedMessage.userMessageId,
-      });
+      // Create interrupt-aware abort controller
+      const interruptCheckAbortController = new AbortController();
+      
+      // Set up interrupt checking interval
+      const interruptCheckInterval = setInterval(() => {
+        if (MessageQueueService.isInterruptRequested(db, messageId)) {
+          console.log(`[MessageQueueProcessor] Interrupt requested for message ${messageId}`);
+          interruptCheckAbortController.abort();
+        }
+      }, 1000); // Check every second
 
-      // Mark as completed
-      MessageQueueService.markCompleted(db, messageId);
+      // Chain abort signals - abort if either timeout or interrupt requested
+      const chainedAbortController = new AbortController();
+      
+      const abortOnTimeout = () => chainedAbortController.abort();
+      const abortOnInterrupt = () => chainedAbortController.abort();
+      
+      abortController.signal.addEventListener('abort', abortOnTimeout);
+      interruptCheckAbortController.signal.addEventListener('abort', abortOnInterrupt);
 
-      console.log(`[MessageQueueProcessor] Successfully processed message ${messageId} for session ${queuedMessage.sessionId}`);
+      try {
+        // Run agent orchestration with interrupt-aware abort signal
+        const result = await AgentOrchestrator.run({
+          db,
+          projectId,
+          projectPath,
+          sessionId: queuedMessage.sessionId,
+          userId: queuedMessage.userId,
+          canExecuteCode: queuedMessage.canExecuteCode,
+          enabledTools: queuedMessage.enabledTools,
+          content: queuedMessage.content,
+          credentialResolver,
+          providerId,
+          modelId,
+          agentName: queuedMessage.agentName || session.agent,
+          abortSignal: chainedAbortController.signal,
+          existingUserMessageId: queuedMessage.userMessageId,
+        });
 
-      // Emit completion event with result
-      EventBus.publish("message.queue.processed", {
-        sessionId: queuedMessage.sessionId,
-        messageId,
-        resultMessageId: result.messageId,
-        usage: result.usage,
-        cost: result.cost,
-        finishReason: result.finishReason,
-      });
+        clearInterval(interruptCheckInterval);
+
+        // Check if we were interrupted after completion
+        if (MessageQueueService.isInterruptRequested(db, messageId)) {
+          MessageQueueService.markInterrupted(db, messageId);
+          console.log(`[MessageQueueProcessor] Message ${messageId} was interrupted during processing`);
+          return;
+        }
+
+        // Mark as completed
+        MessageQueueService.markCompleted(db, messageId);
+
+        console.log(`[MessageQueueProcessor] Successfully processed message ${messageId} for session ${queuedMessage.sessionId}`);
+
+        // Emit completion event with result
+        EventBus.publish("message.queue.processed", {
+          sessionId: queuedMessage.sessionId,
+          messageId,
+          resultMessageId: result.messageId,
+          usage: result.usage,
+          cost: result.cost,
+          finishReason: result.finishReason,
+        });
+      } catch (err) {
+        clearInterval(interruptCheckInterval);
+        
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        
+        // Check if this was an interrupt
+        if (interruptCheckAbortController.signal.aborted && MessageQueueService.isInterruptRequested(db, messageId)) {
+          MessageQueueService.markInterrupted(db, messageId);
+          console.log(`[MessageQueueProcessor] Message ${messageId} was interrupted`);
+        }
+        // Check if this was a timeout or cancellation
+        else if (abortController.signal.aborted) {
+          MessageQueueService.markFailed(db, messageId, "Processing timed out or was cancelled");
+        } else {
+          MessageQueueService.markFailed(db, messageId, errorMessage);
+        }
+
+        console.error(`[MessageQueueProcessor] Failed to process message ${messageId}:`, errorMessage);
+
+        // Emit failure event
+        EventBus.publish("message.queue.failed", {
+          sessionId: queuedMessage.sessionId,
+          messageId,
+          error: errorMessage,
+        });
+      }
 
     } catch (err) {
+      clearInterval(interruptCheckInterval);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       
+      // Check if this was an interrupt
+      if (MessageQueueService.isInterruptRequested(db, messageId)) {
+        MessageQueueService.markInterrupted(db, messageId);
+        console.log(`[MessageQueueProcessor] Message ${messageId} was interrupted`);
+      }
       // Check if this was an abort (timeout or cancellation)
-      if (abortController.signal.aborted) {
+      else if (abortController.signal.aborted) {
         MessageQueueService.markFailed(db, messageId, "Processing timed out or was cancelled");
       } else {
         MessageQueueService.markFailed(db, messageId, errorMessage);

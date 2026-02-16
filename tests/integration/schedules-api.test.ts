@@ -132,7 +132,7 @@ describe("Schedules API Integration", () => {
     it("should create a schedule with workflow action", async () => {
       const response = await app.request(`/api/projects/${projectId}/schedules`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           name: "Workflow Schedule",
           actionType: "workflow",
@@ -152,7 +152,7 @@ describe("Schedules API Integration", () => {
     it("should return 400 for invalid cron expression", async () => {
       const response = await app.request(`/api/projects/${projectId}/schedules`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           name: "Bad Schedule",
           actionType: "action",
@@ -181,7 +181,9 @@ describe("Schedules API Integration", () => {
         cronExpression: "0 * * * *",
       });
 
-      const response = await app.request(`/api/projects/${projectId}/schedules`);
+      const response = await app.request(`/api/projects/${projectId}/schedules`, {
+        headers: createAuthHeaders(sessionToken),
+      });
 
       expect(response.status).toBe(200);
       const data = (await response.json()) as ApiResponse<ScheduleData[]>;
@@ -207,14 +209,16 @@ describe("Schedules API Integration", () => {
       });
 
       const enabledResponse = await app.request(
-        `/api/projects/${projectId}/schedules?enabled=true`
+        `/api/projects/${projectId}/schedules?enabled=true`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const enabledData = (await enabledResponse.json()) as ApiResponse<ScheduleData[]>;
       expect(enabledData.data).toHaveLength(1);
       expect(enabledData.data[0]!.name).toBe("Enabled");
 
       const disabledResponse = await app.request(
-        `/api/projects/${projectId}/schedules?enabled=false`
+        `/api/projects/${projectId}/schedules?enabled=false`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const disabledData = (await disabledResponse.json()) as ApiResponse<ScheduleData[]>;
       expect(disabledData.data).toHaveLength(1);
@@ -233,7 +237,8 @@ describe("Schedules API Integration", () => {
       });
 
       const response = await app.request(
-        `/api/schedules/${schedule.id}?projectId=${projectId}`
+        `/api/schedules/${schedule.id}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -244,7 +249,8 @@ describe("Schedules API Integration", () => {
 
     it("should return 404 for non-existent schedule", async () => {
       const response = await app.request(
-        `/api/schedules/sched_nonexistent?projectId=${projectId}`
+        `/api/schedules/sched_nonexistent?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(404);
@@ -263,7 +269,7 @@ describe("Schedules API Integration", () => {
 
       const response = await app.request(`/api/schedules/${schedule.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           name: "Updated Name",
@@ -290,14 +296,15 @@ describe("Schedules API Integration", () => {
 
       const response = await app.request(
         `/api/schedules/${schedule.id}?projectId=${projectId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
 
       // Verify it's deleted
       const getResponse = await app.request(
-        `/api/schedules/${schedule.id}?projectId=${projectId}`
+        `/api/schedules/${schedule.id}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       expect(getResponse.status).toBe(404);
     });
@@ -318,7 +325,7 @@ describe("Schedules API Integration", () => {
 
       const response = await app.request(
         `/api/schedules/${schedule.id}/enable?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -343,7 +350,7 @@ describe("Schedules API Integration", () => {
 
       const response = await app.request(
         `/api/schedules/${schedule.id}/disable?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -365,7 +372,7 @@ describe("Schedules API Integration", () => {
 
       const response = await app.request(
         `/api/schedules/${schedule.id}/run?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -390,7 +397,8 @@ describe("Schedules API Integration", () => {
       ScheduleService.createRun(db, schedule.id, projectId, Date.now());
 
       const response = await app.request(
-        `/api/schedules/${schedule.id}/runs?projectId=${projectId}`
+        `/api/schedules/${schedule.id}/runs?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -403,7 +411,7 @@ describe("Schedules API Integration", () => {
     it("should validate a valid cron expression", async () => {
       const response = await app.request("/api/schedules/validate-cron", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({ expression: "0 9 * * *" }),
       });
 
@@ -416,7 +424,7 @@ describe("Schedules API Integration", () => {
     it("should reject an invalid cron expression", async () => {
       const response = await app.request("/api/schedules/validate-cron", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({ expression: "invalid" }),
       });
 
@@ -432,7 +440,7 @@ describe("Schedules API Integration", () => {
       // 1. Create
       const createResponse = await app.request(`/api/projects/${projectId}/schedules`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           name: "Lifecycle Test",
           description: "Testing full lifecycle",
@@ -446,14 +454,16 @@ describe("Schedules API Integration", () => {
       const scheduleId = created.data.id;
 
       // 2. Verify in list
-      let listResponse = await app.request(`/api/projects/${projectId}/schedules`);
+      let listResponse = await app.request(`/api/projects/${projectId}/schedules`, {
+        headers: createAuthHeaders(sessionToken),
+      });
       let list = (await listResponse.json()) as ApiResponse<ScheduleData[]>;
       expect(list.data.some((s) => s.id === scheduleId)).toBe(true);
 
       // 3. Update
       const updateResponse = await app.request(`/api/schedules/${scheduleId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           name: "Updated Lifecycle Test",
@@ -464,7 +474,8 @@ describe("Schedules API Integration", () => {
 
       // 4. Get to verify update
       const getResponse = await app.request(
-        `/api/schedules/${scheduleId}?projectId=${projectId}`
+        `/api/schedules/${scheduleId}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const getResult = (await getResponse.json()) as ApiResponse<ScheduleData>;
       expect(getResult.data.name).toBe("Updated Lifecycle Test");
@@ -473,27 +484,28 @@ describe("Schedules API Integration", () => {
       // 5. Disable
       const disableResponse = await app.request(
         `/api/schedules/${scheduleId}/disable?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
       expect(disableResponse.status).toBe(200);
 
       // 6. Enable
       const enableResponse = await app.request(
         `/api/schedules/${scheduleId}/enable?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
       expect(enableResponse.status).toBe(200);
 
       // 7. Trigger manual run
       const triggerResponse = await app.request(
         `/api/schedules/${scheduleId}/run?projectId=${projectId}`,
-        { method: "POST" }
+        { method: "POST", headers: createAuthHeaders(sessionToken) }
       );
       expect(triggerResponse.status).toBe(200);
 
       // 8. Check run history
       const runsResponse = await app.request(
-        `/api/schedules/${scheduleId}/runs?projectId=${projectId}`
+        `/api/schedules/${scheduleId}/runs?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const runsResult = (await runsResponse.json()) as ApiResponse<ScheduleRunData[]>;
       expect(runsResult.data.length).toBeGreaterThanOrEqual(1);
@@ -501,12 +513,14 @@ describe("Schedules API Integration", () => {
       // 9. Delete
       const deleteResponse = await app.request(
         `/api/schedules/${scheduleId}?projectId=${projectId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: createAuthHeaders(sessionToken) }
       );
       expect(deleteResponse.status).toBe(200);
 
       // 10. Verify removed from list
-      listResponse = await app.request(`/api/projects/${projectId}/schedules`);
+      listResponse = await app.request(`/api/projects/${projectId}/schedules`, {
+        headers: createAuthHeaders(sessionToken),
+      });
       list = (await listResponse.json()) as ApiResponse<ScheduleData[]>;
       expect(list.data.some((s) => s.id === scheduleId)).toBe(false);
     });

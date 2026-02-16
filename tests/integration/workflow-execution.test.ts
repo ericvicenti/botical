@@ -19,6 +19,7 @@ import { ProjectService } from "@/services/projects";
 import { WorkflowService } from "@/services/workflows";
 import { WorkflowExecutionService } from "@/services/workflow-executions";
 import { registerAllActions } from "@/actions/index";
+import { createAuthSession, createAuthHeaders } from "./helpers/auth";
 import path from "path";
 import fs from "fs";
 import type { WorkflowStep } from "@/workflows/types";
@@ -56,6 +57,7 @@ describe("Workflow Execution Integration", () => {
   );
   const testUserId = "usr_test-exec-user";
   let projectId: string;
+  let sessionToken: string;
 
   beforeAll(async () => {
     Config.load({ dataDir: testDataDir });
@@ -82,6 +84,9 @@ describe("Workflow Execution Integration", () => {
       ownerId: testUserId,
     });
     projectId = project.id;
+
+    // Create authenticated session
+    sessionToken = await createAuthSession(app, "exec-test@example.com");
   });
 
   afterAll(() => {
@@ -121,7 +126,7 @@ describe("Workflow Execution Integration", () => {
       // Execute the workflow
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -166,7 +171,7 @@ describe("Workflow Execution Integration", () => {
       const startTime = Date.now();
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -222,7 +227,7 @@ describe("Workflow Execution Integration", () => {
       const startTime = Date.now();
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -272,7 +277,7 @@ describe("Workflow Execution Integration", () => {
       const startTime = Date.now();
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -325,7 +330,7 @@ describe("Workflow Execution Integration", () => {
       // Execute the workflow
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -382,7 +387,7 @@ describe("Workflow Execution Integration", () => {
       // Execute the workflow
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -429,7 +434,7 @@ describe("Workflow Execution Integration", () => {
       const startTime = Date.now();
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: { waitTime: 40 },
@@ -472,7 +477,7 @@ describe("Workflow Execution Integration", () => {
       // Execute the workflow
       const response = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           input: {},
@@ -532,7 +537,7 @@ describe("Workflow Execution Integration", () => {
 
       const execResponse = await app.request(`/api/workflows/${workflow.id}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({ projectId, input: {} }),
       });
 
@@ -544,7 +549,8 @@ describe("Workflow Execution Integration", () => {
 
       // Get execution details
       const getResponse = await app.request(
-        `/api/workflow-executions/${executionId}?projectId=${projectId}`
+        `/api/workflow-executions/${executionId}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(getResponse.status).toBe(200);

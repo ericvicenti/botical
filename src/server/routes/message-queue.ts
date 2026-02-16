@@ -102,6 +102,45 @@ messageQueue.post("/sessions/:sessionId/queue/:messageId/retry", async (c) => {
 });
 
 /**
+ * POST /api/sessions/:sessionId/queue/interrupt
+ * Request interrupt of currently processing message
+ */
+messageQueue.post("/sessions/:sessionId/queue/interrupt", async (c) => {
+  const sessionId = c.req.param("sessionId");
+
+  if (!sessionId) {
+    throw new ValidationError("sessionId parameter is required");
+  }
+
+  const db = DatabaseManager.getProjectDb(sessionId);
+
+  try {
+    const interrupted = MessageQueueService.requestInterrupt(db, sessionId);
+    
+    if (interrupted) {
+      return c.json({
+        data: { 
+          message: "Interrupt requested",
+          sessionId,
+          timestamp: Date.now() 
+        },
+      });
+    } else {
+      return c.json({
+        data: { 
+          message: "No interruptible message found",
+          sessionId,
+          timestamp: Date.now() 
+        },
+      });
+    }
+  } catch (error) {
+    console.error(`Error requesting interrupt for session ${sessionId}:`, error);
+    throw error;
+  }
+});
+
+/**
  * DELETE /api/sessions/:sessionId/queue/:messageId
  * Cancel a queued message
  */

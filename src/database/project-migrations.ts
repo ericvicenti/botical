@@ -658,4 +658,21 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    name: "message_queue_interrupts",
+    up: (db) => {
+      db.exec(`
+        -- Add interrupt support to message queue
+        -- interrupt_requested: boolean flag to signal interruption
+        -- interrupted_at: timestamp when interruption was requested
+        -- can_interrupt: whether this message can be interrupted (default true)
+        ALTER TABLE message_queue ADD COLUMN interrupt_requested INTEGER DEFAULT 0;
+        ALTER TABLE message_queue ADD COLUMN interrupted_at INTEGER;
+        ALTER TABLE message_queue ADD COLUMN can_interrupt INTEGER DEFAULT 1;
+        
+        -- Index for efficient lookup of interrupt requests
+        CREATE INDEX idx_message_queue_interrupt ON message_queue(session_id, interrupt_requested, status);
+      `);
+    },
+  },
 ];
