@@ -6,6 +6,52 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Implement Conversation History Auto-Compaction (Context Management Priority #2)
+
+**Priority Addressed:** Context Management & Long Chain Efficiency - Auto-compaction of older turns (keep last 5 turns verbatim, summarize rest)
+
+**Problem Analysis:**
+Agent sessions accumulate massive context over many tool-call steps. Even with tool output truncation implemented, conversation history itself grows linearly with each user-assistant exchange. In long improvement cycles (30+ steps), the full conversation history consumes significant context budget, degrading LLM quality and approaching token limits.
+
+**Solution Implemented:**
+- **Comprehensive Conversation Compaction Utility** (`src/utils/conversation-compaction.ts`):
+  - **Sliding Window Approach**: Keeps last 5 turns verbatim, summarizes older ones
+  - **Smart Summarization**: Extracts key topics, selects important turns, preserves context
+  - **Topic Extraction**: Identifies files, actions, errors, testing patterns from conversation
+  - **Importance Scoring**: Prioritizes turns with errors, implementations, file operations
+  - **Configurable Thresholds**: Customizable recent turn count and summary length limits
+
+- **AgentOrchestrator Integration** (`src/agents/orchestrator.ts`):
+  - **Automatic Triggering**: Compaction activates when message count exceeds 10
+  - **Transparent Operation**: No changes to existing APIs or user experience
+  - **Monitoring Logs**: Detailed logging for debugging and performance tracking
+  - **Statistics Tracking**: Conversation stats for token usage monitoring
+
+**Technical Details:**
+- Uses intelligent turn grouping (user-assistant pairs) for coherent summarization
+- Preserves essential information while dramatically reducing token usage
+- Maintains backward compatibility - no changes to message storage or retrieval
+- Configurable compaction options with sensible defaults
+- Comprehensive error handling and edge case management
+
+**Results:**
+- ✅ Conversation history now auto-compacts in long sessions (10+ messages)
+- ✅ Recent interactions (last 5 turns) preserved verbatim for context continuity
+- ✅ Older turns intelligently summarized with key topics and important excerpts
+- ✅ Significant context budget reduction in long improvement cycles
+- ✅ Transparent operation - no user-facing changes required
+- ✅ Comprehensive logging for monitoring and debugging
+
+**Impact on Success Metric:**
+This directly addresses the goal of completing improvement cycles in <20 steps with <500k tokens. Combined with tool output truncation, conversation compaction prevents context bloat from both tool outputs AND conversation history, enabling longer, more effective agent sessions.
+
+**Next Steps:**
+- Monitor compaction effectiveness in production improvement cycles
+- Move to next context management priority: Sub-task decomposition for improvement cycles
+- Consider adding user-configurable compaction settings if needed
+
+**Commit:** 2b825b1
+
 ### 2026-02-13 - Complete Enhanced Error Handling with Comprehensive Circuit Breaker Support
 
 **Priority Addressed:** PRIORITY 4: Enhance error handling - Implement proper retry logic and circuit breakers
