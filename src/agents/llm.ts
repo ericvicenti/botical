@@ -38,6 +38,8 @@ export interface LLMCallOptions {
   onStreamEvent?: (event: StreamEvent) => void | Promise<void>;
   /** Callback when OAuth tokens are refreshed (for persistence) */
   onTokenRefresh?: (newCredentials: string) => void;
+  /** Provider-specific caching options */
+  cachingOptions?: Record<string, any>;
 }
 
 /**
@@ -104,6 +106,7 @@ export class LLM {
       abortSignal,
       onStreamEvent,
       onTokenRefresh,
+      cachingOptions = {},
     } = options;
 
     // Create the model instance
@@ -127,6 +130,7 @@ export class LLM {
         temperature,
         topP,
         abortSignal,
+        ...cachingOptions, // Spread caching options (promptCacheKey, promptCacheRetention, etc.)
       });
 
       // Process the stream
@@ -287,6 +291,7 @@ export class LLM {
       temperature,
       topP,
       abortSignal,
+      cachingOptions = {},
     } = options;
 
     // Create the model instance
@@ -300,6 +305,7 @@ export class LLM {
       temperature,
       topP,
       abortSignal,
+      ...cachingOptions, // Spread caching options
     });
 
     // Extract tool calls from steps

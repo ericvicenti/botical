@@ -76,6 +76,15 @@ export interface OrchestratorRunOptions {
 
 import { extractTextContent } from "@/services/message-content.ts";
 import { compactContext, DEFAULT_COMPACTION_CONFIG } from "@/utils/context-compaction.ts";
+import { 
+  analyzeCaching, 
+  applyAnthropicCaching, 
+  getOpenAICachingOptions, 
+  supportsPromptCaching,
+  getProviderCachingConfig,
+  DEFAULT_CACHING_CONFIG,
+  type PromptCachingConfig 
+} from "@/utils/prompt-caching.ts";
 
 /**
  * Agent Orchestrator for running AI agents
@@ -175,6 +184,42 @@ export class AgentOrchestrator {
 
     // Build conversation history
     const messages = this.buildMessages(db, sessionId, content);
+
+    // Analyze and apply prompt caching if supported
+    let cachedMessages = messages;
+    let cachingOptions = {};
+    
+    if (supportsPromptCaching(providerId)) {
+      // Get provider-specific caching configuration
+      const providerCachingConfig: PromptCachingConfig = {
+        ...DEFAULT_CACHING_CONFIG,
+        ...getProviderCachingConfig(providerId),
+        cacheKeyPrefix: `${sessionId}_${effectiveAgentName}`,
+      };
+
+      // Analyze caching opportunities
+      const cachingAnalysis = analyzeCaching(messages, providerCachingConfig);
+      
+      if (cachingAnalysis.shouldCache) {
+        console.log(`[AgentOrchestrator] Prompt caching enabled for session ${sessionId}:`, {
+          provider: providerId,
+          cacheableMessages: cachingAnalysis.cacheableMessages.length,
+          uncachedMessages: cachingAnalysis.uncachedMessages.length,
+          estimatedTokenSavings: cachingAnalysis.estimatedTokenSavings,
+          cacheKey: cachingAnalysis.cacheKey,
+          reason: cachingAnalysis.reason,
+        });
+
+        // Apply provider-specific caching
+        if (providerId === "anthropic" || providerId === "anthropic-oauth") {
+          cachedMessages = applyAnthropicCaching(messages, cachingAnalysis);
+        } else if (providerId === "openai") {
+          cachingOptions = getOpenAICachingOptions(cachingAnalysis, providerCachingConfig);
+        }
+      } else {
+        console.log(`[AgentOrchestrator] Prompt caching skipped for session ${sessionId}: ${cachingAnalysis.reason}`);
+      }
+    }
 
     // Resolve tools for this agent
     let availableToolNames = AgentRegistry.resolveTools(
@@ -283,11 +328,12 @@ export class AgentOrchestrator {
         modelId: effectiveModelId,
         apiKey,
         system: systemPrompt,
-        messages,
+        messages: cachedMessages,
         tools,
         maxSteps: effectiveMaxSteps,
         temperature: effectiveTemperature,
         abortSignal,
+        cachingOptions,
         onStreamEvent: async (event) => {
           await processor.process(event);
         },
