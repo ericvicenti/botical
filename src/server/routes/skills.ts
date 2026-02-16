@@ -380,6 +380,13 @@ interface SkillsShSearchResponse {
   count: number;
 }
 
+const SkillsShSearchResponseSchema = z.object({
+  query: z.string(),
+  searchType: z.string(),
+  skills: z.array(z.any()), // SkillsShSearchResult schema would be complex
+  count: z.number(),
+});
+
 /**
  * GET /api/skills/search
  * Search the skills.sh directory for available skills
@@ -402,7 +409,8 @@ skills.get("/search", async (c) => {
       throw new Error(`skills.sh API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = (await response.json()) as SkillsShSearchResponse;
+    const rawData = await response.json();
+    const data = SkillsShSearchResponseSchema.parse(rawData);
 
     return c.json({
       data: data.skills || [],

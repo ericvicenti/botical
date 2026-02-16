@@ -30,6 +30,13 @@ export type TaskStatus =
 export type TaskActor = "agent" | "user";
 
 /**
+ * Type guard for TaskActor
+ */
+function isTaskActor(value: string | null): value is TaskActor {
+  return value === "agent" || value === "user";
+}
+
+/**
  * Task entity
  */
 export interface Task {
@@ -149,8 +156,8 @@ function rowToTask(row: TaskRow): Task {
     activeForm: row.active_form,
     status: row.status as TaskStatus,
     position: row.position,
-    createdBy: (row.created_by || "agent") as TaskActor,
-    assignedTo: (row.assigned_to || "agent") as TaskActor,
+    createdBy: isTaskActor(row.created_by) ? row.created_by : "agent",
+    assignedTo: isTaskActor(row.assigned_to) ? row.assigned_to : "agent",
     parentTaskId: row.parent_task_id,
     description: row.description,
     result: row.result,

@@ -119,10 +119,10 @@ export class SubAgentRunner {
       modelId: params.model?.modelId ?? parentModelId,
     });
 
-    // Determine provider/model
-    const providerId = (params.model?.providerId ??
+    // Determine provider/model - parentProviderId is already validated as ProviderId
+    const providerId = params.model?.providerId ??
       agentConfig.providerId ??
-      parentProviderId) as ProviderId;
+      parentProviderId;
     const modelId =
       params.model?.modelId ?? agentConfig.modelId ?? parentModelId ?? null;
 

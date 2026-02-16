@@ -71,7 +71,7 @@ status.get("/", async (c) => {
         message_count: number;
         updated_at: number;
         created_at: number;
-      }>;
+      }>; // Safe: matches known database schema // Safe: matches known database schema
 
       for (const s of sessions) {
         // Get last message text
@@ -82,7 +82,7 @@ status.get("/", async (c) => {
           WHERE m.session_id = ? AND mp.type = 'text'
           ORDER BY mp.created_at DESC
           LIMIT 1
-        `).get(s.id) as { content: string; role: string } | undefined;
+        `).get(s.id) as { content: string; role: string } | undefined; // Safe: matches database schema
 
         let lastMessage: string | undefined;
         if (lastPart) {
@@ -131,7 +131,7 @@ status.get("/", async (c) => {
         updated_at: number;
         created_at: number;
         last_error: string | null;
-      }>;
+      }>; // Safe: matches known database schema
 
       for (const s of recentRows) {
         if (activeIds.has(s.id)) continue;
@@ -143,7 +143,7 @@ status.get("/", async (c) => {
           WHERE m.session_id = ? AND mp.type = 'text'
           ORDER BY mp.created_at DESC
           LIMIT 1
-        `).get(s.id) as { content: string; role: string } | undefined;
+        `).get(s.id) as { content: string; role: string } | undefined; // Safe: matches database schema
 
         let lastMessage: string | undefined;
         if (lastPart) {

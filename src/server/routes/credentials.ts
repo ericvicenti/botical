@@ -141,7 +141,8 @@ credentials.post("/health", async (c) => {
     throw new ValidationError(`Unsupported provider: ${body.provider}`);
   }
   
-  const provider = body.provider as Provider;
+  // Safe: validated above that body.provider is in SUPPORTED_PROVIDERS
+  const provider = body.provider;
 
   const apiKey = ProviderCredentialsService.getApiKey(auth.userId, provider);
   if (!apiKey) {
