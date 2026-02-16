@@ -139,22 +139,14 @@ messages.post("/", async (c) => {
 
   try {
     // Create user message immediately for persistence
-    const userMessageId = generateId("msg");
     const userMessage = MessageService.create(db, {
-      id: userMessageId,
       sessionId,
       role: "user",
-      parentId: null,
-      finishReason: null,
-      cost: 0,
-      tokensInput: 0,
-      tokensOutput: 0,
-      tokensReasoning: 0,
     });
 
     // Add text part
     MessagePartService.create(db, {
-      messageId: userMessageId,
+      messageId: userMessage.id,
       sessionId,
       type: "text",
       content: { text: content },
@@ -167,7 +159,7 @@ messages.post("/", async (c) => {
     const queuedMessage = MessageQueueService.enqueue(db, {
       sessionId,
       userId,
-      userMessageId,
+      userMessageId: userMessage.id,
       content,
       providerId: providerId,
       modelId,
@@ -185,7 +177,7 @@ messages.post("/", async (c) => {
         data: {
           userMessage: {
             ...userMessage,
-            parts: MessagePartService.listByMessage(db, userMessageId),
+            parts: MessagePartService.listByMessage(db, userMessage.id),
           },
           queued: {
             messageId: queuedMessage.id,
