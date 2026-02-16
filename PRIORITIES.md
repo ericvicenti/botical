@@ -80,7 +80,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [x] Validate agent provider/model on save — warn if no credentials exist for that provider - ✅ COMPLETED: Added provider credential validation to agent creation and update endpoints. Shows warnings when agents use unconfigured providers but allows creation for flexibility. Provides clear feedback during agent configuration.
 
 #### Code Quality Rules (MANDATORY)
-- **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. ⚠️ **IN PROGRESS**: Eliminated 36+ unsafe type assertions across 5 cycles (63 → ~27). Added type guards for TaskActor, Node.js errors, provider validation, external API safety with Zod schemas. Documented legitimate database query assertions. Enhanced provider validation in error recovery endpoints. Leveraged existing schema validation in missions, projects, git, and sessions routes. Remaining: ~27 type assertions to address.
+- **NO `as` type assertions** — Use runtime validation (zod schemas) or typed helper functions instead. Every `as` cast is a bug waiting to happen. ⚠️ **IN PROGRESS**: Eliminated 46+ unsafe type assertions across 6 cycles (63 → ~17). Added type guards for TaskActor, Node.js errors, provider validation, external API safety with Zod schemas. Enhanced tool error handling with shared type guards. Improved task parameter validation with runtime schema checking. Documented legitimate database query assertions. Enhanced provider validation in error recovery endpoints. Leveraged existing schema validation in missions, projects, git, and sessions routes. Remaining: ~17 type assertions to address.
 - **NO `any` type** — Use `unknown` with proper narrowing instead. ⚠️ **IN PROGRESS**: Documented legitimate uses (Zod introspection, generic action parameters). Need to address remaining inappropriate `any` types.
 - **Test every API endpoint end-to-end** — Create a session, send a message, verify the response. Not just unit tests.
 - **Manually test via API** before declaring anything fixed — `curl` the endpoint, check the response.
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 15)*
+*Last read by Leopard: 2026-02-13 (Cycle 16)*
 *Last updated by human: 2026-02-13*
