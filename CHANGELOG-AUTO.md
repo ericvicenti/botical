@@ -6,6 +6,63 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Implement Auto-Compaction of Conversation History (Context Management Priority #2)
+
+**Priority Addressed:** Context Management & Long Chain Efficiency - Auto-compaction of older turns (Priority #2)
+
+**Problem Analysis:**
+After implementing tool output truncation, the next major context management challenge was conversation history bloat. Long agent sessions accumulate many user-assistant message pairs, causing:
+1. Exponential context growth in multi-turn conversations
+2. Token usage approaching model limits (especially with 30+ step improvement cycles)
+3. Degraded LLM performance due to excessive context length
+4. No mechanism to preserve important conversation context while reducing verbosity
+
+**Solution Implemented:**
+- **Context Compaction Utility** (`src/utils/context-compaction.ts`):
+  - **Sliding window approach**: Keeps last N turns verbatim (default: 5), compresses older turns
+  - **Smart compression strategies**: Detects and preserves tool usage patterns, file operations, error mentions
+  - **Structured summaries**: Creates organized summaries with turn-by-turn breakdown
+  - **Token-aware truncation**: Respects maxSummaryTokens limit (default: 1000) with intelligent truncation
+  - **Configurable thresholds**: Adjustable recentTurns and maxSummaryTokens for different use cases
+
+- **AgentOrchestrator Integration** (`src/agents/orchestrator.ts`):
+  - Integrated `compactContext()` into `buildMessages()` method
+  - Applied automatically when message count exceeds threshold
+  - Comprehensive logging for monitoring compaction effectiveness
+  - Zero impact on short conversations (below threshold)
+
+- **Comprehensive Testing** (`tests/unit/utils/context-compaction.test.ts`):
+  - 15 test cases covering all scenarios: basic compaction, tool patterns, error handling
+  - Edge cases: empty messages, multimodal content, mixed role sequences
+  - Token reduction validation and compression ratio testing
+  - Configuration validation and statistics calculation
+
+**Technical Details:**
+- Uses system messages to inject compressed summaries at conversation start
+- Preserves recent context verbatim (most important for LLM performance)
+- Extracts key patterns: "Used tools: X", "Files: Y", "Encountered errors"
+- Handles multimodal messages by extracting text content only
+- Rough token estimation: 1 token ≈ 4 characters for English text
+- Graceful degradation: if compression doesn't save tokens, still reduces message count
+
+**Results:**
+- ✅ Auto-compaction working correctly in AgentOrchestrator
+- ✅ Smart compression preserves essential context while reducing verbosity
+- ✅ Configurable and extensible design for future enhancements
+- ✅ Comprehensive test coverage (15 tests, all passing)
+- ✅ Zero impact on existing functionality (all unit tests pass)
+- ✅ Monitoring and logging for production effectiveness tracking
+
+**Impact on Success Metric:**
+This directly addresses the goal of completing improvement cycles in <20 steps with <500k tokens by preventing conversation history bloat. Combined with tool output truncation, this provides comprehensive context management for long agent sessions.
+
+**Next Steps:**
+- Monitor compaction effectiveness in production improvement cycles
+- Move to Context Management Priority #3: Sub-task decomposition (plan → implement → verify as separate sessions)
+- Consider adding user-configurable compaction settings in agent configurations
+
+**Commit:** e759769
+
 ### 2026-02-13 - Complete Enhanced Error Handling with Comprehensive Circuit Breaker Support
 
 **Priority Addressed:** PRIORITY 4: Enhance error handling - Implement proper retry logic and circuit breakers
