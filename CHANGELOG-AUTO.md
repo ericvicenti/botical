@@ -6,6 +6,59 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-16 - Implement Sub-task Decomposition for Improvement Cycles (Context Management Priority #3)
+
+**Priority Addressed:** Context Management & Long Chain Efficiency - Sub-task decomposition for improvement cycles (plan → implement → verify as separate sessions)
+
+**Problem Analysis:**
+Long improvement cycles accumulate massive context over many steps, even with tool output truncation and conversation compaction implemented. Breaking tasks into focused sub-sessions with fresh context prevents bloat while maintaining structured information flow between phases. This addresses the core architectural challenge of long-running agent sessions.
+
+**Solution Implemented:**
+- **ImprovementCycleDecomposer** (`src/agents/improvement-cycle-decomposer.ts`):
+  - **Three-Phase Architecture**: Plan → Implement → Verify with fresh context per phase
+  - **Structured Context Passing**: Each phase receives summarized results from previous phases
+  - **Phase-Specific Agents**: Uses planning agent for analysis, default agent for implementation/verification
+  - **Configurable Step Limits**: 8 steps for planning, 15 for implementation, 10 for verification
+  - **Comprehensive Error Handling**: Graceful failure isolation between phases
+  - **Token & Cost Tracking**: Monitors resource usage across all phases
+
+- **Improvement Cycle Tool** (`src/tools/improvement-cycle.ts`):
+  - **Seamless Integration**: Available as a tool to existing agents (especially Leopard)
+  - **Rich Output Formatting**: Detailed results with phase summaries, session links, cost tracking
+  - **Provider/Model Flexibility**: Supports custom provider/model selection per cycle
+  - **Background Execution Support**: Non-blocking execution with progress tracking
+
+- **Agent Integration**:
+  - **Default Agent Enhancement**: Added improvement_cycle tool to default agent's toolkit
+  - **Tool Registry Integration**: Registered as "agent" category tool requiring code execution
+  - **Backward Compatibility**: No changes to existing agent workflows
+
+**Technical Details:**
+- Each phase runs in a separate child session with targeted system prompts
+- Context is passed via structured summaries, not full conversation history
+- Phase outputs are parsed and forwarded to subsequent phases
+- Comprehensive logging and monitoring for debugging and optimization
+- Session hierarchy maintained with proper parent-child relationships
+
+**Results:**
+- ✅ Sub-task decomposition fully implemented and integrated
+- ✅ Three-phase improvement cycle architecture operational
+- ✅ Fresh context per phase prevents context bloat accumulation
+- ✅ Structured information flow maintains task continuity
+- ✅ Available to Leopard and other agents via improvement_cycle tool
+- ✅ Comprehensive error handling and monitoring
+- ✅ Unit tests pass, integration tests mostly pass (auth issues unrelated)
+
+**Impact on Success Metric:**
+This completes the core context management infrastructure for efficient long-running agent sessions. Combined with tool output truncation and conversation compaction, this enables breaking complex improvement tasks into focused sub-sessions, directly supporting the goal of <20 steps, <500k tokens for improvement cycles.
+
+**Next Steps:**
+- Monitor effectiveness in production improvement cycles
+- Consider adding user-configurable phase parameters
+- Move to next context management priority: Prompt caching integration
+
+**Commit:** 709d829
+
 ### 2026-02-13 - Implement Conversation History Auto-Compaction (Context Management Priority #2)
 
 **Priority Addressed:** Context Management & Long Chain Efficiency - Auto-compaction of older turns (keep last 5 turns verbatim, summarize rest)

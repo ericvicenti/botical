@@ -26,7 +26,7 @@ send_message() {
     -d "{
       \"projectId\": \"$PROJECT_ID\",
       \"sessionId\": \"$session_id\",
-      \"content\": \"$content\",
+      \"content\": $(echo "$content" | jq -Rs .),
       \"userId\": \"$USER_ID\",
       \"providerId\": \"anthropic-oauth\",
       \"canExecuteCode\": true
@@ -41,6 +41,14 @@ if [ "$CURRENT_BRANCH" != "dev" ]; then
   git checkout dev 2>&1
 fi
 
+# Build the cycle message
+BASE_MSG="Read PRIORITIES.md and CHANGELOG-AUTO.md, pick the next task, implement it, test it. Push to dev branch and open a PR to main. NEVER push to main directly."
+if [ -n "$PR_FEEDBACK" ]; then
+  CYCLE_MSG="$PR_FEEDBACK Then continue: $BASE_MSG"
+else
+  CYCLE_MSG="Continue your improvement cycle. $BASE_MSG"
+fi
+
 # Check for active session (created in last 2 hours)
 TWO_HOURS_AGO=$(( $(date +%s%3N) - 7200000 ))
 ACTIVE_SESSION=$(sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
@@ -48,7 +56,7 @@ ACTIVE_SESSION=$(sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
 
 if [ -n "$ACTIVE_SESSION" ]; then
   echo "📋 Continuing session: $ACTIVE_SESSION"
-  RESP=$(send_message "$ACTIVE_SESSION" "Continue your improvement cycle. Read PRIORITIES.md and CHANGELOG-AUTO.md, pick the next task, implement it, test it. Push to dev branch and open a PR to main. NEVER push to main directly.")
+  RESP=$(send_message "$ACTIVE_SESSION" "$CYCLE_MSG")
 else
   echo "🆕 Creating new session..."
   SESSION_RESP=$(curl -s -X POST "$BASE_URL/api/sessions" \
@@ -67,7 +75,7 @@ else
     exit 1
   fi
   echo "✅ Session: $SESSION_ID"
-  RESP=$(send_message "$SESSION_ID" "Start a new improvement cycle. Read PRIORITIES.md for current priorities. Read CHANGELOG-AUTO.md for recent work. Work on the dev branch. Pick the highest priority unfinished item, implement it, run tests, commit to dev, and open a PR to main. NEVER push to main directly.")
+  RESP=$(send_message "$SESSION_ID" "Start a new improvement cycle. $CYCLE_MSG")
 fi
 
 echo "$RESP" | jq -r '.data.message.id // .error.message // .' 2>/dev/null || echo "$RESP"
