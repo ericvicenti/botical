@@ -676,4 +676,61 @@ export const PROJECT_MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    id: 15,
+    name: "memory_blocks",
+    up: (db) => {
+      db.exec(`
+        -- ============================================
+        -- MEMORY BLOCKS (Letta-style persistent memory)
+        -- ============================================
+        
+        CREATE TABLE memory_blocks (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL, -- scratchpad, task_context, learned_facts, preferences, project_state, custom
+          description TEXT,
+          content TEXT NOT NULL,
+          schema TEXT, -- JSON schema for structured content validation
+          agent_name TEXT NOT NULL,
+          session_id TEXT, -- Optional session context
+          version INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        -- Unique constraint: agent can only have one memory block per name
+        CREATE UNIQUE INDEX idx_memory_blocks_agent_name ON memory_blocks(agent_name, name);
+        
+        -- Indexes for efficient querying
+        CREATE INDEX idx_memory_blocks_agent ON memory_blocks(agent_name);
+        CREATE INDEX idx_memory_blocks_type ON memory_blocks(type);
+        CREATE INDEX idx_memory_blocks_agent_type ON memory_blocks(agent_name, type);
+        CREATE INDEX idx_memory_blocks_session ON memory_blocks(session_id) WHERE session_id IS NOT NULL;
+        CREATE INDEX idx_memory_blocks_updated ON memory_blocks(updated_at DESC);
+
+        -- ============================================
+        -- MEMORY BLOCK VERSIONS (History tracking)
+        -- ============================================
+        
+        CREATE TABLE memory_block_versions (
+          id TEXT PRIMARY KEY,
+          block_id TEXT NOT NULL REFERENCES memory_blocks(id) ON DELETE CASCADE,
+          version INTEGER NOT NULL,
+          content TEXT NOT NULL,
+          change_reason TEXT,
+          session_id TEXT, -- Session that made this change
+          created_at INTEGER NOT NULL
+        );
+
+        -- Unique constraint: one version record per block/version
+        CREATE UNIQUE INDEX idx_memory_block_versions_block_version ON memory_block_versions(block_id, version);
+        
+        -- Indexes for efficient querying
+        CREATE INDEX idx_memory_block_versions_block ON memory_block_versions(block_id);
+        CREATE INDEX idx_memory_block_versions_created ON memory_block_versions(created_at DESC);
+        CREATE INDEX idx_memory_block_versions_session ON memory_block_versions(session_id) WHERE session_id IS NOT NULL;
+      `);
+    },
+  },
 ];

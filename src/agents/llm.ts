@@ -350,6 +350,7 @@ export class LLM {
     projectContext?: string;
     additionalInstructions?: string[];
     availableSkills?: Array<{ name: string; description: string }>;
+    memoryContext?: string;
   }): string {
     const parts: string[] = [];
 
@@ -365,11 +366,15 @@ export class LLM {
     parts.push(`- To edit a file, call the "edit" tool`);
     parts.push(`- To run a command, call the "bash" tool`);
     parts.push(`- To use a skill, call the "read_skill" tool with the skill name`);
+    parts.push(`- To read persistent memory, call the "memory_read" tool`);
+    parts.push(`- To write to persistent memory, call the "memory_write" tool`);
     parts.push(``);
     parts.push(`IMPORTANT: When calling any tool, ALWAYS include a brief "description" parameter that explains what you're doing and why. This helps the user understand your actions in the UI. For example:`);
     parts.push(`- read({ path: "src/config.ts", description: "Checking database configuration" })`);
     parts.push(`- bash({ command: "npm test", description: "Running test suite" })`);
     parts.push(`- grep({ pattern: "TODO", description: "Finding remaining TODO comments" })`);
+    parts.push(`- memory_read({ description: "Checking previous context and notes" })`);
+    parts.push(`- memory_write({ name: "current_task", type: "task_context", content: "Working on...", description: "Updating task context" })`);
     parts.push(``);
     parts.push(`Be concise and helpful. Focus on completing the user's request efficiently.`);
 
@@ -394,6 +399,15 @@ export class LLM {
       }
       parts.push("");
       parts.push("Example: To use the skill named 'code-review', call: read_skill({ name: 'code-review' })");
+    }
+
+    // Memory context (persistent agent memory)
+    if (options.memoryContext) {
+      parts.push("");
+      parts.push("## Persistent Memory");
+      parts.push("You have access to persistent memory blocks that survive across conversations. Use memory_read to recall previous context and memory_write to store important information.");
+      parts.push("");
+      parts.push(options.memoryContext);
     }
 
     // Agent-specific prompt

@@ -135,6 +135,9 @@ export const IdPrefixes = {
   emailToken: "emltkn",
   authSession: "authsess",
   providerCredential: "cred",
+  // Memory-related prefixes
+  memoryBlock: "mem",
+  memoryBlockVersion: "memver",
 } as const;
 
 export type IdPrefix = (typeof IdPrefixes)[keyof typeof IdPrefixes];

@@ -27,6 +27,7 @@ import { SubAgentRunner } from "./subagent-runner.ts";
 import type { TaskParams } from "@/tools/task.ts";
 import { EventBus } from "@/bus/index.ts";
 import { SkillService } from "@/services/skills.ts";
+import { MemoryBlockService } from "@/services/memory-blocks.ts";
 import { CredentialResolver } from "./credential-resolver.ts";
 import { ProviderCredentialsService } from "@/services/provider-credentials.ts";
 
@@ -241,6 +242,8 @@ export class AgentOrchestrator {
       sessionId,
       messageId: assistantMessage.id,
       userId,
+      agentName: effectiveAgentName,
+      db,
       abortSignal,
     });
 
@@ -302,12 +305,17 @@ export class AgentOrchestrator {
       description: skill.description,
     }));
 
-    // Build system prompt with project context and skills
+    // Initialize agent memory if needed and get memory context
+    MemoryBlockService.initializeAgentMemory(db, effectiveAgentName);
+    const memoryContext = MemoryBlockService.getAgentContextSummary(db, effectiveAgentName);
+
+    // Build system prompt with project context, skills, and memory
     // Use session's custom system prompt if set, otherwise use agent prompt
     const systemPrompt = LLM.buildSystemPrompt({
       agentPrompt: session.systemPrompt ?? effectivePrompt,
       projectContext: `Working directory: ${projectPath}`,
       availableSkills,
+      memoryContext,
     });
 
     // Create stream processor
@@ -488,6 +496,8 @@ export class AgentOrchestrator {
     sessionId: string;
     messageId: string;
     userId: string;
+    agentName?: string;
+    db: any;
     abortSignal?: AbortSignal;
   }): ToolExecutionContext {
     const metadataCallbacks: Map<string, ToolMetadataUpdate> = new Map();
@@ -498,6 +508,8 @@ export class AgentOrchestrator {
       sessionId: options.sessionId,
       messageId: options.messageId,
       userId: options.userId,
+      agentName: options.agentName,
+      db: options.db,
       abortSignal: options.abortSignal ?? new AbortController().signal,
       updateMetadata: (metadata: ToolMetadataUpdate) => {
         // Store metadata for potential UI updates

@@ -20,6 +20,7 @@ import { grepTool } from "./grep.ts";
 import { taskTool } from "./task.ts";
 import { readSkillTool } from "./read-skill.ts";
 import { scheduleTool } from "./schedule.ts";
+import { readMemory, writeMemory, deleteMemory, memoryHistory, memorySummary } from "./memory.ts";
 import { ToolRegistry } from "./registry.ts";
 
 /**
@@ -79,6 +80,32 @@ export function registerCoreTools(): void {
   ToolRegistry.register(scheduleTool, {
     category: "other",
     requiresCodeExecution: false, // Manages schedules, doesn't execute code directly
+  });
+
+  // Memory tools (persistent agent memory)
+  ToolRegistry.register(readMemory, {
+    category: "memory",
+    requiresCodeExecution: false,
+  });
+
+  ToolRegistry.register(writeMemory, {
+    category: "memory",
+    requiresCodeExecution: false,
+  });
+
+  ToolRegistry.register(deleteMemory, {
+    category: "memory",
+    requiresCodeExecution: false,
+  });
+
+  ToolRegistry.register(memoryHistory, {
+    category: "memory",
+    requiresCodeExecution: false,
+  });
+
+  ToolRegistry.register(memorySummary, {
+    category: "memory",
+    requiresCodeExecution: false,
   });
 
   // Note: Git operations are now handled via ActionRegistry
