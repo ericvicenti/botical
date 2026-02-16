@@ -282,14 +282,25 @@ async function executeStepCore(
       const modelId = step.modelId ? String(resolveBinding(step.modelId, ctx) || "") : null;
       const maxMessages = step.maxMessages ? Number(resolveBinding(step.maxMessages, ctx) || 10) : 10;
 
-      return await executeSessionStep({
-        message,
-        agent,
-        systemPrompt,
-        providerId,
-        modelId,
-        maxMessages,
-        ctx,
+      // Use circuit breaker for session execution
+      const circuitBreakerKey = `session:${agent}:${providerId || 'default'}`;
+      const circuitBreaker = CircuitBreakerRegistry.getOrCreate(circuitBreakerKey, {
+        failureThreshold: 3, // Lower threshold for AI sessions (more expensive)
+        resetTimeout: 60000, // 1 minute
+        monitoringPeriod: 120000, // 2 minutes
+        name: `Session-${agent}`,
+      });
+
+      return await circuitBreaker.execute(async () => {
+        return await executeSessionStep({
+          message,
+          agent,
+          systemPrompt,
+          providerId,
+          modelId,
+          maxMessages,
+          ctx,
+        });
       });
     }
 
@@ -314,13 +325,24 @@ async function executeStepCore(
       const timeout = step.timeout ? Number(resolveBinding(step.timeout, ctx)) : null;
       const autoApprove = step.autoApprove ? Boolean(resolveBinding(step.autoApprove, ctx)) : false;
 
-      return await executeApprovalStep({
-        message,
-        approvers,
-        timeout,
-        autoApprove,
-        stepId: step.id,
-        ctx,
+      // Use circuit breaker for approval steps (external dependency)
+      const circuitBreakerKey = `approval:${ctx.executionId}:${step.id}`;
+      const circuitBreaker = CircuitBreakerRegistry.getOrCreate(circuitBreakerKey, {
+        failureThreshold: 2, // Lower threshold for approval failures
+        resetTimeout: 300000, // 5 minutes (approvals may need time)
+        monitoringPeriod: 600000, // 10 minutes
+        name: `Approval-${step.id}`,
+      });
+
+      return await circuitBreaker.execute(async () => {
+        return await executeApprovalStep({
+          message,
+          approvers,
+          timeout,
+          autoApprove,
+          stepId: step.id,
+          ctx,
+        });
       });
     }
 
@@ -338,11 +360,23 @@ async function executeStepCore(
 
       const input = resolveArgs(step.input, ctx);
 
-      return await executeWorkflowStep({
-        workflowId,
-        workflowName,
-        input,
-        ctx,
+      // Use circuit breaker for workflow execution
+      const workflowKey = workflowId || workflowName || 'unknown';
+      const circuitBreakerKey = `workflow:${workflowKey}`;
+      const circuitBreaker = CircuitBreakerRegistry.getOrCreate(circuitBreakerKey, {
+        failureThreshold: 3, // Workflows can be complex, lower threshold
+        resetTimeout: 120000, // 2 minutes (workflows may take longer to recover)
+        monitoringPeriod: 300000, // 5 minutes
+        name: `Workflow-${workflowKey}`,
+      });
+
+      return await circuitBreaker.execute(async () => {
+        return await executeWorkflowStep({
+          workflowId,
+          workflowName,
+          input,
+          ctx,
+        });
       });
     }
 

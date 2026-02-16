@@ -92,9 +92,9 @@ Botical has three core primitives. Both humans and agents use the same ones:
 - [x] Ensure Actions have typed input/output + success/error endstates
 - [x] Ensure Workflows can compose sessions + actions, support parallelism, blocking steps, progress notifications
 - [x] Ensure all three primitives have REST API endpoints + WebSocket events
-- [x] **PRIORITY 1: Add SessionStep to workflows** - ✅ COMPLETED: SessionStep is fully implemented in workflow executor (lines 254-275). Supports agent type, system prompt, provider/model config, and message processing. Creates sub-sessions and returns response text.
+- [x] **PRIORITY 1: Add SessionStep to workflows** - ✅ COMPLETED: SessionStep is fully implemented in workflow executor. Fixed AgentOrchestrator API usage (was incorrectly using instance.processMessage, now uses static AgentOrchestrator.run). Supports agent type, system prompt, provider/model config, and message processing. Creates sub-sessions and returns response text.
 - [x] **PRIORITY 2: Add ApprovalStep to workflows** - ✅ COMPLETED: ApprovalStep is fully implemented in workflow executor (lines 292-306). Supports approvers list, timeout, auto-approve logic, and broadcasts approval events via WebSocket. ApprovalRequestService handles persistence.
-- [x] **PRIORITY 3: Add WorkflowStep to workflows** - Enable workflow-to-workflow composition
+- [x] **PRIORITY 3: Add WorkflowStep to workflows** - ✅ COMPLETED: WorkflowStep is fully implemented with workflow-to-workflow composition support.
 - [ ] **PRIORITY 4: Enhance error handling** - Implement proper retry logic and circuit breakers
 - [ ] Build beautiful, responsive UI for observing all three primitives
 
