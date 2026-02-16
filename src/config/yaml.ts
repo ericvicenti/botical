@@ -39,7 +39,7 @@ export function loadYamlFile<T = unknown>(
 
   const content = fs.readFileSync(filePath, "utf-8");
   // TODO: Replace with loadYamlFileWithSchema for type safety
-  return yaml.load(content) as T; // Unsafe: no runtime validation
+  return yaml.load(content) as T; // UNSAFE: no runtime validation - should use schema validation
 }
 
 /**

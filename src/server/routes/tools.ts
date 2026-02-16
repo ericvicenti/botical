@@ -168,7 +168,7 @@ tools.get("/", async (c) => {
   });
 
   const total = ToolService.count(db, {
-    type: type as ToolType | undefined,
+    type, // Already validated by ListQuerySchema
     enabled,
   });
 

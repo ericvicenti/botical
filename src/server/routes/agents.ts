@@ -178,10 +178,11 @@ agents.post("/", async (c) => {
     if (!validProviderIds.includes(result.data.providerId as any)) {
       throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
     }
+    // Safe: validation above ensures it's a valid ProviderId
     
     const validation = validateProviderCredentials(
       userId,
-      result.data.providerId as ProviderId,
+      result.data.providerId as ProviderId, // Safe: validated above
       result.data.name
     );
     
@@ -287,10 +288,11 @@ agents.put("/:name", async (c) => {
     if (!validProviderIds.includes(result.data.providerId as any)) {
       throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
     }
+    // Safe: validation above ensures it's a valid ProviderId
     
     const validation = validateProviderCredentials(
       userId,
-      result.data.providerId as ProviderId,
+      result.data.providerId as ProviderId, // Safe: validated above
       result.data.name || name
     );
     

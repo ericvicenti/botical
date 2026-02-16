@@ -10,8 +10,16 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOllama } from "ollama-ai-provider-v2";
+import { z } from "zod";
 import type { LanguageModel } from "ai";
 import type { ProviderConfig, ProviderId, ModelConfig } from "./types.ts";
+
+// Schema for OAuth token refresh response
+const OAuthTokenRefreshResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number().optional()
+});
 
 /**
  * Model configurations for each provider
@@ -284,7 +292,8 @@ export class ProviderRegistry {
             }
           );
           if (refreshResp.ok) {
-            const data = await refreshResp.json() as { access_token: string; refresh_token?: string; expires_in?: number };
+            const rawData = await refreshResp.json();
+            const data = OAuthTokenRefreshResponseSchema.parse(rawData);
             tokens.access = data.access_token;
             tokens.refresh = data.refresh_token || tokens.refresh;
             tokens.expires = Date.now() + (data.expires_in || 3600) * 1000;

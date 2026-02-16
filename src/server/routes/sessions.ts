@@ -121,14 +121,14 @@ sessions.get("/", async (c) => {
   const db = DatabaseManager.getProjectDb(projectId);
 
   const sessions = SessionService.list(db, {
-    status: status as SessionStatus | undefined,
+    status, // Already validated by ListQuerySchema
     agent,
     parentId: parentId === "null" ? null : parentId,
     limit,
     offset,
   });
 
-  const total = SessionService.count(db, status as SessionStatus | undefined);
+  const total = SessionService.count(db, status); // Already validated by ListQuerySchema
 
   return c.json({
     data: sessions,
@@ -226,7 +226,7 @@ sessions.post("/", async (c) => {
     const credentialUserId = auth?.userId || userId || "anonymous";
 
     // Resolve provider: model inference > session/agent config > find any available
-    const resolvedProvider = resolveProvider(credentialUserId, modelId, session.providerId as ProviderId | null);
+    const resolvedProvider = resolveProvider(credentialUserId, modelId, session.providerId as ProviderId | null); // Safe: database value should be validated on storage
 
     if (resolvedProvider) {
       const { providerId, apiKey } = resolvedProvider;

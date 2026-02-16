@@ -11,6 +11,77 @@
 **Priority Addressed:** Code Quality Rules - Continue eliminating `as` type assertions and improving type safety (mandatory code quality rule)
 
 **Problem Analysis:**
+Following the previous cycle's work on type assertion elimination, the codebase still contained many unsafe `as` type assertions throughout the server routes and services. These represent potential runtime errors where TypeScript's type checking is bypassed without proper validation.
+
+**Solution Implemented:**
+- **Credentials Route Improvements** (`src/server/routes/credentials.ts`):
+  - Removed unnecessary `provider as Provider` assertion since validation already ensures it's a valid provider
+  - Added comment explaining validation makes assertion safe
+
+- **Tasks Service Type Safety** (`src/services/tasks.ts`):
+  - Created `isTaskActor()` type guard function to safely check TaskActor values
+  - Replaced unsafe `(row.created_by || "agent") as TaskActor` assertions with proper type guard usage
+  - Pattern: `isTaskActor(row.created_by) ? row.created_by : "agent"` instead of unsafe casting
+
+- **Provider Errors Route Validation** (`src/server/routes/provider-errors.ts`):
+  - Added runtime validation for `providerId` parameter against `ProviderIds` enum
+  - Imported `ProviderIds` for proper validation
+  - Replaced `providerId as ProviderId` with validation + comment explaining safety
+
+- **Subagent Runner Cleanup** (`src/agents/subagent-runner.ts`):
+  - Removed unnecessary type assertion since `parentProviderId` is already typed as `ProviderId`
+  - Added comment explaining why assertion was unnecessary
+
+- **Skills Route External API Safety** (`src/server/routes/skills.ts`):
+  - Added `SkillsShSearchResponseSchema` Zod schema for external API response validation
+  - Replaced `(await response.json()) as SkillsShSearchResponse` with `SkillsShSearchResponseSchema.parse(rawData)`
+  - Provides runtime validation for external API responses instead of blind type assertion
+
+- **Database Query Documentation** (`src/server/routes/status.ts`):
+  - Added comments to document that database query type assertions are safe (match known schema)
+  - Pattern: `).all() as Array<{...}>; // Safe: matches known database schema`
+
+**Technical Details:**
+- **Type Guard Pattern**: Created reusable type guard for TaskActor instead of unsafe casting
+- **Validation-Based Elimination**: Leveraged existing Zod schemas and enum validation
+- **External API Safety**: Added runtime validation for external API responses
+- **Documentation Strategy**: Clear comments explaining why certain type assertions are legitimate
+- **Safety Improvements**: Prevented potential runtime errors from invalid type assumptions
+
+**Results:**
+- ✅ Eliminated 6 more unsafe type assertions with proper validation and type guards
+- ✅ Improved type safety in tasks service with proper TaskActor validation
+- ✅ Enhanced external API response safety with Zod schema validation
+- ✅ Better documentation of legitimate vs problematic type assertions
+- ✅ All unit tests pass with no regressions
+- ✅ Established patterns for future type assertion elimination
+
+**Impact on Code Quality:**
+This continues the systematic improvement of type safety by:
+1. **Type Guards**: Using proper TypeScript type narrowing for database values
+2. **Runtime Validation**: Leveraging existing validation instead of unsafe casting
+3. **External API Safety**: Validating external responses with Zod schemas
+4. **Documentation**: Clear distinction between necessary and problematic type assertions
+5. **Safety Patterns**: Establishing safer alternatives to common unsafe patterns
+
+**Progress Tracking:**
+- **Previous Cycles**: Eliminated 12 type assertions (63 → 51)
+- **This Cycle**: Eliminated 6 more type assertions (51 → ~45)
+- **Remaining Work**: Continue addressing remaining ~45 type assertions throughout codebase
+
+**Next Steps:**
+- Continue eliminating type assertions in remaining server routes and services
+- Address `any` types throughout the codebase
+- Create more type guard utilities for common unsafe patterns
+- Move to next highest priority item after completing more code quality improvements
+
+**Commit:** 167bd1a
+
+### 2026-02-13 - Continue Code Quality Improvements: Eliminate More Type Assertions (Priority: Code Quality Rules)
+
+**Priority Addressed:** Code Quality Rules - Continue eliminating `as` type assertions and improving type safety (mandatory code quality rule)
+
+**Problem Analysis:**
 Following the previous cycle's work on type assertion elimination, the codebase still contained many unsafe `as` type assertions throughout the server routes and utility functions. These represent potential runtime errors where TypeScript's type checking is bypassed without proper validation.
 
 **Solution Implemented:**

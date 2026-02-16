@@ -14,6 +14,11 @@ import { z } from "zod";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
+
+// Type guard for Node.js errno exceptions
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return err instanceof Error && 'code' in err;
+}
 import { ValidationError } from "@/utils/errors.ts";
 
 const filesystem = new Hono();
@@ -153,10 +158,10 @@ filesystem.get("/browse", async (c) => {
 
     return c.json({ data: response });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isErrnoException(err) && err.code === "ENOENT") {
       throw new ValidationError(`Directory not found: ${dirPath}`);
     }
-    if ((err as NodeJS.ErrnoException).code === "EACCES") {
+    if (isErrnoException(err) && err.code === "EACCES") {
       throw new ValidationError(`Permission denied: ${dirPath}`);
     }
     throw err;

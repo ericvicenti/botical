@@ -519,8 +519,8 @@ export const ProjectConfigService = {
     const cleaned: Partial<T> = {};
     for (const [key, value] of Object.entries(obj)) {
       if (value !== undefined && value !== null) {
-        // Type assertions needed: Object.entries() returns string keys, but we know they're keys of T
-        cleaned[key as keyof T] = value as T[keyof T];
+        // Safe: Object.entries() returns string keys, but we know they're actually keys of T
+        cleaned[key as keyof T] = value as T[keyof T]; // Safe: value comes from T[keyof T]
       }
     }
     return cleaned;

@@ -35,5 +35,6 @@ export function requestId(): MiddlewareHandler {
  * Get request ID from context (type-safe)
  */
 export function getRequestId(c: { get: (key: string) => unknown }): string {
-  return (c.get("requestId") as string) || "unknown";
+  const requestId = c.get("requestId");
+  return typeof requestId === "string" ? requestId : "unknown";
 }

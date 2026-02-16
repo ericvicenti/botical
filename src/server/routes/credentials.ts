@@ -17,6 +17,7 @@
  */
 
 import { Hono } from "hono";
+import { z } from "zod";
 import { requireAuth } from "../../auth/index.ts";
 import {
   ProviderCredentialsService,
@@ -26,6 +27,40 @@ import {
   type Provider,
 } from "../../services/provider-credentials.ts";
 import { ValidationError } from "../../utils/errors.ts";
+
+// Schema for external API responses to replace unsafe type assertions
+const AnthropicOAuthModelsResponseSchema = z.object({
+  data: z.array(z.object({
+    id: z.string(),
+    display_name: z.string().optional()
+  })).optional()
+});
+
+const AnthropicOAuthTokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number().optional()
+});
+
+const OpenAIModelsResponseSchema = z.object({
+  data: z.array(z.object({
+    id: z.string()
+  })).optional()
+});
+
+const GoogleModelsResponseSchema = z.object({
+  models: z.array(z.object({
+    name: z.string(),
+    displayName: z.string(),
+    supportedGenerationMethods: z.array(z.string()).optional()
+  })).optional()
+});
+
+const OllamaModelsResponseSchema = z.object({
+  models: z.array(z.object({
+    name: z.string()
+  })).optional()
+});
 
 const credentials = new Hono();
 
@@ -154,7 +189,10 @@ credentials.post("/health", async (c) => {
       const url = apiKey.replace(/\/+$/, "");
       const resp = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
       if (resp.ok) {
-        const data = await resp.json() as { models?: unknown[] };
+        const rawData = await resp.json();
+        const data = typeof rawData === "object" && rawData !== null && "models" in rawData 
+          ? rawData as { models?: unknown[] } 
+          : { models: [] };
         const modelCount = data.models?.length || 0;
         return c.json({ status: "ok", message: `Connected — ${modelCount} model${modelCount !== 1 ? "s" : ""} available` });
       }
@@ -357,7 +395,8 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelOption[]> {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return [];
-    const data = await res.json() as { data?: Array<{ id: string; display_name?: string }> };
+    const rawData = await res.json();
+    const data = AnthropicOAuthModelsResponseSchema.parse(rawData);
     return (data.data || [])
       .filter((m) => m.id.includes("claude"))
       .map((m) => ({ id: m.id, name: m.display_name || m.id, providerId: "anthropic", providerName: "Anthropic" }))
@@ -391,7 +430,8 @@ async function refreshAnthropicOAuthTokens(
     });
 
     if (resp.ok) {
-      const data = await resp.json() as { access_token: string; refresh_token?: string; expires_in?: number };
+      const rawData = await resp.json();
+      const data = AnthropicOAuthTokenResponseSchema.parse(rawData);
       const newTokens = {
         access: data.access_token,
         refresh: data.refresh_token || tokens.refresh,
@@ -428,7 +468,8 @@ async function fetchAnthropicOAuthModels(tokens: { access: string; refresh: stri
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return [];
-    const data = await res.json() as { data?: Array<{ id: string; display_name?: string }> };
+    const rawData = await res.json();
+    const data = AnthropicOAuthModelsResponseSchema.parse(rawData);
     return (data.data || [])
       .filter((m) => m.id.includes("claude"))
       .map((m) => ({ id: m.id, name: m.display_name || m.id, providerId: "anthropic-oauth", providerName: "Anthropic (Pro/Max)", isFree: true }))
@@ -450,7 +491,8 @@ async function fetchOpenAIModels(apiKey: string): Promise<ModelOption[]> {
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return [];
-    const data = await res.json() as { data?: Array<{ id: string }> };
+    const rawData = await res.json();
+    const data = OpenAIModelsResponseSchema.parse(rawData);
     return (data.data || [])
       .filter((m) => /^(gpt-|o1|o3|chatgpt)/.test(m.id))
       .map((m) => ({ id: m.id, name: m.id, providerId: "openai", providerName: "OpenAI" }))
@@ -465,7 +507,8 @@ async function fetchGoogleModels(apiKey: string): Promise<ModelOption[]> {
       { signal: AbortSignal.timeout(10000) },
     );
     if (!res.ok) return [];
-    const data = await res.json() as { models?: Array<{ name: string; displayName: string; supportedGenerationMethods?: string[] }> };
+    const rawData = await res.json();
+    const data = GoogleModelsResponseSchema.parse(rawData);
     return (data.models || [])
       .filter((m) => m.name.includes("gemini") && m.supportedGenerationMethods?.includes("generateContent"))
       .map((m) => ({ id: m.name.replace("models/", ""), name: m.displayName || m.name, providerId: "google", providerName: "Google" }))
@@ -478,7 +521,8 @@ async function fetchOllamaModels(baseUrl: string): Promise<ModelOption[]> {
     const url = baseUrl.replace(/\/+$/, "");
     const res = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return [];
-    const data = await res.json() as { models?: Array<{ name: string }> };
+    const rawData = await res.json();
+    const data = OllamaModelsResponseSchema.parse(rawData);
     return (data.models || []).map((m) => ({ id: m.name, name: m.name, providerId: "ollama", providerName: "Ollama" }));
   } catch { return []; }
 }

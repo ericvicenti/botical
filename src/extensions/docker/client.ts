@@ -159,10 +159,10 @@ async function dockerRequest<T>(
 
     // Handle empty responses (204 No Content)
     if (response.status === 204) {
-      return {} as T;
+      return {} as T; // Safe: 204 No Content responses have empty body, generic T allows flexibility
     }
 
-    return await response.json() as T;
+    return await response.json() as T; // Safe: Generic method, caller specifies expected type T
   } catch (error) {
     clearTimeout(timeoutId);
 

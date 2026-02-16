@@ -8,6 +8,21 @@ import { z } from "zod";
 import { defineAction, success, error } from "./types.ts";
 import { getExtensionServerUrl } from "../extensions/server-manager.ts";
 
+// Schema for SearXNG API response
+const SearXNGResponseSchema = z.object({
+  data: z.object({
+    query: z.string(),
+    results: z.array(z.object({
+      title: z.string(),
+      url: z.string(),
+      content: z.string().optional(),
+      engine: z.string()
+    })),
+    suggestions: z.array(z.string()).optional()
+  }).optional(),
+  error: z.string().optional()
+});
+
 const MAX_RESULTS = 10;
 const DEFAULT_RESULTS = 5;
 
@@ -63,19 +78,8 @@ export const webSearch = defineAction({
         return error(`Search failed: ${errorText}`, "SEARCH_FAILED");
       }
 
-      const json = await response.json() as {
-        data?: {
-          query: string;
-          results: Array<{
-            title: string;
-            url: string;
-            content?: string;
-            engine: string;
-          }>;
-          suggestions?: string[];
-        };
-        error?: string;
-      };
+      const rawJson = await response.json();
+      const json = SearXNGResponseSchema.parse(rawJson);
 
       if (json.error) {
         return error(`Search failed: ${json.error}`, "SEARCH_FAILED");

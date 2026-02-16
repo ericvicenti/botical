@@ -8,6 +8,26 @@
 import { z } from "zod";
 import { defineAction, success, error } from "./types.ts";
 
+// Schemas for API responses
+const WorkflowsListResponseSchema = z.object({
+  data: z.array(z.object({
+    id: z.string(),
+    name: z.string()
+  }))
+});
+
+const WorkflowExecuteResponseSchema = z.object({
+  data: z.object({
+    executionId: z.string()
+  })
+});
+
+const SessionCreateResponseSchema = z.object({
+  data: z.object({
+    id: z.string()
+  })
+});
+
 const API_KEY = "botical_leopard_194fbb476a9f614465838ea1a13df29a";
 const DEFAULT_PROJECT_ID = "prj_2go5oq0sa9o-51985ca1";
 const DEFAULT_USER_ID = "usr_mldu5ohe-94448ee0";
@@ -59,7 +79,8 @@ async function executeWorkflowHeartbeat(baseUrl: string, projectId: string) {
     return error(`Failed to check workflows: ${await workflowsResp.text()}`);
   }
 
-  const workflowsData = await workflowsResp.json() as { data: Array<{ id: string; name: string }> };
+  const workflowsRawData = await workflowsResp.json();
+  const workflowsData = WorkflowsListResponseSchema.parse(workflowsRawData);
   const improvementWorkflow = workflowsData.data?.find(w => w.name === "Leopard Improvement Cycle");
 
   if (!improvementWorkflow) {
@@ -89,7 +110,8 @@ async function executeWorkflowHeartbeat(baseUrl: string, projectId: string) {
     return error(`Failed to execute workflow: ${await executeResp.text()}`);
   }
 
-  const executeData = await executeResp.json() as { data: { executionId: string } };
+  const executeRawData = await executeResp.json();
+  const executeData = WorkflowExecuteResponseSchema.parse(executeRawData);
   const executionId = executeData.data?.executionId;
 
   if (!executionId) {
@@ -125,7 +147,8 @@ async function executeLegacyHeartbeat(baseUrl: string, projectId: string, messag
     return error(`Failed to create session: ${await createResp.text()}`);
   }
 
-  const createData = await createResp.json() as { data: { id: string } };
+  const createRawData = await createResp.json();
+  const createData = SessionCreateResponseSchema.parse(createRawData);
   const sessionId = createData.data?.id;
   if (!sessionId) return error("No session ID returned");
 

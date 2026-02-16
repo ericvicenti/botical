@@ -7,6 +7,7 @@
  * - Routes incoming messages to leopard agent sessions
  */
 
+import { z } from "zod";
 import { DatabaseManager } from "@/database/manager.ts";
 import { SessionService } from "@/services/sessions.ts";
 import { AgentOrchestrator } from "@/agents/orchestrator.ts";
@@ -14,6 +15,29 @@ import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import type { ProviderId } from "@/agents/types.ts";
 import { Config } from "@/config/index.ts";
 import { extractTextContent } from "@/services/message-content.ts";
+
+// Schema for Telegram API response
+const TelegramGetUpdatesResponseSchema = z.object({
+  ok: z.boolean(),
+  result: z.array(z.object({
+    update_id: z.number(),
+    message: z.object({
+      message_id: z.number(),
+      from: z.object({
+        id: z.number(),
+        first_name: z.string(),
+        last_name: z.string().optional(),
+        username: z.string().optional()
+      }).optional(),
+      chat: z.object({
+        id: z.number(),
+        type: z.string()
+      }),
+      date: z.number(),
+      text: z.string().optional()
+    }).optional()
+  }))
+});
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 
@@ -155,7 +179,8 @@ export class TelegramBot {
         return;
       }
 
-      const data = await resp.json() as { ok: boolean; result: TelegramUpdate[] };
+      const rawData = await resp.json();
+      const data = TelegramGetUpdatesResponseSchema.parse(rawData);
 
       if (data.ok && data.result.length > 0) {
         for (const update of data.result) {
