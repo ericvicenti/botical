@@ -75,6 +75,7 @@ export interface OrchestratorRunOptions {
 }
 
 import { extractTextContent } from "@/services/message-content.ts";
+import { compactContext, DEFAULT_COMPACTION_CONFIG } from "@/utils/context-compaction.ts";
 
 /**
  * Agent Orchestrator for running AI agents
@@ -361,7 +362,7 @@ export class AgentOrchestrator {
   }
 
   /**
-   * Build messages array from session history
+   * Build messages array from session history with auto-compaction
    */
   private static buildMessages(
     db: Database,
@@ -416,7 +417,20 @@ export class AgentOrchestrator {
       content: newUserContent,
     });
 
-    return messages;
+    // Apply context compaction to prevent context bloat in long sessions
+    const compactionResult = compactContext(messages, DEFAULT_COMPACTION_CONFIG);
+    
+    // Log compaction statistics for monitoring
+    if (compactionResult.wasCompacted) {
+      console.log(`[AgentOrchestrator] Context compacted for session ${sessionId}:`, {
+        originalMessages: compactionResult.originalCount,
+        compactedMessages: compactionResult.compactedCount,
+        estimatedTokenReduction: compactionResult.estimatedTokenReduction,
+        compressionRatio: (compactionResult.compactedCount / compactionResult.originalCount).toFixed(2),
+      });
+    }
+
+    return compactionResult.messages;
   }
 
   /**
