@@ -38,6 +38,7 @@ import { ProjectService } from "@/services/projects.ts";
 import { ValidationError, ForbiddenError, NotFoundError } from "@/utils/errors.ts";
 import { validateProviderCredentials } from "@/utils/provider-validation.ts";
 import type { ProviderId } from "@/agents/types.ts";
+import { ProviderIds } from "@/agents/types.ts";
 
 const agents = new Hono();
 
@@ -104,7 +105,7 @@ agents.get("/", async (c) => {
     });
 
     const custom = builtinOnly ? [] : UnifiedAgentService.list(db, projectPath, {
-      mode: mode as any,
+      mode,
       includeHidden,
     }).map((a) => toAgentConfig(a));
 
@@ -172,6 +173,12 @@ agents.post("/", async (c) => {
   const userId = auth?.userId || "anonymous";
   
   if (result.data.providerId) {
+    // Validate that the providerId is actually a valid ProviderId
+    const validProviderIds = Object.values(ProviderIds);
+    if (!validProviderIds.includes(result.data.providerId as any)) {
+      throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
+    }
+    
     const validation = validateProviderCredentials(
       userId,
       result.data.providerId as ProviderId,
@@ -275,6 +282,12 @@ agents.put("/:name", async (c) => {
   const userId = auth?.userId || "anonymous";
   
   if (result.data.providerId) {
+    // Validate that the providerId is actually a valid ProviderId
+    const validProviderIds = Object.values(ProviderIds);
+    if (!validProviderIds.includes(result.data.providerId as any)) {
+      throw new ValidationError(`Invalid provider ID: ${result.data.providerId}`);
+    }
+    
     const validation = validateProviderCredentials(
       userId,
       result.data.providerId as ProviderId,

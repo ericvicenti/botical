@@ -27,7 +27,7 @@ export interface ToolExecutionContext {
   /** The agent name (for memory blocks and context) */
   agentName?: string;
   /** Database connection for the project */
-  db: any; // Using any to avoid circular dependency with Database type
+  db: import("bun:sqlite").Database;
   /** Abort signal for cancellation */
   abortSignal: AbortSignal;
   /** Update tool metadata/progress displayed to user */

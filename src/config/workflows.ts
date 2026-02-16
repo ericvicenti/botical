@@ -16,6 +16,12 @@ import {
   getBoticalPaths,
 } from "./yaml.ts";
 import type { ActionCategory } from "@/actions/types.ts";
+
+// Runtime validation for ActionCategory
+const ActionCategorySchema = z.enum([
+  "file", "search", "shell", "service", "git", "agent", 
+  "project", "navigation", "other"
+]);
 import type {
   WorkflowDefinition,
   WorkflowStep,
@@ -104,16 +110,30 @@ export type WorkflowYaml = z.infer<typeof WorkflowYamlSchema>;
  * Handles optional fields with defaults
  */
 function yamlToWorkflow(name: string, projectId: string, yaml: z.input<typeof WorkflowYamlSchema>): WorkflowDefinition {
+  // Validate and parse category with proper runtime checking
+  const categoryResult = ActionCategorySchema.safeParse(yaml.category ?? "other");
+  const category: ActionCategory = categoryResult.success ? categoryResult.data : "other";
+  
+  // Validate input schema structure
+  const inputSchemaResult = WorkflowInputSchemaSchema.safeParse(yaml.input ?? { fields: [] });
+  const inputSchema: WorkflowInputSchema = inputSchemaResult.success 
+    ? inputSchemaResult.data 
+    : { fields: [] };
+  
+  // Steps are validated by the WorkflowStepSchema in the YAML schema
+  // We can safely cast here since the YAML schema already validated the structure
+  const steps: WorkflowStep[] = yaml.steps ?? [];
+  
   return {
     id: `wf_yaml_${name}`,
     projectId,
     name,
     label: yaml.label,
     description: yaml.description ?? "",
-    category: (yaml.category ?? "other") as ActionCategory,
+    category,
     icon: yaml.icon,
-    inputSchema: (yaml.input ?? { fields: [] }) as WorkflowInputSchema,
-    steps: (yaml.steps ?? []) as WorkflowStep[],
+    inputSchema,
+    steps,
   };
 }
 
@@ -121,13 +141,18 @@ function yamlToWorkflow(name: string, projectId: string, yaml: z.input<typeof Wo
  * Convert WorkflowDefinition to YAML format
  */
 function workflowToYaml(workflow: WorkflowDefinition): WorkflowYaml {
+  // WorkflowStep[] should be compatible with the YAML schema since they share the same structure
+  // We validate this at runtime by parsing the steps through the schema
+  const stepsResult = z.array(WorkflowStepSchema).safeParse(workflow.steps);
+  const validatedSteps = stepsResult.success ? stepsResult.data : [];
+  
   return {
     label: workflow.label,
     description: workflow.description,
     category: workflow.category,
     icon: workflow.icon,
     input: workflow.inputSchema,
-    steps: workflow.steps as z.infer<typeof WorkflowStepSchema>[],
+    steps: validatedSteps,
   };
 }
 

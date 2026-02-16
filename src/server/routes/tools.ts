@@ -72,6 +72,7 @@ tools.get("/actions", async (c) => {
     const def = action.definition;
 
     // Extract param info from Zod schema (casting to access internal Zod structure)
+    // Note: This requires `any` casting to access Zod's internal structure
     const shape = (def.params as any)._def?.shape?.();
     const params: Array<{
       name: string;
@@ -83,6 +84,7 @@ tools.get("/actions", async (c) => {
 
     if (shape) {
       for (const [name, fieldSchema] of Object.entries(shape)) {
+        // Note: Zod schema introspection requires any casting
         const field = fieldSchema as any;
         const typeName = field._def?.typeName;
         const isOptional = typeName === "ZodOptional" || typeName === "ZodDefault";

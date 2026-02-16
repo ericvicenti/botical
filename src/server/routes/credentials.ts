@@ -137,11 +137,11 @@ credentials.get("/models", async (c) => {
 credentials.post("/health", async (c) => {
   const auth = c.get("auth");
   const body = await c.req.json();
-  const provider = body.provider as Provider;
-
-  if (!SUPPORTED_PROVIDERS.includes(provider)) {
-    throw new ValidationError(`Unsupported provider: ${provider}`);
+  if (!SUPPORTED_PROVIDERS.includes(body.provider)) {
+    throw new ValidationError(`Unsupported provider: ${body.provider}`);
   }
+  
+  const provider = body.provider as Provider;
 
   const apiKey = ProviderCredentialsService.getApiKey(auth.userId, provider);
   if (!apiKey) {

@@ -17,6 +17,7 @@ import {
   getBoticalPaths,
 } from "./yaml.ts";
 import type { CustomAgent, AgentMode } from "@/services/agents.ts";
+import { AgentModeSchema } from "@/services/agents.ts";
 
 // ============================================================================
 // YAML Schema
@@ -59,7 +60,7 @@ function yamlToAgent(
     id: `agent_yaml_${name}`,
     name,
     description: yaml.description ?? null,
-    mode: (yaml.mode ?? "subagent") as AgentMode,
+    mode: AgentModeSchema.parse(yaml.mode ?? "subagent"),
     hidden: yaml.hidden ?? false,
     providerId: yaml.providerId ?? null,
     modelId: yaml.modelId ?? null,

@@ -79,10 +79,10 @@ class ConfigManager {
         ? parseInt(process.env.BOTICAL_PORT, 10)
         : undefined,
       host: process.env.BOTICAL_HOST,
-      logLevel: process.env.BOTICAL_LOG_LEVEL as ConfigOptions["logLevel"],
+      logLevel: process.env.BOTICAL_LOG_LEVEL,
 
       // Environment
-      nodeEnv: process.env.NODE_ENV as ConfigOptions["nodeEnv"],
+      nodeEnv: process.env.NODE_ENV,
 
       // Auth & Email
       appUrl: process.env.APP_URL,

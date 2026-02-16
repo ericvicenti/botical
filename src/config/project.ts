@@ -219,7 +219,8 @@ export const ProjectConfigService = {
       return {};
     }
 
-    return yaml as ProjectConfig;
+    // loadYamlFileWithSchema already validates against the schema, so this is safe
+    return yaml;
   },
 
   /**
@@ -252,6 +253,8 @@ export const ProjectConfigService = {
    */
   getSetting<T = unknown>(projectPath: string, key: string): T | undefined {
     const config = this.load(projectPath);
+    // Note: This is inherently unsafe without runtime validation, but maintains existing behavior
+    // TODO: Add runtime validation for specific setting types
     return config.settings?.[key] as T | undefined;
   },
 
