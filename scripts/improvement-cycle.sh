@@ -26,7 +26,7 @@ send_message() {
       \"projectId\": \"$PROJECT_ID\",
       \"sessionId\": \"$session_id\",
       \"content\": \"$content\",
-      \"userId\": \"system\",
+      \"userId\": \"usr_mldu5ohe-94448ee0\",
       \"providerId\": \"anthropic-oauth\",
       \"canExecuteCode\": true
     }" 2>&1
