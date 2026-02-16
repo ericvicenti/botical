@@ -60,7 +60,7 @@ export function UncommittedChanges({ projectId, files, onCommitClick }: Uncommit
       projectId,
       path: file.path,
     });
-    navigate({ to: `/files/${projectId}/${file.path}` });
+    navigate({ to: `/projects/${projectId}/files/${file.path}` });
   };
 
   const handleDiscardFile = (e: React.MouseEvent, file: FileChange) => {

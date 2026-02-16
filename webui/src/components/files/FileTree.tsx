@@ -373,7 +373,7 @@ function FileTreeNode({
         projectId,
         path: file.path,
       });
-      navigate({ to: `/folders/${projectId}/${file.path}` });
+      navigate({ to: `/projects/${projectId}/folders/${file.path}` });
       setExpanded(!expanded);
     } else {
       openPreviewTab({
@@ -381,7 +381,7 @@ function FileTreeNode({
         projectId,
         path: file.path,
       });
-      navigate({ to: `/files/${projectId}/${file.path}` });
+      navigate({ to: `/projects/${projectId}/files/${file.path}` });
       closeSidebarOnMobile();
     }
   }, [file, projectId, expanded, openPreviewTab, navigate, isRenaming, closeSidebarOnMobile]);
@@ -395,14 +395,14 @@ function FileTreeNode({
         projectId,
         path: file.path,
       });
-      navigate({ to: `/folders/${projectId}/${file.path}` });
+      navigate({ to: `/projects/${projectId}/folders/${file.path}` });
     } else {
       openTab({
         type: "file",
         projectId,
         path: file.path,
       });
-      navigate({ to: `/files/${projectId}/${file.path}` });
+      navigate({ to: `/projects/${projectId}/files/${file.path}` });
       closeSidebarOnMobile();
     }
   }, [file, projectId, openTab, navigate, isRenaming, closeSidebarOnMobile]);

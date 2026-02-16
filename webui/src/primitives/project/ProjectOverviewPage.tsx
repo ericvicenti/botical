@@ -54,7 +54,7 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
         path: file.path,
         projectId,
       });
-      navigate({ to: `/files/${projectId}/${file.path}` });
+      navigate({ to: `/projects/${projectId}/files/${file.path}` });
     }
   };
 

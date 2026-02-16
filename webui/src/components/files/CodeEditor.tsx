@@ -344,7 +344,7 @@ export function CodeEditor({ projectId, path, commit }: CodeEditorProps) {
       projectId,
       path: folderPath,
     });
-    navigate({ to: `/folders/${projectId}/${folderPath}` });
+    navigate({ to: `/projects/${projectId}/folders/${folderPath}` });
   };
 
   return (

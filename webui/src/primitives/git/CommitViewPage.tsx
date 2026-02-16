@@ -149,11 +149,11 @@ export default function CommitViewPage({ params }: CommitViewPageProps) {
   const { data: diff } = useGitCommitDiff(projectId, hash);
 
   const handleBrowseAtCommit = () => {
-    navigate({ to: `/folders/${projectId}`, search: { commit: hash } });
+    navigate({ to: `/projects/${projectId}/folders/`, search: { commit: hash } });
   };
 
   const handleViewFileAtCommit = (filePath: string) => {
-    navigate({ to: `/files/${projectId}/${filePath}`, search: { commit: hash } });
+    navigate({ to: `/projects/${projectId}/files/${filePath}`, search: { commit: hash } });
   };
 
   const toggleFileExpanded = (path: string) => {

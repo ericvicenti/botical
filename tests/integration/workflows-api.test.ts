@@ -78,7 +78,7 @@ describe("Workflows API Integration", () => {
     projectId = project.id;
 
     // Set up authentication
-    sessionToken = await createAuthSession(app, testEmail, consoleLogSpy);
+    sessionToken = await createAuthSession(app, testEmail);
   });
 
   afterAll(() => {
@@ -149,7 +149,8 @@ describe("Workflows API Integration", () => {
       });
 
       const response = await app.request(
-        `/api/workflows?projectId=${projectId}`
+        `/api/workflows?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -160,7 +161,8 @@ describe("Workflows API Integration", () => {
 
     it("should return empty array when no workflows exist", async () => {
       const response = await app.request(
-        `/api/workflows?projectId=${projectId}`
+        `/api/workflows?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -173,7 +175,7 @@ describe("Workflows API Integration", () => {
       // Create workflow via API
       const createResponse = await app.request("/api/workflows", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           name: "new-workflow",
@@ -186,7 +188,8 @@ describe("Workflows API Integration", () => {
 
       // List workflows - should include the new one
       const listResponse = await app.request(
-        `/api/workflows?projectId=${projectId}`
+        `/api/workflows?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(listResponse.status).toBe(200);
@@ -207,7 +210,8 @@ describe("Workflows API Integration", () => {
       });
 
       const response = await app.request(
-        `/api/workflows/${workflow.id}?projectId=${projectId}`
+        `/api/workflows/${workflow.id}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
@@ -218,7 +222,8 @@ describe("Workflows API Integration", () => {
 
     it("should return 404 for non-existent workflow", async () => {
       const response = await app.request(
-        `/api/workflows/wf_nonexistent?projectId=${projectId}`
+        `/api/workflows/wf_nonexistent?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(404);
@@ -236,7 +241,7 @@ describe("Workflows API Integration", () => {
 
       const response = await app.request(`/api/workflows/${workflow.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           label: "Updated Label",
@@ -267,7 +272,7 @@ describe("Workflows API Integration", () => {
       // Update the workflow
       await app.request(`/api/workflows/${workflow.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           label: "New Label After Update",
@@ -276,7 +281,8 @@ describe("Workflows API Integration", () => {
 
       // List should show updated label
       const listResponse = await app.request(
-        `/api/workflows?projectId=${projectId}`
+        `/api/workflows?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       const updatedInList = list.data.find((w) => w.id === workflow.id);
@@ -294,14 +300,15 @@ describe("Workflows API Integration", () => {
 
       const response = await app.request(
         `/api/workflows/${workflow.id}?projectId=${projectId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: createAuthHeaders(sessionToken) }
       );
 
       expect(response.status).toBe(200);
 
       // Verify it's deleted
       const getResponse = await app.request(
-        `/api/workflows/${workflow.id}?projectId=${projectId}`
+        `/api/workflows/${workflow.id}?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       expect(getResponse.status).toBe(404);
     });
@@ -320,11 +327,13 @@ describe("Workflows API Integration", () => {
       // Delete workflow2
       await app.request(`/api/workflows/${workflow2.id}?projectId=${projectId}`, {
         method: "DELETE",
+        headers: createAuthHeaders(sessionToken),
       });
 
       // List should only show workflow1
       const listResponse = await app.request(
-        `/api/workflows?projectId=${projectId}`
+        `/api/workflows?projectId=${projectId}`,
+        { headers: createAuthHeaders(sessionToken) }
       );
       const list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       expect(list.data).toHaveLength(1);
@@ -337,7 +346,7 @@ describe("Workflows API Integration", () => {
       // 1. Create
       const createResponse = await app.request("/api/workflows", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: createAuthHeaders(sessionToken),
         body: JSON.stringify({
           projectId,
           name: "lifecycle-test",
@@ -350,7 +359,9 @@ describe("Workflows API Integration", () => {
       const workflowId = created.data.id;
 
       // 2. Verify it appears in list
-      let listResponse = await app.request(`/api/workflows?projectId=${projectId}`);
+      let listResponse = await app.request(`/api/workflows?projectId=${projectId}`, {
+        headers: createAuthHeaders(sessionToken)
+      });
       let list = (await listResponse.json()) as ApiResponse<WorkflowData[]>;
       expect(list.data.some((w) => w.id === workflowId)).toBe(true);
 

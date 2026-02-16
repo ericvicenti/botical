@@ -129,14 +129,14 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/folders/${projectId}/${entry.path}`, search: searchParams });
+      navigate({ to: `/projects/${projectId}/folders/${entry.path}`, search: searchParams });
     } else {
       openPreviewTab({
         type: "file",
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/files/${projectId}/${entry.path}`, search: searchParams });
+      navigate({ to: `/projects/${projectId}/files/${entry.path}`, search: searchParams });
     }
   };
 
@@ -148,14 +148,14 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/folders/${projectId}/${entry.path}`, search: searchParams });
+      navigate({ to: `/projects/${projectId}/folders/${entry.path}`, search: searchParams });
     } else {
       openTab({
         type: "file",
         projectId,
         path: entry.path,
       });
-      navigate({ to: `/files/${projectId}/${entry.path}`, search: searchParams });
+      navigate({ to: `/projects/${projectId}/files/${entry.path}`, search: searchParams });
     }
   };
 
@@ -169,7 +169,7 @@ export function FolderView({ projectId, path, commit }: FolderViewProps) {
       projectId,
       path: folderPath,
     });
-    navigate({ to: `/folders/${projectId}/${folderPath}`, search: searchParams });
+    navigate({ to: `/projects/${projectId}/folders/${folderPath}`, search: searchParams });
   };
 
   if (isLoading) {

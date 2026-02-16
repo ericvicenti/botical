@@ -117,7 +117,7 @@ export function FilePalette() {
       } else {
         openPreviewTab({ type: "file", projectId: selectedProjectId, path });
       }
-      navigate({ to: `/files/${selectedProjectId}/${path}` });
+      navigate({ to: `/projects/${selectedProjectId}/files/${path}` });
       close();
     },
     [selectedProjectId, openTab, openPreviewTab, navigate, close]
