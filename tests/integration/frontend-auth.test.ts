@@ -8,6 +8,7 @@ import { MagicLinkService } from "@/auth/magic-link.ts";
 import { SessionService } from "@/auth/session.ts";
 import { DatabaseManager } from "@/database/manager.ts";
 import { Config } from "@/config/index.ts";
+import { EmailService } from "@/services/email.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import { handleError } from "@/server/middleware/index.ts";
 import fs from "fs";
@@ -96,7 +97,9 @@ describe("Frontend Auth Integration", () => {
 
   describe("Multi-User Mode", () => {
     beforeEach(() => {
+      process.env.NODE_ENV = "test";
       process.env.BOTICAL_SINGLE_USER = "false";
+      EmailService.resetConfig();
 
       app = new Hono();
       app.onError((err, c) => {

@@ -22,6 +22,7 @@ import { handleError } from "@/server/middleware/index.ts";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { createAuthSession, createAuthHeaders } from "./helpers/auth.ts";
 
 // Response types
 interface ProjectResponse {
@@ -59,37 +60,7 @@ interface VerifyResponse {
   isAdmin: boolean;
 }
 
-/**
- * Helper to create an authenticated session and return the bearer token
- */
-async function createAuthSession(
-  app: Hono,
-  email: string,
-  consoleLogSpy: ReturnType<typeof spyOn>
-): Promise<string> {
-  consoleLogSpy.mockClear();
-  const magicRes = await app.request("/auth/magic-link", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  const magicData = (await magicRes.json()) as { loginToken: string };
-  const loginToken = magicData.loginToken;
 
-  const output = consoleLogSpy.mock.calls
-    .map((c: unknown[]) => c.join(" "))
-    .join("\n");
-  const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
-  if (!tokenMatch) throw new Error("No magic link token found in console output");
-
-  // Verify (user clicks link) - returns HTML now
-  await app.request(`/auth/verify?token=${tokenMatch[1]}`);
-
-  // Poll for session
-  const pollRes = await app.request(`/auth/poll-login?token=${loginToken}`);
-  const pollData = (await pollRes.json()) as { status: string; sessionToken: string };
-  return pollData.sessionToken;
-}
 
 describe("Root Project", () => {
   const testDataDir = path.join(
@@ -224,10 +195,10 @@ describe("Root Project", () => {
 
     it("admin can see root project in list", async () => {
       // First user = admin
-      const adminToken = await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      const adminToken = await createAuthSession(app, "admin@example.com");
 
       const res = await app.request("/api/projects", {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: createAuthHeaders(adminToken),
       });
 
       expect(res.status).toBe(200);
@@ -238,10 +209,10 @@ describe("Root Project", () => {
     });
 
     it("admin can access root project directly", async () => {
-      const adminToken = await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      const adminToken = await createAuthSession(app, "admin@example.com");
 
       const res = await app.request("/api/projects/prj_root", {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: createAuthHeaders(adminToken),
       });
 
       expect(res.status).toBe(200);
@@ -252,13 +223,13 @@ describe("Root Project", () => {
 
     it("non-admin cannot see root project in list", async () => {
       // First user = admin
-      await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      await createAuthSession(app, "admin@example.com");
 
       // Second user = not admin
-      const userToken = await createAuthSession(app, "user@example.com", consoleLogSpy);
+      const userToken = await createAuthSession(app, "user@example.com");
 
       const res = await app.request("/api/projects", {
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: createAuthHeaders(userToken),
       });
 
       expect(res.status).toBe(200);
@@ -269,13 +240,13 @@ describe("Root Project", () => {
 
     it("non-admin cannot access root project directly", async () => {
       // First user = admin
-      await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      await createAuthSession(app, "admin@example.com");
 
       // Second user = not admin
-      const userToken = await createAuthSession(app, "user@example.com", consoleLogSpy);
+      const userToken = await createAuthSession(app, "user@example.com");
 
       const res = await app.request("/api/projects/prj_root", {
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: createAuthHeaders(userToken),
       });
 
       expect(res.status).toBe(403);
@@ -284,14 +255,11 @@ describe("Root Project", () => {
     });
 
     it("cannot update root project even as admin", async () => {
-      const adminToken = await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      const adminToken = await createAuthSession(app, "admin@example.com");
 
       const res = await app.request("/api/projects/prj_root", {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          "Content-Type": "application/json",
-        },
+        headers: createAuthHeaders(adminToken),
         body: JSON.stringify({ name: "Renamed Root" }),
       });
 
@@ -299,11 +267,11 @@ describe("Root Project", () => {
     });
 
     it("cannot delete root project even as admin", async () => {
-      const adminToken = await createAuthSession(app, "admin@example.com", consoleLogSpy);
+      const adminToken = await createAuthSession(app, "admin@example.com");
 
       const res = await app.request("/api/projects/prj_root", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: createAuthHeaders(adminToken),
       });
 
       expect(res.status).toBe(403);

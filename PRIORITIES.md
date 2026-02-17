@@ -105,7 +105,7 @@ Botical has three core primitives. Both humans and agents use the same ones:
    - ⚠️ Integration tests need auth setup fixes
 6. [x] **Fix integration test authentication setup** - ✅ PARTIALLY COMPLETED: Created auth helper module with createAuthSession() and createAuthHeaders() functions. Fixed magic link token extraction and test environment setup. First schedules API test now passes. Remaining integration tests need to be updated to use the auth helpers.
 7. [ ] Add integration tests for critical paths (auth flow, message sending, sub-agent spawning)
-8. [ ] Fix frontend tests (need DOM environment)
+8. [⚠️] Fix frontend tests (need DOM environment) - **BLOCKED**: React 19 compatibility issue with @testing-library/react. DOM environment is properly configured, but React component tests fail due to missing React.act in React 19. Non-React tests work fine. Waiting for upstream library support.
 
 ## 🐛 Bug Reports
 

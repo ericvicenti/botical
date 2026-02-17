@@ -10,6 +10,7 @@ import { auth } from "@/server/routes/auth.ts";
 import { MagicLinkService } from "@/auth/magic-link.ts";
 import { DatabaseManager } from "@/database/manager.ts";
 import { Config } from "@/config/index.ts";
+import { EmailService } from "@/services/email.ts";
 import { ValidationError, AuthenticationError } from "@/utils/errors.ts";
 import fs from "fs";
 import path from "path";
@@ -22,12 +23,16 @@ describe("Auth Polling Flow", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(async () => {
-    // Disable single-user mode for auth route tests
+    // Set test environment and disable single-user mode for auth route tests
+    process.env.NODE_ENV = "test";
     process.env.BOTICAL_SINGLE_USER = "false";
 
     // Reset database for each test
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
+
+    // Reset email service config to pick up test environment
+    EmailService.resetConfig();
 
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -115,7 +120,7 @@ describe("Auth Polling Flow", () => {
 
     // Extract the magic link token from console output
     const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-    const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+    const tokenMatch = output.match(/Link:.*?token=([A-Za-z0-9_-]+)/);
     const magicLinkToken = tokenMatch![1];
 
     // Verify the magic link token (simulating user clicking the link)
@@ -151,7 +156,7 @@ describe("Auth Polling Flow", () => {
 
     // Extract the magic link token from console output
     const output = consoleLogSpy.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
-    const tokenMatch = output.match(/token=([A-Za-z0-9_-]+)/);
+    const tokenMatch = output.match(/Link:.*?token=([A-Za-z0-9_-]+)/);
     const magicLinkToken = tokenMatch![1];
 
     // Verify the magic link token
