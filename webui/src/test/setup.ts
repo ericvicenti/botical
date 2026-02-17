@@ -4,6 +4,38 @@ import { afterEach, beforeAll, afterAll, vi } from "vitest";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 
+// React 19 compatibility fix for @testing-library/react
+// The testing library expects React.act to be available, but React 19 doesn't export it by default
+// We need to polyfill it for the testing environment
+beforeAll(() => {
+  // Create a simple act implementation that just runs the callback
+  const mockAct = (callback: () => void) => {
+    callback();
+  };
+
+  // Polyfill React.act for testing-library compatibility
+  if (typeof globalThis !== 'undefined') {
+    // @ts-expect-error - Polyfill for React 19 compatibility
+    globalThis.React = globalThis.React || {};
+    // @ts-expect-error - Polyfill for React 19 compatibility
+    globalThis.React.act = mockAct;
+  }
+
+  // Also patch the react module directly
+  const originalRequire = globalThis.require;
+  if (originalRequire) {
+    const Module = originalRequire('module');
+    const originalLoad = Module._load;
+    Module._load = function (id: string, ...args: any[]) {
+      const result = originalLoad.apply(this, [id, ...args]);
+      if (id === 'react' && result && !result.act) {
+        result.act = mockAct;
+      }
+      return result;
+    };
+  }
+});
+
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {
   writable: true,

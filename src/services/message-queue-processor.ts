@@ -13,6 +13,7 @@ import { AgentOrchestrator } from "@/agents/orchestrator.ts";
 import { CredentialResolver } from "@/agents/credential-resolver.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import type { ProviderId } from "@/agents/types.ts";
+import { ProviderIds } from "@/agents/types.ts";
 import { EventBus } from "@/bus/index.ts";
 
 // ============================================================================
@@ -183,7 +184,10 @@ export class MessageQueueProcessor {
       const session = SessionService.getByIdOrThrow(db, queuedMessage.sessionId);
 
       // Determine provider and model
-      const providerId = (queuedMessage.providerId || session.providerId || "anthropic") as ProviderId;
+      const rawProviderId = queuedMessage.providerId || session.providerId || "anthropic";
+      const providerId = ProviderIds.includes(rawProviderId as ProviderId) 
+        ? (rawProviderId as ProviderId) 
+        : "anthropic"; // Safe fallback to default provider
       const modelId = queuedMessage.modelId || session.modelId || null;
 
       // Create credential resolver

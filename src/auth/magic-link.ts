@@ -216,7 +216,11 @@ export class MagicLinkService {
       WHERE login_token_hash = ? AND expires_at > ?
     `
       )
-      .get(loginTokenHash, Date.now()) as any;
+      .get(loginTokenHash, Date.now()) as { 
+        id: string; 
+        completed_at: number | null; 
+        session_token: string | null; 
+      } | undefined; // Safe: matches database schema for magic_link_tokens table
 
     if (!tokenRecord) {
       throw new AuthenticationError("Invalid or expired login token");

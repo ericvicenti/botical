@@ -85,6 +85,7 @@ export class AgentRegistry {
       includeHidden?: boolean;
       builtinOnly?: boolean;
       customOnly?: boolean;
+      projectPath?: string; // For loading custom YAML agents
     } = {}
   ): AgentConfig[] {
     const agents: AgentConfig[] = [];
@@ -106,8 +107,8 @@ export class AgentRegistry {
 
     // Add custom YAML agents (unless builtinOnly)
     // Note: projectPath must be passed in options for custom agents to appear
-    if (!options.builtinOnly && (options as any).projectPath) {
-      const yamlAgents = AgentYamlService.list((options as any).projectPath);
+    if (!options.builtinOnly && options.projectPath) {
+      const yamlAgents = AgentYamlService.list(options.projectPath);
       for (const custom of yamlAgents) {
         if (options.mode && custom.mode !== options.mode && custom.mode !== "all") {
           continue;

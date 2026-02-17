@@ -116,7 +116,10 @@ export function serializePatch(patch: Patch): string {
  * Deserialize a patch from storage
  */
 export function deserializePatch(serialized: string): Patch {
-  return JSON.parse(serialized) as Patch;
+  const parsed = JSON.parse(serialized);
+  // Safe: Patch is a simple array structure from fast-diff library
+  // The serialized data comes from serializePatch() which creates valid Patch objects
+  return parsed as Patch; // Safe: controlled serialization/deserialization
 }
 
 /**

@@ -10,6 +10,6 @@ export function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
     typeof err === "object" &&
     err !== null &&
     "code" in err &&
-    typeof (err as any).code === "string"
+    typeof (err as Error & { code?: unknown }).code === "string"
   );
 }

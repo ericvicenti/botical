@@ -168,7 +168,7 @@ export const ApprovalService = {
     `).all(userId) as ApprovalRecord[];
     
     return rows.filter(row => {
-      const approvers = JSON.parse(row.approvers) as string[];
+      const approvers = JSON.parse(row.approvers) as string[]; // Safe: database stores JSON array of strings
       return approvers.includes(userId);
     }).map(recordToApproval);
   },

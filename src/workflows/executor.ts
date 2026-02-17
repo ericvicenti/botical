@@ -17,6 +17,8 @@ import type { ActionContext, ActionResult } from "@/actions/types.ts";
 import { ConnectionManager, createEvent } from "@/websocket/index.ts";
 import { CircuitBreakerRegistry } from "@/utils/circuit-breaker.ts";
 import { classifyError, isRetryableError, getRetryDelay } from "@/utils/error-classification.ts";
+import type { ProviderId } from "@/agents/types.ts";
+import { ProviderIds } from "@/agents/types.ts";
 
 // ============================================================================
 // Types
@@ -614,7 +616,9 @@ async function executeSessionStep(params: {
       userId: ctx.actionContext.userId || "system",
       canExecuteCode: true, // Workflow sessions can execute code
       content: message,
-      providerId: (providerId as any) || "anthropic", // Default to anthropic if not specified
+      providerId: (providerId && ProviderIds.includes(providerId as ProviderId)) 
+        ? (providerId as ProviderId) 
+        : "anthropic", // Safe fallback to default provider
       modelId,
       agentName: agent,
       agentPrompt: systemPrompt || undefined,
