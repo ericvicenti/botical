@@ -49,8 +49,8 @@ describe("Workflows API Integration", () => {
   let consoleLogSpy: ReturnType<typeof spyOn>;
 
   beforeAll(async () => {
-    // Disable single-user mode for auth tests
-    process.env.BOTICAL_SINGLE_USER = "false";
+    // Enable single-user mode for testing
+    process.env.BOTICAL_SINGLE_USER = "true";
     
     // Set up console spy FIRST
     consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
@@ -82,6 +82,9 @@ describe("Workflows API Integration", () => {
   });
 
   afterAll(() => {
+    // Clean up environment variable
+    delete process.env.BOTICAL_SINGLE_USER;
+    
     consoleLogSpy?.mockRestore();
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {

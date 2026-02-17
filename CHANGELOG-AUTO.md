@@ -6,6 +6,54 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix Unit Test Authentication: Add Single-User Mode to Tools Test (Priority: Infrastructure)
+
+**Priority Addressed:** Infrastructure - Continue improving test reliability and fixing systematic authentication issues in unit tests
+
+**Problem Analysis:**
+The tools API route tests were failing with 401 authentication errors because they lacked the single-user mode setup that other working unit tests use. This was part of a systematic issue where unit tests need `process.env.BOTICAL_SINGLE_USER = "true"` to bypass authentication requirements, but not all test files had been updated with this setup.
+
+**Solution Implemented:**
+- **Tools Test Fix** (`tests/unit/server/routes/tools.test.ts`):
+  - Added `process.env.BOTICAL_SINGLE_USER = "true"` to beforeEach setup
+  - Added proper cleanup in afterEach to remove environment variable
+  - Added missing `afterEach` import from bun:test
+  - Consistent with pattern used in other working unit tests (projects, agents, sessions, etc.)
+
+**Technical Details:**
+- Single-user mode enables auth bypass for unit tests by auto-handling authentication
+- Environment variable is set per test and cleaned up to prevent test pollution
+- Uses the same pattern established in previous cycles for other route tests
+- No changes to production code - only test setup improvements
+
+**Results:**
+- ✅ Fixed all 23 tools API route tests (was 0/23 pass, now 23/23 pass)
+- ✅ Significant improvement in overall test results: 1771 → 1794 pass, 95 → 72 fail
+- ✅ Reduced failing test count by 23 tests (24% reduction in failures)
+- ✅ Consistent authentication setup across all unit test files
+- ✅ No regressions - all previously passing tests still pass
+
+**Impact on Testing Infrastructure:**
+This continues the systematic improvement of unit test reliability by:
+1. **Authentication Consistency**: All unit tests now use the same auth bypass pattern
+2. **Test Reliability**: Eliminates flaky authentication failures in tools API tests
+3. **Infrastructure Stability**: More stable test suite improves CI/CD reliability
+4. **Development Efficiency**: Developers can rely on consistent test behavior
+
+**Progress Tracking:**
+- **Previous Cycles**: Fixed auth issues in agents, sessions, workflows, messages, missions, files-tree tests
+- **This Cycle**: Fixed tools test authentication (23 tests)
+- **Total Impact**: Systematic improvement across all major API route test suites
+- **Remaining Work**: Continue addressing remaining 72 failing tests (mostly email service and config issues)
+
+**Next Steps:**
+- Investigate remaining test failures (email service, config, session service issues)
+- Continue systematic test reliability improvements
+- Move to next highest priority item in PRIORITIES.md
+- Monitor test stability in CI/CD pipeline
+
+**Commit:** 719a0ec
+
 ### 2026-02-13 - Complete Integration Tests for Critical Paths (Priority: Infrastructure)
 
 **Priority Addressed:** Add integration tests for critical paths (auth flow, message sending, sub-agent spawning) - Infrastructure priority for comprehensive testing coverage

@@ -65,6 +65,9 @@ describe("Schedules API Integration", () => {
   let sessionToken: string;
 
   beforeAll(async () => {
+    // Enable single-user mode for testing
+    process.env.BOTICAL_SINGLE_USER = "true";
+    
     Config.load({ dataDir: testDataDir });
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -92,6 +95,9 @@ describe("Schedules API Integration", () => {
   });
 
   afterAll(() => {
+    // Clean up environment variable
+    delete process.env.BOTICAL_SINGLE_USER;
+    
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

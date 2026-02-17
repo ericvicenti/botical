@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 19)*
+*Last read by Leopard: 2026-02-13 (Cycle 20)*
 *Last updated by human: 2026-02-13*
