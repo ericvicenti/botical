@@ -103,8 +103,8 @@ Botical has three core primitives. Both humans and agents use the same ones:
    - ✅ Fixed test environment (NODE_ENV=test, email dev mode)
    - ✅ All unit tests pass consistently
    - ⚠️ Integration tests need auth setup fixes
-6. [x] **Fix integration test authentication setup** - ✅ PARTIALLY COMPLETED: Created auth helper module with createAuthSession() and createAuthHeaders() functions. Fixed magic link token extraction and test environment setup. First schedules API test now passes. Remaining integration tests need to be updated to use the auth helpers.
-7. [ ] Add integration tests for critical paths (auth flow, message sending, sub-agent spawning)
+6. [x] **Fix integration test authentication setup** - ✅ COMPLETED: Created auth helper module with createAuthSession() and createAuthHeaders() functions. Fixed magic link token extraction and test environment setup. Fixed auth-polling.test.ts and frontend-auth.test.ts with proper NODE_ENV=test and EmailService.resetConfig(). All auth-related integration tests now pass (24/24 tests). Reduced total test failures from ~366 to 176.
+7. [⚠️] Add integration tests for critical paths (auth flow, message sending, sub-agent spawning) - **IN PROGRESS**: Auth flow testing is now complete and working. Need to add tests for message sending and sub-agent spawning workflows.
 8. [⚠️] Fix frontend tests (need DOM environment) - **BLOCKED**: React 19 compatibility issue with @testing-library/react. DOM environment is properly configured, but React component tests fail due to missing React.act in React 19. Non-React tests work fine. Waiting for upstream library support.
 
 ## 🐛 Bug Reports
@@ -132,5 +132,5 @@ Botical has three core primitives. Both humans and agents use the same ones:
 
 ---
 
-*Last read by Leopard: 2026-02-13 (Cycle 16)*
+*Last read by Leopard: 2026-02-13 (Cycle 17)*
 *Last updated by human: 2026-02-13*

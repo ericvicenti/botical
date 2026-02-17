@@ -9,7 +9,7 @@ import { EmailService } from "@/services/email.ts";
 /**
  * Create an authenticated session for testing
  */
-export async function createAuthSession(app: Hono, email: string = "test@example.com"): Promise<string> {
+export async function createAuthSession(app: Hono, email: string = "test@example.com"): Promise<{ sessionToken: string; userId: string; email: string }> {
   // Ensure we're in test mode
   const originalNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = "test";
@@ -42,9 +42,19 @@ export async function createAuthSession(app: Hono, email: string = "test@example
 
     // Poll for session
     const pollRes = await app.request(`/auth/poll-login?token=${loginToken}`);
-    const pollData = (await pollRes.json()) as { status: string; sessionToken: string };
+    const pollData = (await pollRes.json()) as { status: string; sessionToken: string; userId: string };
     
-    return pollData.sessionToken;
+    // Get user info
+    const userRes = await app.request("/auth/me", {
+      headers: { Authorization: `Bearer ${pollData.sessionToken}` },
+    });
+    const userData = (await userRes.json()) as { user: { id: string; email: string } };
+    
+    return {
+      sessionToken: pollData.sessionToken,
+      userId: userData.user.id,
+      email: userData.user.email,
+    };
   } finally {
     consoleLogSpy.mockRestore();
     process.env.NODE_ENV = originalNodeEnv;
