@@ -2,7 +2,7 @@
  * Tools API Route Tests
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { createApp } from "@/server/app.ts";
 import { DatabaseManager } from "@/database/index.ts";
 import { Config } from "@/config/index.ts";
@@ -40,7 +40,15 @@ describe("Tools API Routes", () => {
     }
   });
 
+  afterEach(() => {
+    // Clean up environment
+    delete process.env.BOTICAL_SINGLE_USER;
+  });
+
   beforeEach(async () => {
+    // Enable single-user mode for auth bypass
+    process.env.BOTICAL_SINGLE_USER = "true";
+    
     await DatabaseManager.initialize();
 
     // Create test user

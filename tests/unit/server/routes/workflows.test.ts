@@ -36,6 +36,8 @@ describe("Workflows API Routes", () => {
   let testProjectPath: string;
 
   beforeEach(async () => {
+    // Enable single-user mode for these tests so auth is auto-handled
+    process.env.BOTICAL_SINGLE_USER = "true";
     // Reset and configure for test directory
     DatabaseManager.closeAll();
     Config.load({ dataDir: testDataDir });
@@ -69,6 +71,7 @@ describe("Workflows API Routes", () => {
   });
 
   afterEach(() => {
+    delete process.env.BOTICAL_SINGLE_USER;
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

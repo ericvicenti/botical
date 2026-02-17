@@ -28,6 +28,8 @@ describe("Files API Routes - Dotfiles visibility", () => {
   const testUserId = "usr_test-user-dotfiles";
 
   beforeAll(() => {
+    // Enable single-user mode for these tests so auth is auto-handled
+    process.env.BOTICAL_SINGLE_USER = "true";
     Config.load({ dataDir: testDataDir });
 
     if (fs.existsSync(testDataDir)) {
@@ -36,6 +38,7 @@ describe("Files API Routes - Dotfiles visibility", () => {
   });
 
   afterAll(() => {
+    delete process.env.BOTICAL_SINGLE_USER;
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

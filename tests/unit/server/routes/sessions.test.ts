@@ -25,6 +25,8 @@ describe("Sessions API Routes", () => {
   const testProjectId = "test-project-sessions";
 
   beforeAll(() => {
+    // Enable single-user mode for these tests so auth is auto-handled
+    process.env.BOTICAL_SINGLE_USER = "true";
     Config.load({ dataDir: testDataDir });
 
     if (fs.existsSync(testDataDir)) {
@@ -33,6 +35,7 @@ describe("Sessions API Routes", () => {
   });
 
   afterAll(() => {
+    delete process.env.BOTICAL_SINGLE_USER;
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });

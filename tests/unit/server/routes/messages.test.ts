@@ -37,6 +37,8 @@ describe("Messages API Routes", () => {
   const testProjectId = "test-project-messages";
 
   beforeAll(() => {
+    // Enable single-user mode for these tests so auth is auto-handled
+    process.env.BOTICAL_SINGLE_USER = "true";
     Config.load({ dataDir: testDataDir });
 
     if (fs.existsSync(testDataDir)) {
@@ -45,6 +47,7 @@ describe("Messages API Routes", () => {
   });
 
   afterAll(() => {
+    delete process.env.BOTICAL_SINGLE_USER;
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
