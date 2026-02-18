@@ -5,6 +5,7 @@ import {
   useMissions,
   useProcesses,
   useFiles,
+  useWorkflows,
 } from "@/lib/api/queries";
 import { useTabs } from "@/contexts/tabs";
 import { cn } from "@/lib/utils/cn";
@@ -22,6 +23,7 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const { data: sessions } = useSessions(projectId);
   const { data: missions } = useMissions(projectId);
+  const { data: workflows } = useWorkflows(projectId);
   const { data: processes } = useProcesses(projectId);
   const { data: files, isLoading: filesLoading, error: filesError } = useFiles(projectId);
   const { openPreviewTab } = useTabs();
@@ -45,6 +47,17 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
       label: process.command,
     });
     navigate({ to: "/projects/$projectId/processes/$processId", params: { projectId, processId: process.id } });
+  };
+
+  const handleWorkflowClick = (workflow: { id: string; name: string; label: string }) => {
+    openPreviewTab({
+      type: "page",
+      pageId: "workflow.editor",
+      params: { workflowId: workflow.id, projectId },
+      label: workflow.label || workflow.name,
+      icon: "workflow",
+    });
+    navigate({ to: "/projects/$projectId/workflows/$workflowId", params: { projectId, workflowId: workflow.id } });
   };
 
   const handleFileClick = (file: { path: string; type: string }) => {
@@ -207,12 +220,12 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sessions (Tasks) */}
         <div className="bg-bg-elevated rounded-lg border border-border p-4">
-          <h2 className="font-semibold text-text-primary mb-4">Tasks</h2>
+          <h2 className="font-semibold text-text-primary mb-4">Sessions</h2>
           {!sessions?.length ? (
-            <p className="text-text-muted text-sm">No tasks yet</p>
+            <p className="text-text-muted text-sm">No sessions yet</p>
           ) : (
             <div className="space-y-2">
               {sessions.slice(0, 5).map((session) => (
@@ -236,11 +249,41 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
           )}
         </div>
 
-        {/* Missions */}
+        {/* Workflows */}
         <div className="bg-bg-elevated rounded-lg border border-border p-4">
-          <h2 className="font-semibold text-text-primary mb-4">Missions</h2>
+          <h2 className="font-semibold text-text-primary mb-4">Workflows</h2>
+          {!workflows?.length ? (
+            <p className="text-text-muted text-sm">No workflows yet</p>
+          ) : (
+            <div className="space-y-2">
+              {workflows.slice(0, 5).map((workflow) => (
+                <button
+                  key={workflow.id}
+                  onClick={() => handleWorkflowClick(workflow)}
+                  className="w-full text-left p-3 bg-bg-primary rounded border border-border hover:border-accent-primary/50 hover:bg-bg-elevated transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-text-primary">
+                      {workflow.label || workflow.name}
+                    </span>
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-accent-primary/20 text-accent-primary">
+                      {workflow.category}
+                    </span>
+                  </div>
+                  <div className="text-xs text-text-muted mt-1">
+                    {workflow.steps?.length || 0} steps
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Actions (Missions) */}
+        <div className="bg-bg-elevated rounded-lg border border-border p-4">
+          <h2 className="font-semibold text-text-primary mb-4">Actions</h2>
           {!missions?.length ? (
-            <p className="text-text-muted text-sm">No missions yet</p>
+            <p className="text-text-muted text-sm">No actions yet</p>
           ) : (
             <div className="space-y-2">
               {missions.slice(0, 5).map((mission) => (
@@ -265,7 +308,7 @@ export default function ProjectOverviewPage({ params }: ProjectOverviewPageProps
         </div>
 
         {/* Running Processes */}
-        <div className="bg-bg-elevated rounded-lg border border-border p-4 lg:col-span-2">
+        <div className="bg-bg-elevated rounded-lg border border-border p-4 lg:col-span-3">
           <h2 className="font-semibold text-text-primary mb-4">
             Running Processes
             {runningProcesses?.length ? (

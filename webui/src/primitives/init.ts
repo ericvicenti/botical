@@ -30,6 +30,9 @@ import "./workflow/pages";
 // Settings primitives
 import "./settings/pages";
 
+// Overview primitives
+import "./overview/pages";
+
 // Extensions (load all frontend extensions)
 import "../extensions";
 

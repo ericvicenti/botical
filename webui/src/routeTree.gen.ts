@@ -23,6 +23,7 @@ import { Route as SettingsAboutRouteImport } from './routes/settings/about'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
+import { Route as ProjectsProjectIdPrimitivesRouteImport } from './routes/projects/$projectId/primitives'
 import { Route as ProjectsProjectIdCommitRouteImport } from './routes/projects/$projectId/commit'
 import { Route as ProjectsProjectIdWorkflowsWorkflowIdRouteImport } from './routes/projects/$projectId/workflows/$workflowId'
 import { Route as ProjectsProjectIdWorkflowRunsExecutionIdRouteImport } from './routes/projects/$projectId/workflow-runs/$executionId'
@@ -106,6 +107,12 @@ const ProjectsProjectIdSettingsRoute =
   ProjectsProjectIdSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdPrimitivesRoute =
+  ProjectsProjectIdPrimitivesRouteImport.update({
+    id: '/primitives',
+    path: '/primitives',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
 const ProjectsProjectIdCommitRoute = ProjectsProjectIdCommitRouteImport.update({
@@ -200,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/settings/theme': typeof SettingsThemeRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
+  '/projects/$projectId/primitives': typeof ProjectsProjectIdPrimitivesRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
@@ -227,6 +235,7 @@ export interface FileRoutesByTo {
   '/settings/theme': typeof SettingsThemeRoute
   '/settings': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
+  '/projects/$projectId/primitives': typeof ProjectsProjectIdPrimitivesRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
@@ -257,6 +266,7 @@ export interface FileRoutesById {
   '/settings/theme': typeof SettingsThemeRoute
   '/settings/': typeof SettingsIndexRoute
   '/projects/$projectId/commit': typeof ProjectsProjectIdCommitRoute
+  '/projects/$projectId/primitives': typeof ProjectsProjectIdPrimitivesRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/agents/$agentName': typeof ProjectsProjectIdAgentsAgentNameRoute
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/settings/'
     | '/projects/$projectId/commit'
+    | '/projects/$projectId/primitives'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/projects/$projectId/agents/$agentName'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/settings'
     | '/projects/$projectId/commit'
+    | '/projects/$projectId/primitives'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
     | '/projects/$projectId/agents/$agentName'
@@ -344,6 +356,7 @@ export interface FileRouteTypes {
     | '/settings/theme'
     | '/settings/'
     | '/projects/$projectId/commit'
+    | '/projects/$projectId/primitives'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/projects/$projectId/agents/$agentName'
@@ -465,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/projects/$projectId/settings'
       preLoaderRoute: typeof ProjectsProjectIdSettingsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/primitives': {
+      id: '/projects/$projectId/primitives'
+      path: '/primitives'
+      fullPath: '/projects/$projectId/primitives'
+      preLoaderRoute: typeof ProjectsProjectIdPrimitivesRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
     '/projects/$projectId/commit': {
@@ -589,6 +609,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdCommitRoute: typeof ProjectsProjectIdCommitRoute
+  ProjectsProjectIdPrimitivesRoute: typeof ProjectsProjectIdPrimitivesRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
   ProjectsProjectIdAgentsAgentNameRoute: typeof ProjectsProjectIdAgentsAgentNameRoute
@@ -607,6 +628,7 @@ interface ProjectsProjectIdRouteChildren {
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
   ProjectsProjectIdCommitRoute: ProjectsProjectIdCommitRoute,
+  ProjectsProjectIdPrimitivesRoute: ProjectsProjectIdPrimitivesRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
   ProjectsProjectIdAgentsAgentNameRoute: ProjectsProjectIdAgentsAgentNameRoute,

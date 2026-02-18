@@ -6,6 +6,63 @@
 
 <!-- Leopard appends entries here in reverse chronological order -->
 
+### 2026-02-13 - Fix Integration Test Issues: Action Registration and API Endpoints (Priority: Infrastructure)
+
+**Priority Addressed:** Infrastructure - Continue fixing systematic integration test issues to improve testing reliability
+
+**Problem Analysis:**
+Multiple integration tests were failing with 404 and authentication errors due to several systematic issues:
+1. **Workflow Execution Tests**: Getting 401 authentication errors because not using single-user mode
+2. **Subagent Spawning Tests**: Getting 404 errors due to incorrect action ID and missing action registration
+3. **API Endpoint Availability**: Tests trying to call `/api/tools/actions/execute` but actions not registered
+
+**Solution Implemented:**
+- **Workflow Execution Test Fix** (`tests/integration/workflow-execution.test.ts`):
+  - Added `process.env.BOTICAL_SINGLE_USER = "true"` to beforeAll setup
+  - Added proper environment variable cleanup in afterAll
+  - Fixed all 401 authentication errors - tests now pass except for expected API credential failures
+  - Consistent with authentication pattern established in other integration tests
+
+- **Subagent Spawning Test Fixes** (`tests/integration/subagent-spawning.test.ts`):
+  - **Corrected Action ID**: Changed from incorrect `"mcp_agent_task"` to correct `"agent.task"`
+  - **Added Action Registration**: Added `registerAllActions()` call in beforeEach setup
+  - **Fixed 404 Errors**: All API calls to `/api/tools/actions/execute` now return 200 instead of 404
+  - **Proper Test Setup**: Actions are now properly registered and available for testing
+
+**Technical Details:**
+- Single-user mode enables authentication bypass for integration tests
+- Action registration ensures `/api/tools/actions/execute` endpoint can find and execute actions
+- Correct action ID `"agent.task"` matches the actual registered action in the system
+- Environment variable cleanup prevents test pollution between test runs
+
+**Results:**
+- ✅ **Workflow Execution Tests**: Fixed 401 authentication errors, 8/9 tests now pass
+- ✅ **Subagent Spawning Tests**: Fixed 404 API endpoint errors, all endpoints return 200
+- ✅ **API Endpoint Availability**: `/api/tools/actions/execute` now working correctly in tests
+- ✅ **Systematic Pattern**: Consistent authentication setup across all integration tests
+- ⚠️ **Remaining Issues**: Some test expectations need adjustment (agent.task is placeholder action)
+
+**Impact on Testing Infrastructure:**
+This addresses the infrastructure priority by:
+1. **Reliable API Testing**: Integration tests can now properly call action execution endpoints
+2. **Authentication Consistency**: All integration tests use the same single-user mode pattern
+3. **Proper Test Setup**: Actions are registered and available for testing scenarios
+4. **Error Reduction**: Eliminated systematic 404 and 401 errors across multiple test suites
+5. **Foundation for More Tests**: Stable action execution testing enables more comprehensive integration tests
+
+**Test Results Analysis:**
+- **Before**: Multiple 404 errors (action not found) and 401 errors (authentication failed)
+- **After**: All API calls return 200, proper authentication working
+- **Remaining Work**: Some tests have incorrect expectations about action behavior (agent.task is designed to be intercepted by orchestrator, not executed directly)
+
+**Next Steps:**
+- Review and fix remaining integration test expectations
+- Consider creating proper integration tests for sub-agent spawning via orchestrator
+- Continue systematic integration test reliability improvements
+- Move to next highest priority item in PRIORITIES.md
+
+**Commit:** e7c7982
+
 ### 2026-02-13 - Fix Integration Test Authentication: Enable Single-User Mode (Priority: Infrastructure)
 
 **Priority Addressed:** Infrastructure - Fix systematic authentication issues blocking integration test reliability
