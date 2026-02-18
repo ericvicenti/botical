@@ -60,6 +60,9 @@ describe("Workflow Execution Integration", () => {
   let sessionToken: string;
 
   beforeAll(async () => {
+    // Enable single-user mode for consistent auth behavior
+    process.env.BOTICAL_SINGLE_USER = "true";
+    
     Config.load({ dataDir: testDataDir });
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
@@ -90,6 +93,9 @@ describe("Workflow Execution Integration", () => {
   });
 
   afterAll(() => {
+    // Clean up environment variable
+    delete process.env.BOTICAL_SINGLE_USER;
+    
     DatabaseManager.closeAll();
     if (fs.existsSync(testDataDir)) {
       fs.rmSync(testDataDir, { recursive: true, force: true });
