@@ -18,5 +18,12 @@ if [ "$AGO" -lt "$IDLE_THRESHOLD_MS" ]; then
   exit 0
 fi
 
+# Check for recent rate limit / error spam — back off for 30 min if recent errors
+RECENT_ERRORS=$(sqlite3 "$DB" "SELECT COUNT(*) FROM messages WHERE role='assistant' AND error_type IS NOT NULL AND created_at > $(( NOW_MS - 1800000 )) AND session_id IN (SELECT id FROM sessions WHERE agent='leopard');" 2>/dev/null || echo "0")
+if [ "$RECENT_ERRORS" -ge 3 ]; then
+  echo "⚠️ COOLDOWN: $RECENT_ERRORS errors in last 30 min. Backing off to avoid rate limit spam."
+  exit 0
+fi
+
 echo "IDLE: Leopard last active ${AGO}ms ago. Triggering cycle..."
 exec bash "$(dirname "$0")/improvement-cycle.sh" prod

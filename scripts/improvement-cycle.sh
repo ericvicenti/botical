@@ -37,7 +37,21 @@ TWO_HOURS_AGO=$(( $(date +%s%3N) - 7200000 ))
 ACTIVE_SESSION=$(sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
   "SELECT id FROM sessions WHERE agent = 'leopard' AND status = 'active' AND created_at > $TWO_HOURS_AGO ORDER BY created_at DESC LIMIT 1" 2>/dev/null || true)
 
+# If there's an active session, check if it's in an error loop
 if [ -n "$ACTIVE_SESSION" ]; then
+  # Count recent consecutive errors (last 3 assistant messages)
+  RECENT_ERRORS=$(sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
+    "SELECT COUNT(*) FROM (SELECT error_type FROM messages WHERE session_id='$ACTIVE_SESSION' AND role='assistant' ORDER BY created_at DESC LIMIT 3) WHERE error_type IS NOT NULL;" 2>/dev/null || echo "0")
+
+  if [ "$RECENT_ERRORS" -ge 2 ]; then
+    echo "⚠️ Session $ACTIVE_SESSION has $RECENT_ERRORS recent errors (likely rate limited). Skipping to avoid spam."
+    echo "   Will create a fresh session on next kick when errors clear."
+    # Mark session as completed so we don't keep hitting it
+    sqlite3 "$DATA_DIR/projects/$PROJECT_ID/project.db" \
+      "UPDATE sessions SET status='completed' WHERE id='$ACTIVE_SESSION';" 2>/dev/null || true
+    exit 0
+  fi
+
   echo "📋 Continuing session: $ACTIVE_SESSION"
   RESP=$(send_message "$ACTIVE_SESSION" "Continue your improvement cycle. Read PRIORITIES.md and CHANGELOG-AUTO.md, pick the next task, implement it, test it, deploy if tests pass.")
 else
